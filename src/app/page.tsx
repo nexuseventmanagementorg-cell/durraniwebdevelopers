@@ -212,13 +212,24 @@ export default function HomePage() {
               </div>
             </div>
 
+            <div className="lg:col-span-12 mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-gray-700 shadow-card-dark">
+              <Image
+                src="/hero_banner.jpeg"
+                alt="Durrani Web Developers web application development banner"
+                width={1600}
+                height={595}
+                priority
+                className="h-auto w-full"
+              />
+            </div>
+
             {/* Intro Video */}
             <div className="lg:col-span-12 flex justify-center">
               <div className="w-full max-w-5xl rounded-2xl border border-gray-700 bg-gradient-to-b from-[#242830] to-[#181B20] p-3 shadow-card-dark sm:p-5">
                 <video
                   controls
-                  autoPlay
                   playsInline
+                  muted={false}
                   preload="metadata"
                   aria-label="Durrani Web Developers introduction video"
                   className="aspect-video w-full rounded-xl border border-gray-800 bg-black object-contain"
