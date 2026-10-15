@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminCredentials, setAdminSessionCookie } from "@/lib/auth";
+import { setAdminSessionCookie } from "@/lib/auth";
+import {
+  AdminCredentialStoreError,
+  verifyAdminCredentials,
+} from "@/lib/admin-credentials";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
@@ -17,16 +21,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, password } = body;
+    const { username, password } = body;
 
-    if (!email || !password) {
+    if (typeof username !== "string" || typeof password !== "string" || !username || !password) {
       return NextResponse.json(
-        { success: false, error: "Email and password are required." },
+        { success: false, error: "Username and password are required." },
         { status: 400 }
       );
     }
 
-    const isValid = verifyAdminCredentials(email, password);
+    const isValid = await verifyAdminCredentials(username, password);
     if (!isValid) {
       return NextResponse.json(
         { success: false, error: "Invalid administrator credentials." },
@@ -37,13 +41,21 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       success: true,
       message: "Admin authenticated successfully.",
-      user: { email, role: "SuperAdmin" },
+      user: { username, role: "SuperAdmin" },
     });
 
-    setAdminSessionCookie(response, email);
+    setAdminSessionCookie(response, username);
     return response;
   } catch (error) {
-    console.error("Admin login error", error);
+    if (error instanceof AdminCredentialStoreError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 503 }
+      );
+    }
+    console.error("Admin login error", {
+      errorType: error instanceof Error ? error.name : typeof error,
+    });
     return NextResponse.json(
       { success: false, error: "Authentication system failure." },
       { status: 500 }

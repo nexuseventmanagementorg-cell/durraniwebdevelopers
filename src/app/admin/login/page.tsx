@@ -4,11 +4,11 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Lock, Mail, ArrowRight, AlertTriangle, ArrowLeft } from "lucide-react";
+import { ShieldCheck, Lock, UserRound, AlertTriangle, ArrowLeft } from "lucide-react";
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -22,7 +22,7 @@ export default function AdminLoginPage() {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await res.json();
@@ -67,13 +67,14 @@ export default function AdminLoginPage() {
         {/* Login form */}
         <form onSubmit={handleLogin} className="space-y-4 text-xs">
           <div>
-            <label className="block text-gray-300 font-bold mb-1">Administrator Email</label>
+            <label className="block text-gray-300 font-bold mb-1">Administrator Username</label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <UserRound className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
                 className="w-full bg-[#101216] text-white pl-10 pr-4 py-2.5 rounded-xl border border-gray-700 focus:outline-none focus:border-[#E31E36]"
                 required
               />
@@ -88,6 +89,7 @@ export default function AdminLoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
                 className="w-full bg-[#101216] text-white pl-10 pr-4 py-2.5 rounded-xl border border-gray-700 focus:outline-none focus:border-[#E31E36]"
                 required
               />

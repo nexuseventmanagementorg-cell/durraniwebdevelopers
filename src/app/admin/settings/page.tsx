@@ -5,6 +5,7 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
 import PaymentSettingsPanel from "@/components/admin/PaymentSettingsPanel";
 import StorageStatusPanel from "@/components/admin/StorageStatusPanel";
+import ChangeAdminPasswordPanel from "@/components/admin/ChangeAdminPasswordPanel";
 import { AuditLog, SystemSettings } from "@/lib/types";
 import { BUSINESS_INFO } from "@/lib/constants";
 import {
@@ -122,6 +123,7 @@ export default function AdminSettingsPage() {
           </div>
 
           <PaymentSettingsPanel />
+          <ChangeAdminPasswordPanel />
 
           {/* Technical Environment & Integration Readiness */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

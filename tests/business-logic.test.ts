@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createHmac } from "crypto";
 import { calculateBudget, DEFAULT_PRICING_CONFIG, BUSINESS_INFO, buildWhatsAppLink } from "../src/lib/constants";
-import { signToken, verifyToken, verifyAdminCredentials } from "../src/lib/auth";
+import { signToken, verifyToken } from "../src/lib/auth";
+import {
+  hashAdminPassword,
+  verifyAdminPasswordHash,
+} from "../src/lib/admin-credentials";
 import { checkRateLimit } from "../src/lib/rateLimit";
 import { DataStore } from "../src/lib/store";
 import { detectWebsiteFeatures, estimateWebsite } from "../src/lib/website-estimator";
@@ -104,23 +108,15 @@ test("Admin Token Signing and Tamper Prevention", () => {
   assert.equal(verifyToken(tamperedToken), null, "Tampered token must be rejected");
 });
 
-test("Admin login is disabled when deployment credentials are missing", () => {
-  const previousEmail = process.env.ADMIN_EMAIL;
-  const previousPassword = process.env.ADMIN_PASSWORD;
-  delete process.env.ADMIN_EMAIL;
-  delete process.env.ADMIN_PASSWORD;
+test("Admin password hashes are salted and verified without storing plaintext", async () => {
+  const password = "long-test-password-value";
+  const firstHash = await hashAdminPassword(password);
+  const secondHash = await hashAdminPassword(password);
 
-  try {
-    assert.equal(
-      verifyAdminCredentials("admin@example.invalid", "not-configured"),
-      false
-    );
-  } finally {
-    if (previousEmail === undefined) delete process.env.ADMIN_EMAIL;
-    else process.env.ADMIN_EMAIL = previousEmail;
-    if (previousPassword === undefined) delete process.env.ADMIN_PASSWORD;
-    else process.env.ADMIN_PASSWORD = previousPassword;
-  }
+  assert.notEqual(firstHash, secondHash, "Each password hash must use a random salt");
+  assert.equal(await verifyAdminPasswordHash(password, firstHash), true);
+  assert.equal(await verifyAdminPasswordHash("incorrect-password", firstHash), false);
+  assert.equal(firstHash.includes(password), false);
 });
 
 test("Rate limiter threshold enforcement", () => {

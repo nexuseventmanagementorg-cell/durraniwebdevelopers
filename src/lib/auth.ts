@@ -56,23 +56,8 @@ export function verifyToken(token: string): { email: string; timestamp: number }
   }
 }
 
-export function verifyAdminCredentials(email: string, pass: string): boolean {
-  const targetEmail = process.env.ADMIN_EMAIL;
-  const targetPassword = process.env.ADMIN_PASSWORD;
-
-  if (!targetEmail || !targetPassword) return false;
-
-  if (
-    email.trim().toLowerCase() === targetEmail.trim().toLowerCase() &&
-    pass === targetPassword
-  ) {
-    return true;
-  }
-  return false;
-}
-
-export function setAdminSessionCookie(response: NextResponse, email: string): void {
-  const token = signToken({ email, timestamp: Date.now() });
+export function setAdminSessionCookie(response: NextResponse, username: string): void {
+  const token = signToken({ email: username, timestamp: Date.now() });
   response.cookies.set({
     name: SESSION_COOKIE_NAME,
     value: token,
@@ -80,7 +65,7 @@ export function setAdminSessionCookie(response: NextResponse, email: string): vo
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 7 * 24 * 60 * 60, // 7 days
+    maxAge: 7 * 24 * 60 * 60,
   });
 }
 

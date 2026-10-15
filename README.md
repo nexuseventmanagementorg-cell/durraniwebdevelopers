@@ -144,12 +144,14 @@ Card checkout remains unavailable if required configuration or the database migr
 1. Push this repository to GitHub.
 2. Go to [vercel.com](https://vercel.com) and click **Add New Project** → Select your repository.
 3. In **Environment Variables**, add:
-   - `ADMIN_EMAIL`: Your production admin email
-   - `ADMIN_PASSWORD`: Strong production admin password
+   - `ADMIN_USERNAME`: Your production admin username
+   - `ADMIN_PASSWORD`: Enter the initial password privately in Vercel; do not store it in source control.
    - `SESSION_SECRET`: A secure random 64-character string
    - `CRON_SECRET`: Random secret string for Vercel Cron jobs
-4. Click **Deploy**.
-5. Your web application is now live on Vercel!
+   - `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`: Server-side DWD Supabase credentials.
+4. In the dedicated DWD Supabase project, run [`supabase/admin-credentials.sql`](./supabase/admin-credentials.sql) before using password changes. It creates a restricted store for the salted password hash.
+5. Click **Deploy**.
+6. Your web application is now live on Vercel!
 
 **Preview/persistence note:** Do not use the Vercel preview to accept customer inquiries, orders, or business payment updates yet. Core `DataStore` records still use `data/db.json`, which is not durable on Vercel's serverless filesystem. Migrate those workflows to persistent storage before accepting real customer submissions. The local `data/db.json` is intentionally excluded from Git because it can contain private customer and payment information.
 
