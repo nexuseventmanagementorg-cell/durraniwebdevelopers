@@ -1,36 +1,135 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Durrani Web Developers — Professional Web Application Platform
 
-## Getting Started
+A complete, production-oriented web application for **Durrani Web Developers**, a software engineering business that builds custom web applications, e-commerce stores, restaurant ordering systems, SaaS projects, and business management software.
 
-First, run the development server:
+Developed with **Google Antigravity**, built on **Next.js 14 (App Router)**, **TypeScript**, and **Tailwind CSS**, with dual database readiness (**Local Persistent Store** + **Supabase PostgreSQL**), engineered for seamless deployment on **Vercel**.
 
+---
+
+## 🚀 Live Brand Details
+- **Business Name:** Durrani Web Developers
+- **Tagline:** Ideas | Code | Real Solutions
+- **Headline:** *We Turn Your Ideas Into Powerful Web Applications*
+- **Official Email:** `durraniwebdevelopers@gmail.com`
+- **Phone / WhatsApp:** `03299669565` (International: `+92 329 9669565`)
+- **Default Currency:** Pakistani Rupees (PKR)
+- **Deployment Platform:** Vercel
+
+---
+
+## 🎨 Design System & Visual Identity
+- **Primary Red:** `#E31E36`
+- **Deep Black:** `#101216`
+- **Dark Surface:** `#181B20` & `#242830`
+- **Light Grey:** `#F4F5F7`
+- **Pure White:** `#FFFFFF`
+
+---
+
+## 🌟 Key Application Features
+
+### 1. Public Business Portal
+- **Home Page (`/`)**: Hero section with official branding, flyer visual showcase, trust badges, packages overview, industries served, portfolio highlights, ordering workflow, FAQs, and WhatsApp CTAs.
+- **Services Page (`/services`)**: In-depth service breakdowns for Restaurant Ordering, E-Commerce, Jewellery Showrooms, Cosmetics, Fashion, Grocery, SaaS, CRM, Booking, and Inventory systems with direct calculator links.
+- **Portfolio Archive (`/portfolio`)**: Interactive category filtering, live search by project name or technology, project detail modals, live demo links, and strictly privacy-compliant public budget badges (with client consent checks).
+- **Pricing & Rates (`/pricing`)**: Transparent breakdown of Package 1 (Without Client Admin - PKR 35,000) and Package 2 (With Client Admin - PKR 45,000) with exact 11-month installment schedules, daily cost rates (PKR 95.89 vs PKR 123.29), and modular add-on rules.
+- **Interactive Budget Calculator (`/calculator`)**: Multi-step questionnaire (8 steps) featuring real-time budget calculations, add-on feature selection (+PKR 10,000 rules), installment projections, inquiry submission, unique reference code generation (`DW-XXXXXX`), confetti celebration, and direct pre-filled WhatsApp links.
+- **Inquiry Status Tracker (`/track-order`)**: Sanitized milestone tracker requiring reference ID + matching email, isolating client data while displaying the live pipeline (*New Inquiry* → *Under Review* → *Contacted* → *Quotation Sent* → *Awaiting Advance* → *Approved* → *In Development* → *Delivered*).
+- **Contact (`/contact`)**: Form submissions, direct click-to-call, click-to-email, and one-click WhatsApp chat.
+
+### 2. Secure Private Admin Panel
+- **Login (`/admin/login`)**: Protected by HMAC session cookies and rate-limiting brute-force guards.
+- **Executive Dashboard (`/admin/dashboard`)**: Live metrics (Total Clients, Active Projects, Inquiries Inbox, Verified Revenue Received, Outstanding Balances, Awaiting Verification), monthly revenue bar charts, and recent activity audit stream.
+- **Inquiries Inbox (`/admin/inquiries`)**: Full review of customer questionnaire submissions, status changes, direct WhatsApp messaging, and **1-Click Conversion into Active Projects & Registered Clients**.
+- **Active Projects (`/admin/projects`)**: Delivery timeline management, Vercel deployment URLs, milestone status updates, and private internal notes.
+- **Clients Directory (`/admin/clients`)**: Customer directory, total billed/paid balances, contact details, and soft archiving.
+- **Payment Verification (`/admin/payments`)**: Financial ledger supporting JazzCash, EasyPaisa, and Bank Transfer with admin verification before applying funds to project balances.
+- **Project Invoices (`/admin/invoices`)**: Commercial invoice generator with itemized deliverables, payment terms, advance deductions, and print-to-PDF formatting (`window.print()`).
+- **Dynamic Pricing Rules (`/admin/pricing`)**: Change base rates (35k / 45k), advance amounts, installment counts, and modular add-on prices in real time without modifying source code.
+- **Portfolio & Privacy (`/admin/portfolio`)**: Add/edit portfolio projects, toggle public/private visibility, approve consented public budgets, and manage demo URLs.
+- **Automated Monthly Reminders (`/admin/reminders`)**: Automated installment reminder engine supporting 7-day, 3-day, on-due-date, and overdue triggers, with manual WhatsApp dispatch and Vercel Cron worker integration.
+- **Settings & Audit Logs (`/admin/settings`)**: System settings, technical runtime statuses, and tamper-evident audit history.
+
+---
+
+## 🛠 Local Setup & Running Instructions
+
+### 1. Prerequisites
+- **Node.js**: v18.17+ or v20+
+- **npm**: v9+ or v10+
+
+### 2. Installation
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Clone or navigate to the project directory
+cd durrani-web-developers
+
+# Install dependencies
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Environment Variables
+Copy `.env.example` to `.env.local`:
+```bash
+cp .env.example .env.local
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Default local credentials:
+- **Admin Email:** `admin@durraniwebdevelopers.com`
+- **Admin Password:** `Durrani2026!Secure`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Running the Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) to view the public website or [http://localhost:3000/admin/login](http://localhost:3000/admin/login) for the admin portal.
 
-## Learn More
+### 5. Running the Test Suite
+```bash
+npm test
+```
+Runs the automated unit test suite verifying:
+- Package 1 & 2 budget formulas
+- Exact 11-month installment reconciliation
+- Add-on deduplication
+- WhatsApp link formatting
+- Admin token cryptography & security
+- Rate limiter enforcement
+- DataStore ledger isolation
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🗄 Database & Supabase Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The application features a dual data architecture:
+1. **Local Persistent Storage**: Active out-of-the-box (`data/db.json`). All inquiry submissions, payments, clients, and settings persist across restarts automatically.
+2. **Supabase PostgreSQL Schema**: Located at `supabase/schema.sql`.
 
-## Deploy on Vercel
+To deploy to Supabase:
+1. Create a new project at [supabase.com](https://supabase.com).
+2. Go to the **SQL Editor** in your Supabase dashboard.
+3. Open `supabase/schema.sql`, copy all contents, and execute.
+4. Copy your project URL, anon key, and service role key into your Vercel Environment Variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## ☁ Vercel Deployment Instructions
+
+1. Push this repository to GitHub.
+2. Go to [vercel.com](https://vercel.com) and click **Add New Project** → Select your repository.
+3. In **Environment Variables**, add:
+   - `ADMIN_EMAIL`: Your production admin email
+   - `ADMIN_PASSWORD`: Strong production admin password
+   - `SESSION_SECRET`: A secure random 64-character string
+   - `CRON_SECRET`: Random secret string for Vercel Cron jobs
+4. Click **Deploy**.
+5. Your web application is now live on Vercel!
+
+---
+
+## 🔒 Security Best Practices
+- **No Secret Leaks**: No credentials, private tokens, or Supabase service keys are included in public frontend bundles.
+- **Client Data Isolation**: Public order tracking requires both reference code and matching email. Private notes and other client financial ledgers are strictly filtered out on the server.
+- **Verification Before Paid**: Payments submitted manually (JazzCash / EasyPaisa) require an administrator's verification action before advancing project balance or status.
