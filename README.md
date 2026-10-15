@@ -133,7 +133,7 @@ The integration uses Safepay's official Node SDK and hosted checkout. Card data 
 3. Set `SAFEPAY_ENVIRONMENT=sandbox` and set `NEXT_PUBLIC_SITE_URL` to the public HTTPS origin where this app can be reached. `http://localhost:3000` is not a reachable webhook destination; for local checkout tests, use a secure public HTTPS tunnel that forwards to the local app.
 4. In the Safepay sandbox dashboard, add the webhook endpoint `https://<your-public-host>/api/webhooks/safepay` and subscribe to the `payment.succeeded` event. Use that endpoint's sandbox webhook secret in `SAFEPAY_WEBHOOK_SECRET`.
 5. Restart the app, then check `/admin/settings`. Safepay is ready only when its server-side variables, the `gateway_payments` table, and the configured HTTPS origin are available. Try a sandbox test card from [Safepay's test-card guide](https://safepay-docs.netlify.app/developers/safepay/test-cards); confirm the signed webhook is received and the transaction appears at `/admin/payment-proofs`.
-6. Before production, complete Safepay merchant approval and confirm supported presentment/settlement currencies and fees with Safepay. Configure the production API keys, webhook secret, endpoint and environment separately in the production deployment. Never promote sandbox keys to production.
+6. This implementation is Sandbox-only: `SAFEPAY_ENVIRONMENT=production` is rejected and live card checkout is disabled. Do not use production keys or enable live payments. A separately reviewed change is required after merchant approval and confirmation of supported presentment/settlement currencies and fees.
 
 Card checkout remains unavailable if required configuration or the database migration is missing. Valid webhook confirmations are recorded in the Supabase gateway table; they do not automatically modify the separate legacy project-finance ledger.
 
@@ -149,6 +149,7 @@ Card checkout remains unavailable if required configuration or the database migr
    - `SESSION_SECRET`: A secure random 64-character string
    - `CRON_SECRET`: Random secret string for Vercel Cron jobs
    - `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`: Server-side DWD Supabase credentials.
+   - For Sandbox card testing only, also configure `SAFEPAY_PUBLIC_KEY`, `SAFEPAY_SECRET_KEY`, `SAFEPAY_WEBHOOK_SECRET`, `SAFEPAY_ENVIRONMENT=sandbox`, and `NEXT_PUBLIC_SITE_URL` using the public HTTPS deployment origin. Register `https://<your-public-host>/api/webhooks/safepay` in Safepay's Sandbox dashboard.
 4. In the dedicated DWD Supabase project, run [`supabase/admin-credentials.sql`](./supabase/admin-credentials.sql) before using password changes. It creates a restricted store for the salted password hash.
 5. Click **Deploy**.
 6. Your web application is now live on Vercel!

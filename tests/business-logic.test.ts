@@ -19,6 +19,7 @@ import {
 } from "../src/lib/payment-server";
 import { DEFAULT_PAYMENT_SETTINGS } from "../src/lib/payment-types";
 import {
+  getSafepaySetupStatus,
   isSafepayCurrency,
   toSafepayMinorUnits,
   verifySafepayWebhookSignature,
@@ -210,6 +211,45 @@ test("Safepay checkout accepts supported quote currencies and converts amounts t
   assert.equal(toSafepayMinorUnits("4000", "PKR"), 400000);
   assert.throws(() => toSafepayMinorUnits("1.001", "EUR"), /decimal places/i);
   assert.throws(() => toSafepayMinorUnits("0", "PKR"), /valid payment amount/i);
+});
+
+test("Safepay checkout only enables with Sandbox configuration and a public HTTPS URL", () => {
+  const variableNames = [
+    "SAFEPAY_PUBLIC_KEY",
+    "SAFEPAY_SECRET_KEY",
+    "SAFEPAY_WEBHOOK_SECRET",
+    "SAFEPAY_ENVIRONMENT",
+    "NEXT_PUBLIC_SITE_URL",
+  ] as const;
+  const previousValues = new Map(
+    variableNames.map((name) => [name, process.env[name]] as const)
+  );
+
+  try {
+    process.env.SAFEPAY_PUBLIC_KEY = "sandbox-public-key";
+    process.env.SAFEPAY_SECRET_KEY = "sandbox-secret-key";
+    process.env.SAFEPAY_WEBHOOK_SECRET = "sandbox-webhook-secret";
+    process.env.SAFEPAY_ENVIRONMENT = "sandbox";
+    process.env.NEXT_PUBLIC_SITE_URL = "https://dwd-sandbox.test";
+    assert.equal(getSafepaySetupStatus().configured, true);
+    assert.equal(getSafepaySetupStatus().environment, "sandbox");
+
+    process.env.SAFEPAY_ENVIRONMENT = "production";
+    const productionStatus = getSafepaySetupStatus();
+    assert.equal(productionStatus.configured, false);
+    assert.equal(productionStatus.environment, null);
+    assert.match(productionStatus.message, /production checkout is disabled/i);
+
+    process.env.SAFEPAY_ENVIRONMENT = "sandbox";
+    process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
+    assert.equal(getSafepaySetupStatus().configured, false);
+  } finally {
+    for (const name of variableNames) {
+      const previousValue = previousValues.get(name);
+      if (previousValue === undefined) delete process.env[name];
+      else process.env[name] = previousValue;
+    }
+  }
 });
 
 test("Safepay webhook signature checks signed payloads and rejects modified or malformed events", () => {

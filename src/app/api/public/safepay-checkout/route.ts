@@ -12,7 +12,6 @@ import {
   getSafepaySetupStatus,
   getSafepaySiteUrl,
   isSafepayCurrency,
-  type SafepayEnvironment,
   toSafepayMinorUnits,
 } from "@/lib/safepay";
 
@@ -136,7 +135,7 @@ export async function POST(request: NextRequest) {
     const cancelUrl = new URL(successUrl);
     cancelUrl.searchParams.set("cancelled", "1");
     const checkoutUrl = safepay.checkout.createCheckoutUrl({
-      env: setup.environment as SafepayEnvironment,
+      env: setup.environment,
       tbt: authToken,
       tracker: trackerToken,
       source: "hosted",

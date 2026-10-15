@@ -131,7 +131,7 @@ export default function PaymentSettingsPanel() {
 
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 flex gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            <p>Card checkout is not active yet. Safepay merchant approval and production credentials are required before a working card option can be offered.</p>
+            <p>Safepay Sandbox checkout stays disabled until its sandbox credentials, public HTTPS webhook endpoint, and payment table are configured. Live card payments are disabled.</p>
           </div>
 
           <button

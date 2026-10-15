@@ -5,7 +5,7 @@ import type { CurrencyCode } from "@/lib/currency";
 export const SAFEPAY_CURRENCIES = ["PKR", "USD", "EUR", "GBP", "CAD", "AUD"] as const;
 export type SafepayCurrency = (typeof SAFEPAY_CURRENCIES)[number];
 
-export type SafepayEnvironment = "sandbox" | "production";
+export type SafepayEnvironment = "sandbox";
 
 export interface SafepaySetupStatus {
   configured: boolean;
@@ -32,11 +32,18 @@ export function getSafepaySetupStatus(): SafepaySetupStatus {
     .map(([name]) => name);
 
   const environment = process.env.SAFEPAY_ENVIRONMENT?.trim();
-  if (environment && environment !== "sandbox" && environment !== "production") {
+  if (environment === "production") {
     return {
       configured: false,
       environment: null,
-      message: "SAFEPAY_ENVIRONMENT must be either sandbox or production.",
+      message: "Safepay production checkout is disabled. Use Sandbox credentials with SAFEPAY_ENVIRONMENT=sandbox.",
+    };
+  }
+  if (environment && environment !== "sandbox") {
+    return {
+      configured: false,
+      environment: null,
+      message: "SAFEPAY_ENVIRONMENT must be sandbox.",
     };
   }
 
@@ -72,7 +79,7 @@ export function getSafepaySetupStatus(): SafepaySetupStatus {
     } catch {
       return {
         configured: false,
-        environment: environment === "sandbox" || environment === "production" ? environment : null,
+        environment: environment === "sandbox" ? "sandbox" : null,
         message: "NEXT_PUBLIC_SITE_URL must be a public HTTPS website URL so Safepay can reach the webhook.",
       };
     }
@@ -81,15 +88,15 @@ export function getSafepaySetupStatus(): SafepaySetupStatus {
   if (missing.length > 0) {
     return {
       configured: false,
-      environment: environment === "sandbox" || environment === "production" ? environment : null,
+      environment: environment === "sandbox" ? "sandbox" : null,
       message: `Safepay is not configured. Set ${missing.join(", ")} in the deployment environment; keep private API and webhook keys server-side.`,
     };
   }
 
   return {
     configured: true,
-    environment: environment as SafepayEnvironment,
-    message: `Safepay ${environment} credentials are configured. Checkout is available only after the gateway table is installed.`,
+    environment: "sandbox",
+    message: "Safepay Sandbox credentials are configured. Checkout is available only after the gateway table is installed.",
   };
 }
 
@@ -153,10 +160,7 @@ export function getSafepayClient() {
 
   return new Safepay(secretKey, {
     authType: "secret",
-    host:
-      status.environment === "sandbox"
-        ? "https://sandbox.api.getsafepay.com"
-        : "https://api.getsafepay.com",
+    host: "https://sandbox.api.getsafepay.com",
     timeout: 15_000,
   });
 }
