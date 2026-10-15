@@ -154,7 +154,7 @@ export default function HomePage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 xl:gap-12 items-center">
             {/* Left Column */}
-            <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
+            <div className="lg:col-span-12 mx-auto w-full max-w-5xl space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 bg-[#242830] border border-[#E31E36]/30 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-200">
                 <span className="w-2 h-2 rounded-full bg-[#E31E36] animate-ping" />
                 <span className="text-[#E31E36] font-bold">Durrani Web Developers</span>
@@ -212,9 +212,9 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right Column: Intro Video */}
-            <div className="lg:col-span-6 flex justify-center">
-              <div className="w-full max-w-2xl rounded-2xl border border-gray-700 bg-gradient-to-b from-[#242830] to-[#181B20] p-4 shadow-card-dark">
+            {/* Intro Video */}
+            <div className="lg:col-span-12 flex justify-center">
+              <div className="w-full max-w-5xl rounded-2xl border border-gray-700 bg-gradient-to-b from-[#242830] to-[#181B20] p-3 shadow-card-dark sm:p-5">
                 <video
                   controls
                   autoPlay
