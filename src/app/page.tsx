@@ -7,6 +7,7 @@ import {
 } from "@/lib/constants";
 import { DataStore } from "@/lib/store";
 import RegionalPrice from "@/components/RegionalPrice";
+import SiteIntro from "@/components/SiteIntro";
 import {
   Calculator,
   ArrowRight,
@@ -146,6 +147,7 @@ export default function HomePage() {
 
   return (
     <div className="bg-[#FFFFFF] text-[#101216]">
+      <SiteIntro />
       {/* 1. HERO SECTION */}
       <section className="relative bg-[#101216] text-white pt-20 pb-24 overflow-hidden border-b border-[#242830]">
         {/* Subtle grid background */}
