@@ -7,7 +7,6 @@ import {
 } from "@/lib/constants";
 import { DataStore } from "@/lib/store";
 import RegionalPrice from "@/components/RegionalPrice";
-import SiteIntro from "@/components/SiteIntro";
 import {
   Calculator,
   ArrowRight,
@@ -147,7 +146,6 @@ export default function HomePage() {
 
   return (
     <div className="bg-[#FFFFFF] text-[#101216]">
-      <SiteIntro />
       {/* 1. HERO SECTION */}
       <section className="relative bg-[#101216] text-white pt-20 pb-24 overflow-hidden border-b border-[#242830]">
         {/* Subtle grid background */}
@@ -214,22 +212,22 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right Column: Visual Flyer Graphic */}
+            {/* Right Column: Intro Video */}
             <div className="lg:col-span-5 flex justify-center">
-              <div className="relative w-full max-w-md bg-gradient-to-b from-[#242830] to-[#181B20] p-4 rounded-2xl border border-gray-700 shadow-card-dark">
-                <div className="relative w-full h-[460px] rounded-xl overflow-hidden border border-gray-800">
-                  <Image
-                    src="/rates-flyer.jpg"
-                    alt="Durrani Web Developers Pricing and Rates Flyer"
-                    fill
-                    className="object-contain"
-                    priority
-                  />
-                </div>
+              <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-gradient-to-b from-[#242830] to-[#181B20] p-4 shadow-card-dark">
+                <video
+                  controls
+                  autoPlay
+                  playsInline
+                  preload="metadata"
+                  aria-label="Durrani Web Developers introduction video"
+                  className="aspect-video w-full rounded-xl border border-gray-800 bg-black object-contain"
+                >
+                  <source src="/logoanimation2.mp4" type="video/mp4" />
+                  Your browser does not support HTML video.
+                </video>
                 <div className="mt-3 flex items-center justify-between text-xs px-2 text-gray-400">
-                  <span className="flex items-center gap-1 font-semibold text-white">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Verified Pricing Structure
-                  </span>
+                  <span className="font-semibold text-white">Durrani Web Developers</span>
                   <Link href="/pricing" className="text-[#E31E36] font-bold hover:underline">
                     View Full Rate Details &rarr;
                   </Link>
