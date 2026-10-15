@@ -10,6 +10,7 @@ import {
   RECEIPT_BUCKET,
 } from "@/lib/payment-server";
 import { MANUAL_PAYMENT_METHODS, type ManualPaymentMethod } from "@/lib/payment-types";
+import { notifyAdminOfSubmission } from "@/lib/admin-notifications";
 
 export const runtime = "nodejs";
 
@@ -149,6 +150,15 @@ export async function POST(request: NextRequest) {
       }
       throw error;
     }
+
+    await notifyAdminOfSubmission({
+      type: "Payment order",
+      reference: inquiryReference || id,
+      customerName,
+      customerEmail,
+      customerPhone,
+      details: `Manual payment receipt submitted: ${method}, PKR ${Math.round(amount * 100) / 100}; transaction reference ${transactionReference}. Verification is pending.`,
+    });
 
     return NextResponse.json(
       { success: true, message: "Receipt submitted. Payment remains pending until an admin verifies it." },

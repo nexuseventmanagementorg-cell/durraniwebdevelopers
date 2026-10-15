@@ -114,7 +114,7 @@ export class DataStore {
     }
   }
 
-  private static writeData(data: DatabaseSchema): void {
+  private static writeData(data: DatabaseSchema, propagateError = false): void {
     try {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -122,6 +122,9 @@ export class DataStore {
       fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
     } catch (err) {
       console.error("Error writing database file", err);
+      if (propagateError) {
+        throw err;
+      }
     }
   }
 
@@ -148,7 +151,7 @@ export class DataStore {
       targetId: inquiry.id,
       details: `New inquiry submitted for estimated ${inquiry.calculation.estimatedTotal} PKR.`,
     }, data);
-    this.writeData(data);
+    this.writeData(data, true);
     return inquiry;
   }
 

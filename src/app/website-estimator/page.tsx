@@ -15,6 +15,7 @@ import { formatCurrency } from "@/lib/currency";
 import { WebsiteEstimateResult } from "@/lib/website-estimator";
 import CurrencySelector from "@/components/CurrencySelector";
 import { useCurrency } from "@/components/CurrencyProvider";
+import { trackVisitorEvent } from "@/lib/visitor-tracking";
 
 export default function WebsiteEstimatorPage() {
   const [url, setUrl] = useState("");
@@ -56,6 +57,9 @@ export default function WebsiteEstimatorPage() {
       }
 
       setEstimate(result.estimate as WebsiteEstimateResult);
+      trackVisitorEvent("estimator").catch((trackingError) => {
+        console.error("Could not record today's URL estimator user count", trackingError);
+      });
     } catch (requestError) {
       console.error("Website estimate request failed", requestError);
       setError("Scan service tak rabta nahi ho saka. Thori dair baad dobara koshish karein.");

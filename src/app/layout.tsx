@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import { CurrencyProvider } from "@/components/CurrencyProvider";
+import VisitorAnalytics from "@/components/VisitorAnalytics";
 
 export const metadata: Metadata = {
   title: "Durrani Web Developers | Custom Web Applications & Enterprise Software",
@@ -33,6 +34,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-[#FFFFFF] text-[#101216] selection:bg-[#E31E36] selection:text-white">
         <CurrencyProvider>
+          <VisitorAnalytics />
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />

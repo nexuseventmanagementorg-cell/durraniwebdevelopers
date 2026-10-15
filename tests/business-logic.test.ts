@@ -8,6 +8,8 @@ import {
   verifyAdminPasswordHash,
 } from "../src/lib/admin-credentials";
 import { checkRateLimit } from "../src/lib/rateLimit";
+import { getPakistanDateKey } from "../src/lib/dates";
+import { hashVisitorId, isVisitorAnalyticsEvent } from "../src/lib/visitor-analytics";
 import { DataStore } from "../src/lib/store";
 import { detectWebsiteFeatures, estimateWebsite } from "../src/lib/website-estimator";
 import { currencyForCountry, getRegionalPricingConfig } from "../src/lib/currency";
@@ -140,6 +142,15 @@ test("DataStore Ledger Calculations & Isolation", () => {
   const pricingConfig = DataStore.getPricingConfig();
   assert.equal(pricingConfig.baseWithoutAdmin, 35000);
   assert.equal(pricingConfig.baseWithAdmin, 45000);
+});
+
+test("Daily analytics use Pakistan dates and hash per-day visitor identifiers", () => {
+  assert.equal(getPakistanDateKey(new Date("2026-10-15T19:30:00.000Z")), "2026-10-16");
+  assert.match(hashVisitorId("daily-browser-id"), /^[0-9a-f]{64}$/);
+  assert.notEqual(hashVisitorId("daily-browser-id"), "daily-browser-id");
+  assert.equal(isVisitorAnalyticsEvent("visitor"), true);
+  assert.equal(isVisitorAnalyticsEvent("estimator"), true);
+  assert.equal(isVisitorAnalyticsEvent("payment"), false);
 });
 
 test("Website estimator maps visible store and admin signals to calculator pricing", () => {

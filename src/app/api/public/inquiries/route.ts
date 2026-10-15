@@ -5,6 +5,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 import { Inquiry } from "@/lib/types";
 import { CurrencyCode, isCurrencyCode, getRegionalPricingConfig } from "@/lib/currency";
 import { getExchangeRateSnapshot } from "@/lib/exchange-rates";
+import { notifyAdminOfSubmission } from "@/lib/admin-notifications";
 
 export async function POST(request: NextRequest) {
   try {
@@ -126,6 +127,19 @@ export async function POST(request: NextRequest) {
     };
 
     const savedInquiry = DataStore.createInquiry(newInquiry);
+    await notifyAdminOfSubmission({
+      type: "Project inquiry",
+      reference: savedInquiry.id,
+      customerName: savedInquiry.customerName,
+      customerEmail: savedInquiry.email,
+      customerPhone: savedInquiry.phone,
+      details: [
+        `Business: ${savedInquiry.businessName || "Not provided"}`,
+        `Project types: ${savedInquiry.projectTypes.join(", ")}`,
+        `Estimated budget: ${savedInquiry.calculation.estimatedTotal} PKR`,
+        `Country: ${savedInquiry.cityCountry || "Not provided"}`,
+      ].join("\n"),
+    });
 
     return NextResponse.json({
       success: true,

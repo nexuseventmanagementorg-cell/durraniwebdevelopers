@@ -14,6 +14,7 @@ import {
   isSafepayCurrency,
   toSafepayMinorUnits,
 } from "@/lib/safepay";
+import { notifyAdminOfSubmission } from "@/lib/admin-notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -163,6 +164,15 @@ export async function POST(request: NextRequest) {
       status: "pending",
     });
     if (insertError) throw insertError;
+
+    await notifyAdminOfSubmission({
+      type: "Payment order",
+      reference: inquiryReference || id,
+      customerName,
+      customerEmail,
+      customerPhone,
+      details: `Safepay checkout started for ${amount} ${currency}. Payment is pending.`,
+    });
 
     return NextResponse.json(
       { success: true, checkoutUrl, paymentId: id },

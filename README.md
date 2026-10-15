@@ -2,7 +2,7 @@
 
 A complete, production-oriented web application for **Durrani Web Developers**, a software engineering business that builds custom web applications, e-commerce stores, restaurant ordering systems, SaaS projects, and business management software.
 
-Developed with **Google Antigravity**, built on **Next.js 14 (App Router)**, **TypeScript**, and **Tailwind CSS**, with dual database readiness (**Local Persistent Store** + **Supabase PostgreSQL**), engineered for seamless deployment on **Vercel**.
+Developed with **Google Antigravity** and **Visual Studio Code**, built on **Next.js 14 (App Router)**, **TypeScript**, and **Tailwind CSS**, with dual database readiness (**Local Persistent Store** + **Supabase PostgreSQL**), engineered for seamless deployment on **Vercel**.
 
 ---
 
@@ -78,6 +78,14 @@ cp .env.example .env.local
 
 There are no default admin credentials. Set `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `SESSION_SECRET` in the ignored `.env.local` file before signing in. Production authentication stays disabled until explicit credentials and a session secret are configured.
 
+### Automatic admin notifications
+
+New calculator inquiries, contact messages, payment orders/receipts, and confirmed Safepay payments trigger independent email and WhatsApp alerts. Provider failures are logged and do not discard a successfully saved submission.
+
+- **Email:** Configure `RESEND_API_KEY` and a sender verified by Resend in `RESEND_FROM_EMAIL`. Set `ADMIN_NOTIFICATION_EMAIL` to override the default DWD business email.
+- **WhatsApp:** Configure `WHATSAPP_API_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and `WHATSAPP_ADMIN_PHONE` in international digits. Create and get Meta approval for the template set in `WHATSAPP_ADMIN_TEMPLATE_NAME`, then set its language. The template body must have four placeholders in order: alert type, reference, customer name/phone, and details.
+- Store provider secrets only in server-side `.env.local` and deployment environment variables.
+
 ### 4. Running the Development Server
 ```bash
 npm run dev
@@ -113,6 +121,14 @@ To deploy to Supabase:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
+
+### Daily visitor counts
+
+The public footer reports unique daily visitors, visitors who opened the budget calculator, and visitors who completed a successful URL estimate. Counts use Pakistan's calendar day and refresh every 30 seconds. A random per-day browser identifier is hashed before it reaches the server; hashes older than two days are removed as new events arrive.
+
+1. Run [`supabase/visitor-analytics.sql`](./supabase/visitor-analytics.sql) in the dedicated DWD Supabase SQL Editor.
+2. Configure `NEXT_PUBLIC_SUPABASE_URL` and the server-only `SUPABASE_SERVICE_ROLE_KEY` in local `.env.local` and deployment variables.
+3. Restart/redeploy. If Supabase or the migration is unavailable, the footer explicitly reports unavailable counts rather than showing a false zero.
 
 ### Private payment receipt setup
 

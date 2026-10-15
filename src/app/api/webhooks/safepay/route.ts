@@ -8,6 +8,7 @@ import {
   getSafepaySetupStatus,
   verifySafepayWebhookSignature,
 } from "@/lib/safepay";
+import { notifyAdminOfSubmission } from "@/lib/admin-notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,10 +86,20 @@ export async function POST(request: NextRequest) {
       .eq("amount_minor", data.amount)
       .eq("currency", data.currency)
       .eq("status", "pending")
-      .select("id")
+      .select("id,customer_name,customer_email,customer_phone,amount_minor,currency")
       .maybeSingle();
 
     if (error) throw error;
+    if (updatedPayment) {
+      await notifyAdminOfSubmission({
+        type: "Payment received",
+        reference: updatedPayment.id,
+        customerName: updatedPayment.customer_name,
+        customerEmail: updatedPayment.customer_email,
+        customerPhone: updatedPayment.customer_phone,
+        details: `Safepay payment confirmed: ${(Number(updatedPayment.amount_minor) / 100).toFixed(2)} ${updatedPayment.currency}.`,
+      });
+    }
     if (!updatedPayment) {
       const { data: existing, error: lookupError } = await supabase
         .from("gateway_payments")
