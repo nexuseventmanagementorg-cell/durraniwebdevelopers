@@ -1,6 +1,69 @@
 {
   "inquiries": [
     {
+      "id": "DW-884128",
+      "createdAt": "2026-10-15T09:57:15.224Z",
+      "updatedAt": "2026-10-15T09:57:15.224Z",
+      "status": "New Inquiry",
+      "customerName": "Shahid Durrani",
+      "businessName": "",
+      "email": "shahid@example.com",
+      "phone": "03299669565",
+      "cityCountry": "",
+      "preferredContact": "whatsapp",
+      "customerIntro": "",
+      "projectTypes": [
+        "E-commerce store"
+      ],
+      "problemToSolve": "",
+      "targetAudience": "",
+      "productsServices": "",
+      "inspirationUrl": "",
+      "isNewOrUpgrade": "new",
+      "preferredLaunchDate": "",
+      "expectedBudgetRange": "",
+      "displayFixedOnly": false,
+      "needsProductCatalog": false,
+      "productFeatures": [],
+      "acceptOrdersOnline": false,
+      "orderFeatures": [],
+      "needsReviewsOrAccounts": false,
+      "adminPanelType": "client_admin",
+      "adminFeatures": [],
+      "selectedAddons": [
+        "google_auth",
+        "supabase_db"
+      ],
+      "customFeatureNotes": "",
+      "calculation": {
+        "basePrice": 45000,
+        "adminFee": 10000,
+        "addonsTotal": 20000,
+        "selectedAddonDetails": [
+          {
+            "id": "google_auth",
+            "label": "Google Authentication",
+            "price": 10000
+          },
+          {
+            "id": "supabase_db",
+            "label": "Supabase Database Integration",
+            "price": 10000
+          }
+        ],
+        "contingencyAmount": 0,
+        "estimatedTotal": 65000,
+        "advanceAmount": 10000,
+        "remainingBalance": 55000,
+        "installmentsCount": 11,
+        "regularInstallment": 5000,
+        "finalInstallment": 5000,
+        "dailyCost": 178.08
+      },
+      "disclaimerAccepted": true,
+      "adminNotes": "Submitted via online interactive budget calculator."
+    },
+    {
       "id": "DW-948210",
       "createdAt": "2026-10-14T08:30:00Z",
       "updatedAt": "2026-10-14T08:30:00Z",
@@ -645,6 +708,15 @@
     "autoRemindersEnabled": true
   },
   "auditLogs": [
+    {
+      "action": "INQUIRY_CREATED",
+      "actor": "Shahid Durrani",
+      "targetType": "inquiry",
+      "targetId": "DW-884128",
+      "details": "New inquiry submitted for estimated 65000 PKR.",
+      "id": "log-1792058235224-659y",
+      "timestamp": "2026-10-15T09:57:15.224Z"
+    },
     {
       "id": "log-1",
       "action": "SYSTEM_INITIALIZED",
