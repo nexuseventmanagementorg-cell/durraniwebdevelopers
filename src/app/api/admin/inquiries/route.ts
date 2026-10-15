@@ -1,0 +1,174 @@
+import { NextRequest, NextResponse } from "next/server";
+import { verifyAdminRequest } from "@/lib/auth";
+import { DataStore } from "@/lib/store";
+import { Client, Project, OrderStatus } from "@/lib/types";
+
+export async function GET(request: NextRequest) {
+  if (!verifyAdminRequest(request)) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const inquiries = DataStore.getInquiries();
+  return NextResponse.json({ success: true, inquiries });
+}
+
+export async function PATCH(request: NextRequest) {
+  if (!verifyAdminRequest(request)) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { id, status, adminNotes, revisedApprovedPrice } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Inquiry ID is required" }, { status: 400 });
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (status) updates.status = status as OrderStatus;
+    if (adminNotes !== undefined) updates.adminNotes = adminNotes;
+
+    if (revisedApprovedPrice !== undefined) {
+      const current = DataStore.getInquiryById(id);
+      if (current) {
+        updates.calculation = {
+          ...current.calculation,
+          estimatedTotal: Number(revisedApprovedPrice),
+          remainingBalance: Math.max(0, Number(revisedApprovedPrice) - current.calculation.advanceAmount),
+        };
+      }
+    }
+
+    const updated = DataStore.updateInquiry(id, updates);
+    if (!updated) {
+      return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, inquiry: updated });
+  } catch (error) {
+    console.error("Update inquiry error", error);
+    return NextResponse.json({ success: false, error: "Failed to update inquiry" }, { status: 500 });
+  }
+}
+
+// Convert inquiry to Project & Client
+export async function POST(request: NextRequest) {
+  if (!verifyAdminRequest(request)) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { inquiryId, deliveryTimeline, initialAdvanceReceived } = body;
+
+    const inquiry = DataStore.getInquiryById(inquiryId);
+    if (!inquiry) {
+      return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
+    }
+
+    // 1. Check if client already exists or create new one
+    const clients = DataStore.getClients();
+    let client = clients.find(
+      (c) => c.email.toLowerCase() === inquiry.email.toLowerCase()
+    );
+
+    const approvedPrice = inquiry.calculation.estimatedTotal;
+    const advanceRequired = inquiry.calculation.advanceAmount;
+    const advanceReceived = Number(initialAdvanceReceived || 0);
+    const remainingBalance = Math.max(0, approvedPrice - advanceReceived);
+
+    if (!client) {
+      const newClientId = `cli-${Date.now().toString().slice(-6)}`;
+      client = {
+        id: newClientId,
+        name: inquiry.customerName,
+        businessName: inquiry.businessName || inquiry.customerName,
+        email: inquiry.email,
+        phone: inquiry.phone,
+        cityCountry: inquiry.cityCountry || "Pakistan",
+        notes: `Converted from inquiry ${inquiry.id}. Preferred contact: ${inquiry.preferredContact}.`,
+        createdAt: new Date().toISOString(),
+        archived: false,
+        totalProjects: 1,
+        totalBilled: approvedPrice,
+        totalPaid: advanceReceived,
+        outstandingBalance: remainingBalance,
+      };
+      DataStore.createClient(client);
+    } else {
+      DataStore.updateClient(client.id, {
+        totalProjects: (client.totalProjects || 0) + 1,
+        totalBilled: (client.totalBilled || 0) + approvedPrice,
+        totalPaid: (client.totalPaid || 0) + advanceReceived,
+        outstandingBalance: (client.outstandingBalance || 0) + remainingBalance,
+      });
+    }
+
+    // 2. Create project
+    const newProjectId = `proj-${Date.now().toString().slice(-6)}`;
+    const newProject: Project = {
+      id: newProjectId,
+      inquiryId: inquiry.id,
+      clientId: client.id,
+      clientName: client.name,
+      clientEmail: client.email,
+      clientPhone: client.phone,
+      name: `${inquiry.businessName || inquiry.customerName} - ${inquiry.projectTypes[0] || "Web Application"}`,
+      category: inquiry.projectTypes[0] || "Custom web applications",
+      description: inquiry.problemToSolve || inquiry.productsServices || "Custom web application development.",
+      approvedPrice,
+      advanceRequired,
+      advanceReceived,
+      remainingBalance,
+      status: advanceReceived >= advanceRequired ? "In Development" : "Awaiting Advance",
+      deliveryTimeline: deliveryTimeline || "3 to 4 Weeks",
+      selectedFeatures: [
+        ...inquiry.projectTypes,
+        inquiry.adminPanelType === "client_admin" ? "Client Admin Panel" : "Internal Managed",
+        ...inquiry.selectedAddons,
+      ],
+      adminNotes: `Converted from inquiry ${inquiry.id}. Original budget estimate: PKR ${inquiry.calculation.estimatedTotal}.`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    DataStore.createProject(newProject);
+
+    // 3. If initial advance was recorded, log payment record
+    if (advanceReceived > 0) {
+      DataStore.recordPayment({
+        id: `pay-${Date.now().toString().slice(-6)}`,
+        projectId: newProjectId,
+        projectName: newProject.name,
+        clientId: client.id,
+        clientName: client.name,
+        amount: advanceReceived,
+        method: "Manual Entry / Cash",
+        transactionRef: `CONV-ADV-${inquiry.id}`,
+        paymentDate: new Date().toISOString(),
+        status: "Paid",
+        verifiedByAdmin: true,
+        adminNotes: `Initial advance recorded on inquiry conversion.`,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    // 4. Update inquiry with converted project ID and status
+    DataStore.updateInquiry(inquiry.id, {
+      status: advanceReceived >= advanceRequired ? "Approved" : "Awaiting Advance",
+      convertedProjectId: newProjectId,
+      adminNotes: `Converted into project #${newProjectId} on ${new Date().toLocaleDateString()}.`,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Inquiry successfully converted to active Project #${newProjectId}!`,
+      project: newProject,
+      client,
+    });
+  } catch (error) {
+    console.error("Conversion error", error);
+    return NextResponse.json({ success: false, error: "Failed to convert inquiry" }, { status: 500 });
+  }
+}

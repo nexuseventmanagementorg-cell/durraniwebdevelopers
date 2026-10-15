@@ -1,0 +1,1314 @@
+"use client";
+
+import React, { useState, useEffect, useMemo, Suspense } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import confetti from "canvas-confetti";
+import {
+  DEFAULT_PRICING_CONFIG,
+  calculateBudget,
+  formatPKR,
+  BUSINESS_INFO,
+  buildWhatsAppLink,
+} from "@/lib/constants";
+import {
+  Calculator,
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle2,
+  ShieldCheck,
+  AlertTriangle,
+  Send,
+  Sparkles,
+  Layers,
+  Utensils,
+  ShoppingBag,
+  Gem,
+  Sparkle,
+  Shirt,
+  Apple,
+  Cpu,
+  Users,
+  Calendar,
+  Boxes,
+  Briefcase,
+  Code2,
+  Check,
+  Clock,
+  PhoneCall,
+  MessageSquare,
+  Copy,
+  CheckCheck,
+} from "lucide-react";
+
+function CalculatorContent() {
+  const searchParams = useSearchParams();
+  const initialPackage = searchParams.get("package");
+  const initialType = searchParams.get("type");
+
+  // Step state: 1 to 8 (8 is confirmation/submit)
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedInquiry, setSubmittedInquiry] = useState<any | null>(null);
+  const [copiedRef, setCopiedRef] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Step 1: Customer Info
+  const [customerName, setCustomerName] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [cityCountry, setCityCountry] = useState("");
+  const [preferredContact, setPreferredContact] = useState<"whatsapp" | "email" | "phone">("whatsapp");
+  const [customerIntro, setCustomerIntro] = useState("");
+
+  // Step 2: Project Type
+  const [selectedProjectTypes, setSelectedProjectTypes] = useState<string[]>(
+    initialType ? [initialType] : ["Custom web application"]
+  );
+
+  // Step 3: Project Description
+  const [problemToSolve, setProblemToSolve] = useState("");
+  const [targetAudience, setTargetAudience] = useState("");
+  const [productsServices, setProductsServices] = useState("");
+  const [inspirationUrl, setInspirationUrl] = useState("");
+  const [isNewOrUpgrade, setIsNewOrUpgrade] = useState<"new" | "upgrade">("new");
+  const [preferredLaunchDate, setPreferredLaunchDate] = useState("Within 3 to 4 weeks");
+  const [expectedBudgetRange, setExpectedBudgetRange] = useState("PKR 45,000 - 65,000");
+
+  // Step 4: Website and Product Management
+  const [displayFixedOnly, setDisplayFixedOnly] = useState(false);
+  const [needsProductCatalog, setNeedsProductCatalog] = useState(true);
+  const [productFeatures, setProductFeatures] = useState<string[]>([
+    "categories",
+    "variants",
+    "stock",
+    "images",
+    "pricing",
+  ]);
+  const [acceptOrdersOnline, setAcceptOrdersOnline] = useState(true);
+  const [orderFeatures, setOrderFeatures] = useState<string[]>([
+    "cart",
+    "checkout",
+    "coupons",
+    "delivery_fees",
+  ]);
+  const [needsReviewsOrAccounts, setNeedsReviewsOrAccounts] = useState(true);
+
+  // Step 5: Admin Panel Requirements
+  const [adminPanelType, setAdminPanelType] = useState<"none" | "client_admin">(
+    initialPackage === "without_admin" ? "none" : "client_admin"
+  );
+  const [adminFeatures, setAdminFeatures] = useState<string[]>([
+    "products",
+    "orders",
+    "stock",
+    "customers",
+    "payments",
+    "reports",
+  ]);
+
+  // Step 6: Advanced Features
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const [customFeatureNotes, setCustomFeatureNotes] = useState("");
+
+  // Step 7: Disclaimer
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(true);
+
+  // Real-time calculation
+  const calculation = useMemo(() => {
+    return calculateBudget(adminPanelType, selectedAddons, DEFAULT_PRICING_CONFIG);
+  }, [adminPanelType, selectedAddons]);
+
+  // Project Type Catalog
+  const projectTypeOptions = [
+    { label: "Restaurant website or ordering app", icon: Utensils },
+    { label: "E-commerce store", icon: ShoppingBag },
+    { label: "Jewellery store", icon: Gem },
+    { label: "Cosmetics store", icon: Sparkle },
+    { label: "Fashion store", icon: Shirt },
+    { label: "Grocery store", icon: Apple },
+    { label: "SaaS application", icon: Cpu },
+    { label: "Client management system", icon: Users },
+    { label: "Booking system", icon: Calendar },
+    { label: "Inventory system", icon: Boxes },
+    { label: "Custom web application", icon: Briefcase },
+    { label: "Other custom software", icon: Code2 },
+  ];
+
+  const adminFeatureOptions = [
+    { id: "products", label: "Product and category management" },
+    { id: "orders", label: "Orders and order-status management" },
+    { id: "stock", label: "Inventory and stock management" },
+    { id: "customers", label: "Customer management and lookup" },
+    { id: "payments", label: "Payments and transaction records" },
+    { id: "reports", label: "Reports and revenue analytics" },
+    { id: "coupons", label: "Coupons and promotional discounts" },
+    { id: "reviews", label: "Reviews and testimonials approval" },
+    { id: "content", label: "Website banners & text management" },
+    { id: "roles", label: "User roles and permissions" },
+    { id: "notifications", label: "Email / WhatsApp notification logs" },
+  ];
+
+  const addonOptions = Object.values(DEFAULT_PRICING_CONFIG.addons);
+
+  // Toggle helpers
+  const toggleProjectType = (type: string) => {
+    setSelectedProjectTypes((prev) =>
+      prev.includes(type) ? (prev.length > 1 ? prev.filter((t) => t !== type) : prev) : [...prev, type]
+    );
+  };
+
+  const toggleProductFeature = (f: string) => {
+    setProductFeatures((prev) =>
+      prev.includes(f) ? prev.filter((item) => item !== f) : [...prev, f]
+    );
+  };
+
+  const toggleOrderFeature = (f: string) => {
+    setOrderFeatures((prev) =>
+      prev.includes(f) ? prev.filter((item) => item !== f) : [...prev, f]
+    );
+  };
+
+  const toggleAdminFeature = (f: string) => {
+    setAdminFeatures((prev) =>
+      prev.includes(f) ? prev.filter((item) => item !== f) : [...prev, f]
+    );
+  };
+
+  const toggleAddon = (id: string) => {
+    setSelectedAddons((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  // Validation before proceeding
+  const validateStep = (step: number): boolean => {
+    setErrorMessage("");
+    if (step === 1) {
+      if (!customerName.trim()) {
+        setErrorMessage("Please enter your full name.");
+        return false;
+      }
+      if (!email.trim() || !email.includes("@")) {
+        setErrorMessage("Please enter a valid email address.");
+        return false;
+      }
+      if (!phone.trim() || phone.trim().length < 8) {
+        setErrorMessage("Please enter a valid WhatsApp or contact phone number.");
+        return false;
+      }
+    }
+    if (step === 2) {
+      if (selectedProjectTypes.length === 0) {
+        setErrorMessage("Please select at least one relevant project category.");
+        return false;
+      }
+    }
+    if (step === 7) {
+      if (!disclaimerAccepted) {
+        setErrorMessage("You must accept the estimate disclaimer to proceed.");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep((prev) => Math.min(8, prev + 1));
+      window.scrollTo({ top: 150, behavior: "smooth" });
+    }
+  };
+
+  const handleBack = () => {
+    setErrorMessage("");
+    setCurrentStep((prev) => Math.max(1, prev - 1));
+    window.scrollTo({ top: 150, behavior: "smooth" });
+  };
+
+  // Final submission to server
+  const handleSubmit = async () => {
+    if (!validateStep(7)) return;
+
+    setIsSubmitting(true);
+    setErrorMessage("");
+
+    try {
+      const payload = {
+        customerName,
+        businessName,
+        email,
+        phone,
+        cityCountry,
+        preferredContact,
+        customerIntro,
+        projectTypes: selectedProjectTypes,
+        problemToSolve,
+        targetAudience,
+        productsServices,
+        inspirationUrl,
+        isNewOrUpgrade,
+        preferredLaunchDate,
+        expectedBudgetRange,
+        displayFixedOnly,
+        needsProductCatalog,
+        productFeatures,
+        acceptOrdersOnline,
+        orderFeatures,
+        needsReviewsOrAccounts,
+        adminPanelType,
+        adminFeatures,
+        selectedAddons,
+        customFeatureNotes,
+        disclaimerAccepted,
+      };
+
+      const res = await fetch("/api/public/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to submit project inquiry.");
+      }
+
+      setSubmittedInquiry(data.inquiry);
+      setCurrentStep(8);
+
+      // Trigger celebration confetti
+      try {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ["#E31E36", "#101216", "#ffffff", "#10B981"],
+        });
+      } catch (e) {
+        // Ignore if confetti fails in some contexts
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const copyReferenceToClipboard = () => {
+    if (submittedInquiry?.id) {
+      navigator.clipboard.writeText(submittedInquiry.id);
+      setCopiedRef(true);
+      setTimeout(() => setCopiedRef(false), 2500);
+    }
+  };
+
+  const stepsList = [
+    "Customer Info",
+    "Project Type",
+    "Scope & Problem",
+    "Products & Orders",
+    "Admin Panel",
+    "Advanced Add-ons",
+    "Estimated Budget",
+    "Confirmation",
+  ];
+
+  return (
+    <div className="bg-[#FFFFFF] text-[#101216] min-h-screen">
+      {/* Top Banner */}
+      <section className="bg-[#101216] text-white py-12 border-b border-[#242830]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-3">
+          <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest bg-[#242830] px-3.5 py-1 rounded-full border border-[#E31E36]/30">
+            Multi-Step Requirements Questionnaire
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
+            Interactive Web App Budget Calculator
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-300 max-w-xl mx-auto">
+            Answer a few quick questions about your project to instantly calculate an exact, transparent development budget and installment schedule.
+          </p>
+        </div>
+      </section>
+
+      {/* Main Questionnaire Container */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        {/* Progress Bar & Steps Tracker */}
+        <div className="mb-10">
+          <div className="flex items-center justify-between text-xs font-bold text-gray-500 mb-2">
+            <span>Step {currentStep} of 8: <strong className="text-[#101216]">{stepsList[currentStep - 1]}</strong></span>
+            <span>{Math.round((currentStep / 8) * 100)}% Completed</span>
+          </div>
+          <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-[#E31E36] to-red-500 h-full transition-all duration-300 ease-out"
+              style={{ width: `${(currentStep / 8) * 100}%` }}
+            />
+          </div>
+
+          {/* Step Pill Indicators */}
+          <div className="hidden md:flex justify-between mt-3 text-[10px] font-semibold text-gray-400">
+            {stepsList.map((stepName, idx) => (
+              <span
+                key={idx}
+                className={idx + 1 === currentStep ? "text-[#E31E36] font-bold" : idx + 1 < currentStep ? "text-gray-700" : ""}
+              >
+                {idx + 1}. {stepName}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Live Estimate Sidebar Ribbon */}
+        {currentStep < 8 && (
+          <div className="bg-[#101216] text-white p-4 rounded-xl border border-gray-800 mb-8 flex flex-wrap items-center justify-between gap-4 shadow-card-dark">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-[#E31E36] flex items-center justify-center text-white">
+                <Calculator className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">
+                  Live Dynamic Estimate
+                </span>
+                <span className="text-xl font-black text-white">
+                  {formatPKR(calculation.estimatedTotal)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 text-xs">
+              <div className="bg-[#181B20] px-3 py-1.5 rounded-lg border border-gray-700">
+                <span className="text-gray-400">Advance: </span>
+                <strong className="text-white font-bold">{formatPKR(calculation.advanceAmount)}</strong>
+              </div>
+              <div className="bg-[#181B20] px-3 py-1.5 rounded-lg border border-gray-700">
+                <span className="text-gray-400">11 Installments: </span>
+                <strong className="text-[#E31E36] font-bold">PKR {calculation.regularInstallment.toLocaleString()}/mo</strong>
+              </div>
+              <div className="bg-[#181B20] px-3 py-1.5 rounded-lg border border-gray-700 hidden sm:block">
+                <span className="text-gray-400">Daily: </span>
+                <strong className="text-gray-200">PKR {calculation.dailyCost}/day</strong>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Error notification */}
+        {errorMessage && (
+          <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-xs text-[#E31E36] font-semibold flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* STEP 1: CUSTOMER INFORMATION */}
+        {/* ============================================================== */}
+        {currentStep === 1 && (
+          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+            <div>
+              <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
+                Step 1 of 8
+              </span>
+              <h2 className="text-2xl font-black text-[#101216] mt-1">
+                Your Contact & Business Details
+              </h2>
+              <p className="text-xs text-gray-600 mt-1">
+                Let us know who we are communicating with so our senior developers can review your scope.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Full Name <span className="text-[#E31E36]">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Farhan Durrani"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Business / Company Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. SpiceCraft Grill & Lounge"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Email Address <span className="text-[#E31E36]">*</span>
+                </label>
+                <input
+                  type="email"
+                  placeholder="e.g. client@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  WhatsApp / Contact Phone <span className="text-[#E31E36]">*</span>
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 03299669565 or 03001234567"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  City / Country (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Lahore, Pakistan"
+                  value={cityCountry}
+                  onChange={(e) => setCityCountry(e.target.value)}
+                  className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Preferred Contact Method
+                </label>
+                <select
+                  value={preferredContact}
+                  onChange={(e: any) => setPreferredContact(e.target.value)}
+                  className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                >
+                  <option value="whatsapp">WhatsApp (Recommended)</option>
+                  <option value="email">Email</option>
+                  <option value="phone">Direct Phone Call</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Short Introduction About You or Your Business (Optional)
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Briefly tell us what your business does..."
+                value={customerIntro}
+                onChange={(e) => setCustomerIntro(e.target.value)}
+                className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* STEP 2: PROJECT TYPE */}
+        {/* ============================================================== */}
+        {currentStep === 2 && (
+          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+            <div>
+              <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
+                Step 2 of 8
+              </span>
+              <h2 className="text-2xl font-black text-[#101216] mt-1">
+                Select Your Project Category
+              </h2>
+              <p className="text-xs text-gray-600 mt-1">
+                Select one or more categories that reflect the web application you want to build.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {projectTypeOptions.map((opt) => {
+                const isSelected = selectedProjectTypes.includes(opt.label);
+                return (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => toggleProjectType(opt.label)}
+                    className={`p-4 rounded-xl text-left border transition flex items-start gap-3 ${
+                      isSelected
+                        ? "bg-white border-[#E31E36] shadow-sm ring-1 ring-[#E31E36]"
+                        : "bg-white/70 hover:bg-white border-gray-200"
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        isSelected ? "bg-[#E31E36] text-white" : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      <opt.icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-[#101216] block leading-snug">
+                        {opt.label}
+                      </span>
+                      {isSelected && (
+                        <span className="text-[10px] text-[#E31E36] font-bold inline-flex items-center gap-0.5 mt-1">
+                          <Check className="w-3 h-3" /> Selected
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* STEP 3: PROJECT DESCRIPTION */}
+        {/* ============================================================== */}
+        {currentStep === 3 && (
+          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+            <div>
+              <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
+                Step 3 of 8
+              </span>
+              <h2 className="text-2xl font-black text-[#101216] mt-1">
+                Project Scope & Business Goals
+              </h2>
+              <p className="text-xs text-gray-600 mt-1">
+                Help us understand the commercial objectives and functional requirements of the web application.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  What specific problem should the application solve?
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. We currently take food orders manually on phone calls, leading to mistakes and delayed deliveries. We need a live web menu."
+                  value={problemToSolve}
+                  onChange={(e) => setProblemToSolve(e.target.value)}
+                  className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Who will use this application? (Target Audience)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Local diners, corporate clients, retail buyers"
+                    value={targetAudience}
+                    onChange={(e) => setTargetAudience(e.target.value)}
+                    className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    What products or services will it offer?
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Burgers, pizzas, beverages, meal deals"
+                    value={productsServices}
+                    onChange={(e) => setProductsServices(e.target.value)}
+                    className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Is a similar website available as inspiration? (URL)
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="e.g. https://example-store.com"
+                    value={inspirationUrl}
+                    onChange={(e) => setInspirationUrl(e.target.value)}
+                    className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Is this a brand new build or an upgrade?
+                  </label>
+                  <select
+                    value={isNewOrUpgrade}
+                    onChange={(e: any) => setIsNewOrUpgrade(e.target.value)}
+                    className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                  >
+                    <option value="new">Brand New Web Application</option>
+                    <option value="upgrade">Upgrade / Redesign of Existing Website</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Preferred Launch Date
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Within 3 weeks / Before next month"
+                    value={preferredLaunchDate}
+                    onChange={(e) => setPreferredLaunchDate(e.target.value)}
+                    className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Expected Budget Range
+                  </label>
+                  <select
+                    value={expectedBudgetRange}
+                    onChange={(e) => setExpectedBudgetRange(e.target.value)}
+                    className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                  >
+                    <option value="PKR 35,000 - 45,000">PKR 35,000 - 45,000 (Standard starting)</option>
+                    <option value="PKR 45,000 - 65,000">PKR 45,000 - 65,000 (With Client Admin & Addons)</option>
+                    <option value="PKR 65,000 - 95,000">PKR 65,000 - 95,000 (Advanced E-Commerce / Custom)</option>
+                    <option value="PKR 100,000+">PKR 100,000+ (Enterprise SaaS & Bespoke Systems)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* STEP 4: WEBSITE AND PRODUCT MANAGEMENT */}
+        {/* ============================================================== */}
+        {currentStep === 4 && (
+          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+            <div>
+              <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
+                Step 4 of 8
+              </span>
+              <h2 className="text-2xl font-black text-[#101216] mt-1">
+                Website Content & Product Management
+              </h2>
+              <p className="text-xs text-gray-600 mt-1">
+                Configure whether you need active product catalogs, shopping carts, or fixed informational layouts.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Question A */}
+              <div className="bg-white p-4 rounded-xl border border-gray-200">
+                <span className="text-xs font-bold text-[#101216] block mb-2">
+                  Will the application display fixed content only or need editable products?
+                </span>
+                <div className="flex flex-wrap gap-3">
+                  <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="catalogNeed"
+                      checked={needsProductCatalog}
+                      onChange={() => {
+                        setNeedsProductCatalog(true);
+                        setDisplayFixedOnly(false);
+                      }}
+                      className="accent-[#E31E36]"
+                    />
+                    <span>Yes, business will add and manage products / catalog items</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="catalogNeed"
+                      checked={displayFixedOnly}
+                      onChange={() => {
+                        setDisplayFixedOnly(true);
+                        setNeedsProductCatalog(false);
+                      }}
+                      className="accent-[#E31E36]"
+                    />
+                    <span>No, static portfolio / informational content only</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Conditional Product Attributes */}
+              {needsProductCatalog && (
+                <div className="bg-white p-4 rounded-xl border border-gray-200 space-y-3">
+                  <span className="text-xs font-bold text-[#101216] block">
+                    Which product attributes do you need?
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                    {[
+                      { id: "categories", label: "Categories & tags" },
+                      { id: "variants", label: "Variants (Size, Color, Weight)" },
+                      { id: "stock", label: "Stock & inventory tracking" },
+                      { id: "images", label: "Multi-image gallery upload" },
+                      { id: "pricing", label: "Discounted & sale prices" },
+                    ].map((feat) => (
+                      <label
+                        key={feat.id}
+                        className="flex items-center gap-2 text-gray-700 cursor-pointer p-2 rounded-lg bg-gray-50 border border-gray-200"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={productFeatures.includes(feat.id)}
+                          onChange={() => toggleProductFeature(feat.id)}
+                          className="accent-[#E31E36]"
+                        />
+                        <span>{feat.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Order management questions */}
+              <div className="bg-white p-4 rounded-xl border border-gray-200 space-y-3">
+                <span className="text-xs font-bold text-[#101216] block">
+                  Will customers place orders or request quotes online?
+                </span>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="orderAccept"
+                      checked={acceptOrdersOnline}
+                      onChange={() => setAcceptOrdersOnline(true)}
+                      className="accent-[#E31E36]"
+                    />
+                    <span>Yes, customers will order directly online</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="orderAccept"
+                      checked={!acceptOrdersOnline}
+                      onChange={() => setAcceptOrdersOnline(false)}
+                      className="accent-[#E31E36]"
+                    />
+                    <span>No, inquiries/calls only</span>
+                  </label>
+                </div>
+
+                {acceptOrdersOnline && (
+                  <div className="pt-3 border-t border-gray-100">
+                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                      Ordering & Checkout Features Needed:
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                      {[
+                        { id: "cart", label: "Shopping cart" },
+                        { id: "checkout", label: "Online checkout" },
+                        { id: "coupons", label: "Coupons & discounts" },
+                        { id: "delivery_fees", label: "Delivery fees & areas" },
+                      ].map((ofeat) => (
+                        <label
+                          key={ofeat.id}
+                          className="flex items-center gap-2 text-gray-700 cursor-pointer p-2 rounded-lg bg-gray-50 border border-gray-200"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={orderFeatures.includes(ofeat.id)}
+                            onChange={() => toggleOrderFeature(ofeat.id)}
+                            className="accent-[#E31E36]"
+                          />
+                          <span>{ofeat.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* STEP 5: ADMIN PANEL REQUIREMENTS */}
+        {/* ============================================================== */}
+        {currentStep === 5 && (
+          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+            <div>
+              <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
+                Step 5 of 8
+              </span>
+              <h2 className="text-2xl font-black text-[#101216] mt-1">
+                Admin Panel & System Management Access
+              </h2>
+              <p className="text-xs text-gray-600 mt-1">
+                Choose whether you need a dedicated client dashboard or prefer our team to manage backend updates exclusively.
+              </p>
+            </div>
+
+            {/* Comparison Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Option A: No Admin Panel */}
+              <div
+                onClick={() => setAdminPanelType("none")}
+                className={`p-5 rounded-2xl border-2 cursor-pointer transition flex flex-col justify-between ${
+                  adminPanelType === "none"
+                    ? "bg-white border-[#101216] shadow-md ring-1 ring-[#101216]"
+                    : "bg-white/60 hover:bg-white border-gray-200"
+                }`}
+              >
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-xs font-black uppercase tracking-wider text-gray-500 bg-gray-100 px-3 py-0.5 rounded-full">
+                      Package 1
+                    </span>
+                    <strong className="text-base font-black text-[#101216]">PKR 35,000 base</strong>
+                  </div>
+                  <h3 className="font-black text-sm text-[#101216]">
+                    Without Client Admin Panel Support
+                  </h3>
+                  <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+                    Durrani Web Developers maintains the backend administration exclusively for you. You do not receive admin dashboard credentials. Product updates and catalog adjustments are requested via developer support.
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                  <span className="text-gray-500">11 monthly installments of:</span>
+                  <strong className="text-[#101216] font-bold">PKR 2,272.73 / mo</strong>
+                </div>
+              </div>
+
+              {/* Option B: With Client Admin Panel */}
+              <div
+                onClick={() => setAdminPanelType("client_admin")}
+                className={`p-5 rounded-2xl border-2 cursor-pointer transition flex flex-col justify-between ${
+                  adminPanelType === "client_admin"
+                    ? "bg-white border-[#E31E36] shadow-glow ring-1 ring-[#E31E36]"
+                    : "bg-white/60 hover:bg-white border-gray-200"
+                }`}
+              >
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-xs font-black uppercase tracking-wider text-[#E31E36] bg-red-100 px-3 py-0.5 rounded-full">
+                      Package 2 (Recommended)
+                    </span>
+                    <strong className="text-base font-black text-[#E31E36]">PKR 45,000 base</strong>
+                  </div>
+                  <h3 className="font-black text-sm text-[#101216]">
+                    With Client Admin Panel Support
+                  </h3>
+                  <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+                    You receive full, independent client dashboard credentials. Add/edit products, manage orders, update inventory stock, view customer records, and export reports autonomously.
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                  <span className="text-gray-500">11 monthly installments of:</span>
+                  <strong className="text-[#E31E36] font-bold">PKR 3,181.82 / mo</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Dashboard Feature Picker if Client Admin chosen */}
+            {adminPanelType === "client_admin" && (
+              <div className="bg-white p-5 rounded-xl border border-gray-200 space-y-3">
+                <span className="text-xs font-bold text-[#101216] block">
+                  Select Dashboard Modules Required:
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 text-xs">
+                  {adminFeatureOptions.map((opt) => (
+                    <label
+                      key={opt.id}
+                      className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 border border-gray-200 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={adminFeatures.includes(opt.id)}
+                        onChange={() => toggleAdminFeature(opt.id)}
+                        className="accent-[#E31E36]"
+                      />
+                      <span className="text-gray-700">{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* STEP 6: ADVANCED FEATURES (ADD-ONS) */}
+        {/* ============================================================== */}
+        {currentStep === 6 && (
+          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+            <div>
+              <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
+                Step 6 of 8
+              </span>
+              <h2 className="text-2xl font-black text-[#101216] mt-1">
+                Optional Advanced Features & Add-ons
+              </h2>
+              <p className="text-xs text-gray-600 mt-1">
+                Select any additional enterprise capabilities needed. Configurable pricing rules (+PKR 10,000 starting each). No duplicate charges.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {addonOptions.map((addon) => {
+                const isSelected = selectedAddons.includes(addon.id);
+                return (
+                  <div
+                    key={addon.id}
+                    onClick={() => toggleAddon(addon.id)}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition flex flex-col justify-between ${
+                      isSelected
+                        ? "bg-white border-[#E31E36] shadow-sm ring-1 ring-[#E31E36]"
+                        : "bg-white/70 hover:bg-white border-gray-200"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                          {addon.category}
+                        </span>
+                        <strong className="text-xs font-black text-[#E31E36]">
+                          +{formatPKR(addon.price)}
+                        </strong>
+                      </div>
+                      <h4 className="font-extrabold text-xs text-[#101216] mb-1">
+                        {addon.label}
+                      </h4>
+                      <p className="text-[11px] text-gray-600 leading-relaxed">
+                        {addon.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px]">
+                      <span className={isSelected ? "text-[#E31E36] font-bold" : "text-gray-400"}>
+                        {isSelected ? "✓ Added to Estimate" : "+ Click to Add"}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {}} // handled by parent div
+                        className="accent-[#E31E36]"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Custom Advanced Feature Notes (Optional)
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Describe any other integrations (e.g. customized accounting export, specific delivery driver app, third-party webhook)..."
+                value={customFeatureNotes}
+                onChange={(e) => setCustomFeatureNotes(e.target.value)}
+                className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* STEP 7: ESTIMATED BUDGET & PAYMENT SCHEDULE */}
+        {/* ============================================================== */}
+        {currentStep === 7 && (
+          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+            <div>
+              <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
+                Step 7 of 8
+              </span>
+              <h2 className="text-2xl font-black text-[#101216] mt-1">
+                Your Estimated Development Budget & Payment Plan
+              </h2>
+              <p className="text-xs text-gray-600 mt-1">
+                Review the exact transparent breakdown generated dynamically from your selected project scope.
+              </p>
+            </div>
+
+            {/* Pricing Summary Card */}
+            <div className="bg-white rounded-2xl border border-gray-300 p-6 shadow-sm space-y-4">
+              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                <div>
+                  <span className="text-xs font-bold text-gray-500">Base Application Architecture</span>
+                  <p className="text-xs text-gray-700">
+                    {adminPanelType === "client_admin"
+                      ? "Package 2: With Dedicated Client Admin Dashboard Support"
+                      : "Package 1: Without Client Admin Support (Durrani Managed)"}
+                  </p>
+                </div>
+                <strong className="text-sm font-black text-[#101216]">
+                  {formatPKR(calculation.basePrice)}
+                </strong>
+              </div>
+
+              {/* Selected Add-ons list */}
+              {calculation.selectedAddonDetails.length > 0 && (
+                <div className="space-y-2 pb-3 border-b border-gray-200 text-xs">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
+                    Selected Add-on Integrations:
+                  </span>
+                  {calculation.selectedAddonDetails.map((item) => (
+                    <div key={item.id} className="flex justify-between items-center text-gray-700">
+                      <span>• {item.label}</span>
+                      <strong className="text-gray-900 font-bold">+{formatPKR(item.price)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Total Row */}
+              <div className="flex justify-between items-baseline pt-2">
+                <div>
+                  <span className="text-xs uppercase font-extrabold text-[#E31E36] tracking-wider block">
+                    Total Estimated Project Budget
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    (Estimated total for complete development)
+                  </span>
+                </div>
+                <span className="text-3xl font-black text-[#E31E36]">
+                  {formatPKR(calculation.estimatedTotal)}
+                </span>
+              </div>
+            </div>
+
+            {/* Illustrative 12-Month Payment Schedule */}
+            <div className="bg-[#101216] text-white p-6 rounded-2xl border border-gray-800 shadow-card-dark space-y-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-[#E31E36]" />
+                <h3 className="font-extrabold text-sm text-white">
+                  Illustrative 12-Month Payment Arrangement
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                <div className="bg-[#181B20] p-4 rounded-xl border border-gray-700">
+                  <span className="text-gray-400 block mb-1">Advance Payment (at start):</span>
+                  <strong className="text-lg font-black text-white">
+                    {formatPKR(calculation.advanceAmount)}
+                  </strong>
+                </div>
+
+                <div className="bg-[#181B20] p-4 rounded-xl border border-gray-700">
+                  <span className="text-gray-400 block mb-1">Remaining Balance:</span>
+                  <strong className="text-lg font-black text-white">
+                    {formatPKR(calculation.remainingBalance)}
+                  </strong>
+                </div>
+
+                <div className="bg-[#181B20] p-4 rounded-xl border border-gray-700">
+                  <span className="text-gray-400 block mb-1">10 Monthly Installments:</span>
+                  <strong className="text-lg font-black text-[#E31E36]">
+                    PKR {calculation.regularInstallment.toLocaleString()} / mo
+                  </strong>
+                  <span className="text-[10px] text-gray-400 block mt-1">
+                    (Final 11th adjusted: PKR {calculation.finalInstallment.toLocaleString()})
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-gray-400 leading-relaxed italic">
+                * Illustrative schedule. Payments are made via JazzCash, EasyPaisa, or direct Bank Transfer. Advance is verified prior to development kickoff.
+              </p>
+            </div>
+
+            {/* Estimate Disclaimer Checkbox */}
+            <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-900 space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={disclaimerAccepted}
+                  onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+                  className="mt-1 accent-[#E31E36] w-4 h-4 rounded"
+                />
+                <span className="leading-relaxed">
+                  <strong>Estimate Disclaimer Acceptance:</strong> I understand that this figure is an accurate dynamic estimate based on my selected preferences, and not a finalized contract. Durrani Web Developers will review my specific requirements personally, confirm the formal delivery timeline and scope on WhatsApp, and provide the official quotation before project kickoff.
+                </span>
+              </label>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* STEP 8: CONFIRMATION & ORDER SUBMISSION SUCCESS */}
+        {/* ============================================================== */}
+        {currentStep === 8 && submittedInquiry && (
+          <div className="bg-white p-8 sm:p-12 rounded-3xl border border-gray-300 shadow-xl text-center space-y-6 animate-fadeIn">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
+              <CheckCircle2 className="w-10 h-10" />
+            </div>
+
+            <div>
+              <span className="text-xs font-extrabold text-emerald-600 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full">
+                Inquiry Successfully Logged
+              </span>
+              <h2 className="text-3xl font-black text-[#101216] mt-2">
+                Thank You, {submittedInquiry.customerName}!
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-600 max-w-lg mx-auto mt-1">
+                Your web application requirements and estimated budget breakdown have been safely recorded in our system.
+              </p>
+            </div>
+
+            {/* Reference Box */}
+            <div className="max-w-md mx-auto bg-[#F4F5F7] p-5 rounded-2xl border border-gray-300 flex items-center justify-between">
+              <div className="text-left">
+                <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wider block">
+                  Your Inquiry Reference Code:
+                </span>
+                <span className="text-2xl font-black text-[#E31E36]">
+                  {submittedInquiry.id}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={copyReferenceToClipboard}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-white hover:bg-gray-100 px-3 py-2 rounded-xl border border-gray-300 transition"
+              >
+                {copiedRef ? (
+                  <>
+                    <CheckCheck className="w-4 h-4 text-emerald-600" /> Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" /> Copy Ref
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Summary Highlights */}
+            <div className="max-w-md mx-auto bg-gray-50 p-4 rounded-xl border border-gray-200 text-xs text-left space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Estimated Total:</span>
+                <strong className="text-[#101216] font-bold">
+                  {formatPKR(submittedInquiry.calculation.estimatedTotal)}
+                </strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Initial Advance:</span>
+                <strong className="text-[#101216] font-bold">
+                  {formatPKR(submittedInquiry.calculation.advanceAmount)}
+                </strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Selected Package:</span>
+                <strong className="text-[#E31E36] font-bold">
+                  {submittedInquiry.adminPanelType === "client_admin" ? "With Client Admin" : "Without Admin"}
+                </strong>
+              </div>
+            </div>
+
+            {/* Next Steps Card */}
+            <div className="max-w-lg mx-auto text-xs text-gray-600 text-left bg-blue-50/60 p-4 rounded-xl border border-blue-200 space-y-1.5">
+              <strong className="text-blue-900 block font-bold">What happens next?</strong>
+              <p>1. Our team reviews your questionnaire response and technical specifications.</p>
+              <p>2. We will contact you via WhatsApp ({submittedInquiry.phone}) to finalize delivery dates and confirm quotation.</p>
+              <p>3. Once agreed, your advance payment is verified and development commences.</p>
+            </div>
+
+            {/* Direct WhatsApp Callout Action */}
+            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href={buildWhatsAppLink(
+                  `Assalam-o-Alaikum Durrani Web Developers! I just submitted project inquiry ${submittedInquiry.id} for "${submittedInquiry.businessName || submittedInquiry.customerName}" (Estimated ${formatPKR(submittedInquiry.calculation.estimatedTotal)}). Please review my requirements.`
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-7 py-3.5 rounded-xl font-bold text-xs shadow-lg transition"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Open In WhatsApp Directly ({BUSINESS_INFO.phoneDisplay})
+              </a>
+
+              <Link
+                href={`/track-order?ref=${submittedInquiry.id}&email=${encodeURIComponent(submittedInquiry.email)}`}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#101216] hover:bg-black text-white px-6 py-3.5 rounded-xl font-bold text-xs transition"
+              >
+                Track Inquiry Status Live
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Bottom Back / Next Navigation Controls */}
+        {currentStep < 8 && (
+          <div className="mt-8 flex items-center justify-between pt-6 border-t border-gray-200">
+            {currentStep > 1 ? (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="inline-flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-[#101216] bg-white px-5 py-2.5 rounded-xl border border-gray-300 transition"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </button>
+            ) : (
+              <div />
+            )}
+
+            {currentStep < 7 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="inline-flex items-center gap-2 text-xs font-bold text-white bg-[#E31E36] hover:bg-[#C8162D] px-6 py-3 rounded-xl shadow-glow transition"
+              >
+                Continue to Step {currentStep + 1}
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 text-xs font-bold text-white bg-[#E31E36] hover:bg-[#C8162D] px-8 py-3.5 rounded-xl shadow-glow transition disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Submitting Requirements...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Submit Project Inquiry & Get Reference
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function CalculatorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#FFFFFF] flex items-center justify-center">
+          <div className="text-center space-y-2">
+            <div className="w-8 h-8 border-4 border-[#E31E36] border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="text-xs text-gray-500 font-bold">Loading interactive budget calculator...</p>
+          </div>
+        </div>
+      }
+    >
+      <CalculatorContent />
+    </Suspense>
+  );
+}
