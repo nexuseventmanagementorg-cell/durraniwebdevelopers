@@ -157,6 +157,22 @@ test("Website estimator maps visible store and admin signals to calculator prici
   assert.equal(manualPaymentSignals.addonIds.includes("payment_gateway"), false);
 });
 
+test("Website estimator ignores chatbot mentions unless the page invites users to open or use one", () => {
+  const informationalMention = detectWebsiteFeatures(
+    "Our budget calculator offers AI chatbots as an optional add-on. Learn about chatbot development. Pakistan add-ons include AI chatbots."
+  );
+  assert.equal(informationalMention.addonIds.includes("ai_chatbot"), false);
+  assert.equal(
+    informationalMention.features.some((feature) => feature.title === "Chatbot ya AI assistant"),
+    false
+  );
+
+  const chatbotCallToAction = detectWebsiteFeatures(
+    "Chat with our AI assistant now to get help."
+  );
+  assert.equal(chatbotCallToAction.addonIds.includes("ai_chatbot"), true);
+});
+
 test("Website estimator rejects local URLs before making a request", async () => {
   await assert.rejects(
     estimateWebsite("http://localhost/"),

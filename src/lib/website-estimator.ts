@@ -361,7 +361,9 @@ export function detectWebsiteFeatures(text: string): {
   const accounts = has(/\b(sign[ -]?in|log[ -]?in|create account|register|my account|customer portal)\b/);
   const payment = has(/\b(stripe|paypal|razorpay|paystack|authorize\.net|credit card|debit card|pay online|online payment gateway|payment gateway|online payment integration)\b/);
   const analytics = has(/\b(analytics dashboard|sales report|financial report|business analytics|revenue chart)\b/);
-  const chatbot = has(/\b(ai chatbot|chatbot|virtual assistant|ask our ai)\b/);
+  const chatbot = has(
+    /\b(?:chat|talk|message)\s+(?:to|with)\s+(?:our\s+)?(?:ai(?:\s+(?:chatbot|assistant))?|chatbot|virtual assistant)\b|\b(?:ask|try|open|start)\s+(?:our\s+)?(?:ai(?:\s+(?:chatbot|assistant))?|chatbot|virtual assistant)\b/i
+  );
   const customIntegration = has(/\b(webhook integration|api integration|automated system sync|connect to (our )?(erp|crm|accounting software))\b/);
 
   if (productCatalog) {
