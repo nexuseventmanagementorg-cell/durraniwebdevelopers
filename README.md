@@ -1,241 +1,161 @@
-# Durrani Web Developers
+# Durrani Web Developers — Professional Web Application Platform
 
-**Ideas | Code | Real Solutions**
+A complete, production-oriented web application for **Durrani Web Developers**, a software engineering business that builds custom web applications, e-commerce stores, restaurant ordering systems, SaaS projects, and business management software.
 
-Modern, responsive, and scalable web applications built for businesses, startups, and entrepreneurs.
-
-Durrani Web Developers provides custom web development solutions, including restaurant applications, e-commerce stores, SaaS platforms, order-taking systems, booking applications, and business management software.
-
-## 🚀 About the Project
-
-This project is the official website and business management platform for **Durrani Web Developers**.
-
-It is designed to help potential clients explore our services, calculate estimated project costs, submit project requirements, and contact us directly for consultation.
-
-The platform also aims to provide an administrative dashboard for managing inquiries, clients, projects, pricing, payments, and business content.
-
-## ✨ Key Features
-
-- **Professional Portfolio:** Showcase services and approved projects.
-- **Interactive Budget Calculator:** Estimate project costs based on selected requirements and add-ons.
-- **Project Inquiry System:** Collect customer information and project specifications.
-- **WhatsApp Consultation:** Enable direct communication with potential clients.
-- **Service Management:** Present web development services and custom solutions.
-- **Flexible Pricing:** Configure packages, additional features, and payment plans.
-- **Admin Dashboard:** Manage inquiries, clients, projects, and business settings, according to the implemented features.
-- **Payment Tracking:** Record advance payments, installment schedules, outstanding balances, and payment verification.
-- **Responsive Design:** Support desktop, tablet, and mobile devices.
-- **Production Deployment:** Deploy the application to Vercel.
-
-## 🛠️ Services
-
-Our services include:
-
-1. Restaurant Web Applications
-2. Restaurant Order-Taking Applications
-3. E-commerce Stores
-4. Jewellery Store Websites
-5. Cosmetics and Beauty Stores
-6. Fashion Store Applications
-7. Grocery Ordering Systems
-8. SaaS Applications
-9. Customer Relationship Management (CRM)
-10. Booking and Appointment Systems
-11. Inventory and Product Management Systems
-12. Custom Business Applications
-13. Other Custom Software Solutions
-
-## 🧩 Modular Extensions
-
-Additional features can be integrated according to project requirements:
-
-- Google Authentication
-- Supabase Database Integration
-- Payment Integration
-- Advanced Analytics and Reporting
-- AI-Powered Chatbot
-- Custom Advanced Features
-
-The availability and cost of each extension depend on the final project scope and technical requirements.
-
-## 💰 Pricing Overview
-
-| Package | Starting Price |
-|---|---:|
-| Web Application Without Client Admin Support | PKR 35,000 |
-| Web Application With Client Admin Support | PKR 45,000 |
-
-**Advance Payment:** PKR 10,000
-
-The remaining amount can be arranged through an agreed installment plan, subject to the final quotation.
-
-Additional features, custom domains, paid third-party services, and other project-specific requirements may incur extra charges.
-
-All prices are estimates until the project scope and final quotation are confirmed.
-
-## 💻 Technology Stack
-
-The intended technology stack includes:
-
-- **Frontend:** Next.js, React, TypeScript, Tailwind CSS
-- **Backend:** Next.js server-side functionality and API routes, where implemented
-- **Database:** Supabase PostgreSQL, where configured
-- **Authentication:** Secure server-side authentication appropriate to the application
-- **Deployment:** Vercel
-- **Version Control:** Git and GitHub
-
-*Note: The exact technologies and integrations depend on the current implementation of the repository.*
-
-## ⚙️ Getting Started
-
-Follow these steps to run the project locally.
-
-### Prerequisites
-
-Install the following tools:
-
-- Node.js (a version compatible with the project's Next.js version)
-- npm
-- Git
-- A Supabase project, if database integration is enabled
-
-### 1. Clone the Repository
-
-```bash
-git clone YOUR_GITHUB_REPOSITORY_URL
-```
-
-Navigate to the project directory:
-
-```bash
-cd YOUR_PROJECT_FOLDER
-```
-
-Replace the example values with your actual GitHub repository URL and project folder name.
-
-### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-### 3. Configure Environment Variables
-
-Create a `.env.local` file in the project root if the application requires environment variables.
-
-Example:
-
-```env
-# Supabase — configure only if used by the application
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-
-# Admin authentication — use only if required by the implementation
-ADMIN_DEFAULT_USER=
-ADMIN_DEFAULT_PASS=
-JWT_SECRET=
-```
-
-Fill in only the variables required by the actual application code.
-
-**Security requirements:**
-
-- Never commit `.env.local` or other files containing secrets.
-- Never expose `SUPABASE_SERVICE_ROLE_KEY` in browser-side code.
-- Never expose `JWT_SECRET` or administrator credentials.
-- Use strong, unique production credentials.
-- Configure production environment variables in the Vercel project settings.
-- Keep `.env.example` free of real passwords, API keys, and other secrets.
-
-### 4. Start the Development Server
-
-```bash
-npm run dev
-```
-
-Open the local application at:
-
-```text
-http://localhost:3000
-```
-
-### 5. Build for Production
-
-```bash
-npm run build
-```
-
-If the build completes successfully, start the production server locally with:
-
-```bash
-npm run start
-```
-
-## 🗄️ Database Setup
-
-If the application uses Supabase:
-
-1. Create a Supabase project.
-2. Apply the database schema and migrations required by the application.
-3. Configure the required environment variables.
-4. Enable appropriate Row Level Security (RLS) policies.
-5. Verify that database access is restricted to authorized users.
-6. Test reading and writing data before production deployment.
-
-Database tables and migrations must match the application's actual code. Creating tables alone does not automatically migrate existing data or guarantee that every application feature is connected.
-
-## 🌐 Deployment on Vercel
-
-1. Push the project to GitHub.
-2. Sign in to Vercel.
-3. Import the GitHub repository.
-4. Configure the required environment variables in **Project Settings → Environment Variables**.
-5. Deploy the application.
-6. Check the build and runtime logs.
-7. Test the live website, forms, database connectivity, authentication, and administrative functions.
-8. Redeploy after changing production environment variables when required.
-
-A successful deployment does not automatically guarantee that every integration is working. Test all critical functionality before handing the application over to a client.
-
-## 🔄 Project Development Workflow
-
-Our standard workflow is:
-
-1. Requirements submission and budget estimation.
-2. Direct WhatsApp consultation.
-3. Scope confirmation and advance payment.
-4. Application architecture and development.
-5. Testing, production deployment, and handover.
-
-Project timelines, features, and payment milestones are confirmed individually for each project.
-
-## 🔐 Security
-
-Security is an important part of our development process.
-
-- Protect administrator routes and sensitive API endpoints.
-- Validate user input on the server.
-- Use secure authentication and session management.
-- Apply appropriate database permissions and RLS policies.
-- Keep private credentials on the server.
-- Verify payments before marking them as received.
-- Avoid storing sensitive customer or payment information unnecessarily.
-- Review logs and errors without exposing secrets.
-
-## 📞 Contact Us
-
-**Durrani Web Developers**
-
-- **Email:** durraniwebdevelopers@gmail.com
-- **WhatsApp / Phone:** +92 329 966 9565
-- **Deployment Platform:** Vercel
-
-For project inquiries, custom requirements, or pricing clarification, contact us directly.
-
-## 📄 License
-
-Unless a separate license is included in this repository, the source code is provided for project development and demonstration purposes. Reuse, redistribution, and commercial use should be authorized by the repository owner.
+Developed with **Google Antigravity**, built on **Next.js 14 (App Router)**, **TypeScript**, and **Tailwind CSS**, with dual database readiness (**Local Persistent Store** + **Supabase PostgreSQL**), engineered for seamless deployment on **Vercel**.
 
 ---
 
-**Durrani Web Developers — Ideas | Code | Real Solutions**
+## 🚀 Live Brand Details
+- **Business Name:** Durrani Web Developers
+- **Tagline:** Ideas | Code | Real Solutions
+- **Headline:** *We Turn Your Ideas Into Powerful Web Applications*
+- **Official Email:** `durraniwebdevelopers@gmail.com`
+- **Phone / WhatsApp:** `03299669565` (International: `+92 329 9669565`)
+- **Default Currency:** Pakistani Rupees (PKR)
+- **Deployment Platform:** Vercel
+
+---
+
+## 🎨 Design System & Visual Identity
+- **Primary Red:** `#E31E36`
+- **Deep Black:** `#101216`
+- **Dark Surface:** `#181B20` & `#242830`
+- **Light Grey:** `#F4F5F7`
+- **Pure White:** `#FFFFFF`
+
+---
+
+## 🌟 Key Application Features
+
+### 1. Public Business Portal
+- **Home Page (`/`)**: Hero section with official branding, flyer visual showcase, trust badges, packages overview, industries served, portfolio highlights, ordering workflow, FAQs, and WhatsApp CTAs.
+- **Services Page (`/services`)**: In-depth service breakdowns for Restaurant Ordering, E-Commerce, Jewellery Showrooms, Cosmetics, Fashion, Grocery, SaaS, CRM, Booking, and Inventory systems with direct calculator links.
+- **Portfolio Archive (`/portfolio`)**: Interactive category filtering, live search by project name or technology, project detail modals, live demo links, and strictly privacy-compliant public budget badges (with client consent checks).
+- **Pricing & Rates (`/pricing`)**: Transparent breakdown of Package 1 (Without Client Admin - PKR 35,000) and Package 2 (With Client Admin - PKR 45,000) with exact 11-month installment schedules, daily cost rates (PKR 95.89 vs PKR 123.29), and modular add-on rules.
+- **Interactive Budget Calculator (`/calculator`)**: Multi-step questionnaire (8 steps) featuring real-time budget calculations, add-on feature selection (+PKR 10,000 rules), installment projections, inquiry submission, unique reference code generation (`DW-XXXXXX`), confetti celebration, and direct pre-filled WhatsApp links.
+- **Inquiry Status Tracker (`/track-order`)**: Sanitized milestone tracker requiring reference ID + matching email, isolating client data while displaying the live pipeline (*New Inquiry* → *Under Review* → *Contacted* → *Quotation Sent* → *Awaiting Advance* → *Approved* → *In Development* → *Delivered*).
+- **Contact (`/contact`)**: Form submissions, direct click-to-call, click-to-email, and one-click WhatsApp chat.
+
+### 2. Secure Private Admin Panel
+- **Login (`/admin/login`)**: Protected by HMAC session cookies and rate-limiting brute-force guards.
+- **Executive Dashboard (`/admin/dashboard`)**: Live metrics (Total Clients, Active Projects, Inquiries Inbox, Verified Revenue Received, Outstanding Balances, Awaiting Verification), monthly revenue bar charts, and recent activity audit stream.
+- **Inquiries Inbox (`/admin/inquiries`)**: Full review of customer questionnaire submissions, status changes, direct WhatsApp messaging, and **1-Click Conversion into Active Projects & Registered Clients**.
+- **Active Projects (`/admin/projects`)**: Delivery timeline management, Vercel deployment URLs, milestone status updates, and private internal notes.
+- **Clients Directory (`/admin/clients`)**: Customer directory, total billed/paid balances, contact details, and soft archiving.
+- **Payment Verification (`/admin/payments`)**: Financial ledger supporting JazzCash, EasyPaisa, and Bank Transfer with admin verification before applying funds to project balances.
+- **Customer Payments (`/payment`)**: Pakistan-only JazzCash, Easypaisa, and bank-transfer instructions; private receipt submission; and Safepay hosted card checkout when the gateway configuration, payment database table, and public webhook endpoint are ready.
+- **Receipt Reviews (`/admin/payment-proofs`)**: Admin-only short-lived links to private customer receipts, with pending/verified/rejected review actions.
+- **Payment Instructions (`/admin/settings`)**: Admin-editable wallet and bank-transfer details; no CNIC/identity number is requested or displayed.
+- **Project Invoices (`/admin/invoices`)**: Commercial invoice generator with itemized deliverables, payment terms, advance deductions, and print-to-PDF formatting (`window.print()`).
+- **Dynamic Pricing Rules (`/admin/pricing`)**: Change base rates (35k / 45k), advance amounts, installment counts, and modular add-on prices in real time without modifying source code.
+- **Portfolio & Privacy (`/admin/portfolio`)**: Add/edit portfolio projects, toggle public/private visibility, approve consented public budgets, and manage demo URLs.
+- **Automated Monthly Reminders (`/admin/reminders`)**: Automated installment reminder engine supporting 7-day, 3-day, on-due-date, and overdue triggers, with manual WhatsApp dispatch and Vercel Cron worker integration.
+- **Settings & Audit Logs (`/admin/settings`)**: System settings, technical runtime statuses, and tamper-evident audit history.
+
+---
+
+## 🛠 Local Setup & Running Instructions
+
+### 1. Prerequisites
+- **Node.js**: v18.17+ or v20+
+- **npm**: v9+ or v10+
+
+### 2. Installation
+```bash
+# Clone or navigate to the project directory
+cd durrani-web-developers
+
+# Install dependencies
+npm install
+```
+
+### 3. Environment Variables
+Copy `.env.example` to `.env.local`:
+```bash
+cp .env.example .env.local
+```
+
+There are no default admin credentials. Set `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `SESSION_SECRET` in the ignored `.env.local` file before signing in. Production authentication stays disabled until explicit credentials and a session secret are configured.
+
+### 4. Running the Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) to view the public website or [http://localhost:3000/admin/login](http://localhost:3000/admin/login) for the admin portal.
+
+### 5. Running the Test Suite
+```bash
+npm test
+```
+Runs the automated unit test suite verifying:
+- Package 1 & 2 budget formulas
+- Exact 11-month installment reconciliation
+- Add-on deduplication
+- WhatsApp link formatting
+- Admin token cryptography & security
+- Rate limiter enforcement
+- DataStore ledger isolation
+
+---
+
+## 🗄 Database & Supabase Deployment
+
+The application features a dual data architecture:
+1. **Core application store**: `DataStore` continues to use `data/db.json` for inquiries, clients, projects, invoices, the existing financial ledger, and general settings.
+2. **Supabase PostgreSQL schema**: Core tables are defined in `supabase/schema.sql`. The separate `supabase/payment-workflow.sql` migration adds Supabase-backed payment instructions and private customer receipt submissions; those payment workflows do not imply that the rest of `DataStore` has migrated from JSON.
+
+To deploy to Supabase:
+1. Create a new project at [supabase.com](https://supabase.com).
+2. Go to the **SQL Editor** in your Supabase dashboard.
+3. Open `supabase/schema.sql`, copy all contents, and execute.
+4. Copy your project URL, anon key, and service role key into your Vercel Environment Variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+
+### Private payment receipt setup
+
+Receipt files and editable transfer instructions require a **dedicated Durrani Web Developers Supabase project**. Do not reuse a customer or GRILLVI database.
+
+1. Create a Supabase project and open its SQL Editor.
+2. Run [`supabase/payment-workflow.sql`](./supabase/payment-workflow.sql). It creates a locked-down settings table, a receipt metadata table, and a **private** `payment-receipts` Storage bucket. There is no public read policy for uploaded receipts.
+3. Add `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to local `.env.local` and Vercel project environment variables. Obtain the service-role key from Supabase project settings. Keep it server-side only; never put it in client code or share it in chat.
+4. Restart the local server / redeploy Vercel, then sign in to `/admin/settings` and enter the JazzCash/Easypaisa recipient, bank/account information, and enabled Pakistan payment methods. The website only shows a method once its required details have been saved.
+5. Open `/payment` from a Pakistan connection, make a small test transfer, submit the receipt, and review it at `/admin/payment-proofs`. An uploaded receipt stays pending until an authenticated admin confirms the money was actually received in the relevant provider/bank account. Receipt verification is stored in Supabase and does not automatically mark a row in the separate legacy project financial ledger as paid.
+
+### Safepay hosted card checkout
+
+The integration uses Safepay's official Node SDK and hosted checkout. Card data is entered on Safepay, never collected by this application. A checkout stays pending until a valid `X-SFPY-SIGNATURE` webhook for `payment.succeeded` matches the saved tracker, order reference, amount, and currency. The browser return URL is informational only and never marks a payment paid.
+
+1. In the dedicated DWD Supabase project, review and run [`supabase/safepay-checkout.sql`](./supabase/safepay-checkout.sql). This adds an isolated `gateway_payments` table and does not alter existing payment records.
+2. In the Safepay **sandbox** dashboard, retrieve its **Public API Key** (used as `merchant_api_key`), **Private API Secret Key**, and webhook shared secret. Add them to `.env.local` as `SAFEPAY_PUBLIC_KEY`, `SAFEPAY_SECRET_KEY`, and `SAFEPAY_WEBHOOK_SECRET`. Do not use production credentials for sandbox tests and do not put secrets in `NEXT_PUBLIC_*` variables.
+3. Set `SAFEPAY_ENVIRONMENT=sandbox` and set `NEXT_PUBLIC_SITE_URL` to the public HTTPS origin where this app can be reached. `http://localhost:3000` is not a reachable webhook destination; for local checkout tests, use a secure public HTTPS tunnel that forwards to the local app.
+4. In the Safepay sandbox dashboard, add the webhook endpoint `https://<your-public-host>/api/webhooks/safepay` and subscribe to the `payment.succeeded` event. Use that endpoint's sandbox webhook secret in `SAFEPAY_WEBHOOK_SECRET`.
+5. Restart the app, then check `/admin/settings`. Safepay is ready only when its server-side variables, the `gateway_payments` table, and the configured HTTPS origin are available. Try a sandbox test card from [Safepay's test-card guide](https://safepay-docs.netlify.app/developers/safepay/test-cards); confirm the signed webhook is received and the transaction appears at `/admin/payment-proofs`.
+6. Before production, complete Safepay merchant approval and confirm supported presentment/settlement currencies and fees with Safepay. Configure the production API keys, webhook secret, endpoint and environment separately in the production deployment. Never promote sandbox keys to production.
+
+Card checkout remains unavailable if required configuration or the database migration is missing. Valid webhook confirmations are recorded in the Supabase gateway table; they do not automatically modify the separate legacy project-finance ledger.
+
+---
+
+## ☁ Vercel Deployment Instructions
+
+1. Push this repository to GitHub.
+2. Go to [vercel.com](https://vercel.com) and click **Add New Project** → Select your repository.
+3. In **Environment Variables**, add:
+   - `ADMIN_EMAIL`: Your production admin email
+   - `ADMIN_PASSWORD`: Strong production admin password
+   - `SESSION_SECRET`: A secure random 64-character string
+   - `CRON_SECRET`: Random secret string for Vercel Cron jobs
+4. Click **Deploy**.
+5. Your web application is now live on Vercel!
+
+**Preview/persistence note:** Do not use the Vercel preview to accept customer inquiries, orders, or business payment updates yet. Core `DataStore` records still use `data/db.json`, which is not durable on Vercel's serverless filesystem. Migrate those workflows to persistent storage before accepting real customer submissions. The local `data/db.json` is intentionally excluded from Git because it can contain private customer and payment information.
+
+---
+
+## 🔒 Security Best Practices
+- **No Secret Leaks**: No credentials, private tokens, or Supabase service keys are included in public frontend bundles.
+- **Client Data Isolation**: Public order tracking requires both reference code and matching email. Private notes and other client financial ledgers are strictly filtered out on the server.
+- **Verification Before Paid**: Payments submitted manually (JazzCash / EasyPaisa) require an administrator's verification action before advancing project balance or status.
