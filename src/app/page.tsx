@@ -152,9 +152,9 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f242d_1px,transparent_1px),linear-gradient(to_bottom,#1f242d_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 xl:gap-12 items-center">
             {/* Left Column */}
-            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+            <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 bg-[#242830] border border-[#E31E36]/30 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-200">
                 <span className="w-2 h-2 rounded-full bg-[#E31E36] animate-ping" />
                 <span className="text-[#E31E36] font-bold">Durrani Web Developers</span>
@@ -213,8 +213,8 @@ export default function HomePage() {
             </div>
 
             {/* Right Column: Intro Video */}
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-gradient-to-b from-[#242830] to-[#181B20] p-4 shadow-card-dark">
+            <div className="lg:col-span-6 flex justify-center">
+              <div className="w-full max-w-2xl rounded-2xl border border-gray-700 bg-gradient-to-b from-[#242830] to-[#181B20] p-4 shadow-card-dark">
                 <video
                   controls
                   autoPlay
@@ -228,13 +228,36 @@ export default function HomePage() {
                 </video>
                 <div className="mt-3 flex items-center justify-between text-xs px-2 text-gray-400">
                   <span className="font-semibold text-white">Durrani Web Developers</span>
-                  <Link href="/pricing" className="text-[#E31E36] font-bold hover:underline">
-                    View Full Rate Details &rarr;
-                  </Link>
+                  <span>Ideas • Code • Real Solutions</span>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="bg-[#F4F5F7] px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:p-5">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3 px-1">
+            <div>
+              <span className="text-xs font-extrabold uppercase tracking-widest text-[#E31E36]">
+                Pricing overview
+              </span>
+              <h2 className="mt-1 text-xl font-black text-[#101216] sm:text-2xl">
+                Rates & Web Application Packages
+              </h2>
+            </div>
+            <Link href="/pricing" className="text-sm font-bold text-[#E31E36] hover:underline">
+              View pricing details &rarr;
+            </Link>
+          </div>
+          <Image
+            src="/rates-flyer.jpg.png"
+            alt="Durrani Web Developers rates and web application packages flyer"
+            width={1024}
+            height={1536}
+            className="mx-auto h-auto w-full rounded-xl"
+          />
         </div>
       </section>
 
