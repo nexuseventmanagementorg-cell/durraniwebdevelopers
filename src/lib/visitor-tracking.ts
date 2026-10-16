@@ -1,34 +1,36 @@
 "use client";
 
 import type { VisitorAnalyticsEvent } from "@/lib/visitor-analytics";
-import { getPakistanDateKey } from "@/lib/dates";
 
-const STORAGE_KEY = "dwd_daily_visitor_id";
+const STORAGE_KEY = "dwd_visitor_id";
+const LEGACY_STORAGE_KEY = "dwd_daily_visitor_id";
+const VISITOR_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function getDailyVisitorId(): string {
-  const today = getPakistanDateKey();
+function getVisitorId(): string {
   const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
+  if (saved && VISITOR_ID_PATTERN.test(saved)) return saved;
+
+  const legacySaved = localStorage.getItem(LEGACY_STORAGE_KEY);
+  if (legacySaved) {
     try {
-      const value: unknown = JSON.parse(saved);
+      const value: unknown = JSON.parse(legacySaved);
       if (
         typeof value === "object" &&
         value !== null &&
-        "date" in value &&
-        value.date === today &&
         "visitorId" in value &&
         typeof value.visitorId === "string" &&
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.visitorId)
+        VISITOR_ID_PATTERN.test(value.visitorId)
       ) {
+        localStorage.setItem(STORAGE_KEY, value.visitorId);
         return value.visitorId;
       }
     } catch (error) {
-      console.error("Could not read the daily analytics identifier", error);
+      console.error("Could not read the analytics identifier", error);
     }
   }
 
   const visitorId = crypto.randomUUID();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: today, visitorId }));
+  localStorage.setItem(STORAGE_KEY, visitorId);
   return visitorId;
 }
 
@@ -36,7 +38,7 @@ export async function trackVisitorEvent(event: VisitorAnalyticsEvent): Promise<v
   const response = await fetch("/api/public/analytics", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ event, visitorId: getDailyVisitorId() }),
+    body: JSON.stringify({ event, visitorId: getVisitorId() }),
     keepalive: true,
   });
   if (!response.ok) {

@@ -124,11 +124,11 @@ To deploy to Supabase:
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
 
-### Daily visitor counts
+### All-time visitor counts
 
-The public footer reports unique daily visitors, visitors who opened the budget calculator, and visitors who completed a successful URL estimate. Counts use Pakistan's calendar day and refresh every 30 seconds. The browser keeps a random, per-day identifier; only its SHA-256 hash is sent to the server, and per-visitor hashes older than two days are cleaned up when new events are recorded. Aggregated daily totals remain available.
+The public footer reports all-time unique visitors, visitors who opened the budget calculator, and visitors who completed a successful URL estimate. Counts refresh every 30 seconds. The browser keeps a persistent random identifier; only its SHA-256 hash is sent to the server. The migration seeds from visitor hashes retained by the previous daily-count system, then deduplicates each browser across all future days. Older deleted hashes cannot be recovered, so the seeded baseline may not include every historical visitor. Clearing browser storage or using another browser/device creates a new visitor identity.
 
-1. Run [`supabase/visitor-analytics.sql`](./supabase/visitor-analytics.sql) in the dedicated DWD Supabase SQL Editor.
+1. Run [`supabase/visitor-analytics.sql`](./supabase/visitor-analytics.sql) in the dedicated DWD Supabase SQL Editor, including when upgrading an existing daily-count setup.
 2. Configure `NEXT_PUBLIC_SUPABASE_URL` and the server-only `SUPABASE_SERVICE_ROLE_KEY` in local `.env.local` and Vercel.
 3. Restart/redeploy and load any public page. If Supabase or the migration is unavailable, the footer explicitly shows that visitor counts are unavailable rather than showing a false zero.
 

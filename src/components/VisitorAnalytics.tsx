@@ -11,11 +11,11 @@ export default function VisitorAnalytics() {
     if (pathname.startsWith("/admin")) return;
 
     trackVisitorEvent("visitor").catch((error) => {
-      console.error("Could not record today's visitor count", error);
+      console.error("Could not record all-time visitor count", error);
     });
     if (pathname === "/calculator") {
       trackVisitorEvent("calculator").catch((error) => {
-        console.error("Could not record today's budget calculator user count", error);
+        console.error("Could not record all-time budget calculator user count", error);
       });
     }
   }, [pathname]);

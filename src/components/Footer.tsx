@@ -21,7 +21,7 @@ import {
   Globe,
 } from "lucide-react";
 
-interface DailyVisitorCounts {
+interface AllTimeVisitorCounts {
   visitor: number;
   calculator: number;
   estimator: number;
@@ -29,7 +29,7 @@ interface DailyVisitorCounts {
 
 export default function Footer() {
   const pathname = usePathname();
-  const [visitorCounts, setVisitorCounts] = useState<DailyVisitorCounts | null>(null);
+  const [visitorCounts, setVisitorCounts] = useState<AllTimeVisitorCounts | null>(null);
   const [analyticsUnavailable, setAnalyticsUnavailable] = useState(false);
 
   const refreshVisitorCounts = useCallback(async (signal?: AbortSignal) => {
@@ -39,11 +39,11 @@ export default function Footer() {
       if (!response.ok || !result.success) {
         throw new Error(result.error || "Visitor analytics are unavailable.");
       }
-      setVisitorCounts(result.counts as DailyVisitorCounts);
+      setVisitorCounts(result.counts as AllTimeVisitorCounts);
       setAnalyticsUnavailable(false);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      console.error("Could not refresh today's visitor counts", error);
+      console.error("Could not refresh all-time visitor counts", error);
       setAnalyticsUnavailable(true);
     }
   }, []);
@@ -244,10 +244,10 @@ export default function Footer() {
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h3 id="visitor-counts-heading" className="text-base font-bold text-white">
-                Today&apos;s Website Visitors
+                All-time Website Visitors
               </h3>
               <p className="mt-1 text-xs text-gray-400">
-                Daily unique visitors; refreshed every 30 seconds. Date follows Pakistan time.
+                All-time unique visitors; refreshed every 30 seconds.
               </p>
             </div>
             {analyticsUnavailable && (

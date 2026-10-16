@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/rateLimit";
 import {
-  getDailyVisitorCounts,
+  getAllTimeVisitorCounts,
   hashVisitorId,
   isVisitorAnalyticsEvent,
   recordVisitorEvent,
@@ -13,11 +13,11 @@ export const runtime = "nodejs";
 export async function GET() {
   try {
     return NextResponse.json(
-      { success: true, ...(await getDailyVisitorCounts()) },
+      { success: true, ...(await getAllTimeVisitorCounts()) },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (error) {
-    console.error("Daily visitor analytics could not be read", error);
+    console.error("All-time visitor analytics could not be read", error);
     return NextResponse.json(
       { success: false, error: "Visitor analytics are temporarily unavailable." },
       { status: 503, headers: { "Cache-Control": "no-store" } }
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     await recordVisitorEvent(body.event, visitorHash);
     return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    console.error("Daily visitor analytics event could not be recorded", error);
+    console.error("All-time visitor analytics event could not be recorded", error);
     return NextResponse.json(
       { success: false, error: "Visitor analytics are temporarily unavailable." },
       { status: 503, headers: { "Cache-Control": "no-store" } }
