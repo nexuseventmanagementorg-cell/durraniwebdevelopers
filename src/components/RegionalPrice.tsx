@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCurrency } from "@/lib/currency";
 import { useCurrency } from "./CurrencyProvider";
 
 export default function RegionalPrice({
@@ -9,9 +10,13 @@ export default function RegionalPrice({
 }: {
   pkrAmount: number;
   className?: string;
-  conversion?: "international-quote" | "historical-fx";
+  conversion?: "international-quote" | "historical-fx" | "international-addon";
 }) {
-  const { formatPrice, formatConvertedPKR } = useCurrency();
-  const format = conversion === "historical-fx" ? formatConvertedPKR : formatPrice;
-  return <span className={className}>{format(pkrAmount)}</span>;
+  const { currency, locale, formatPrice, formatConvertedPKR } = useCurrency();
+  const formatted = conversion === "historical-fx"
+    ? formatConvertedPKR(pkrAmount)
+    : conversion === "international-addon" && currency !== "PKR"
+      ? formatCurrency(100, currency, locale)
+      : formatPrice(pkrAmount);
+  return <span className={className}>{formatted}</span>;
 }

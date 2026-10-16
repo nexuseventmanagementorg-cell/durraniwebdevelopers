@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import confetti from "canvas-confetti";
 import {
+  ADDON_CATEGORY_LABELS,
   DEFAULT_PRICING_CONFIG,
   calculateBudget,
   BUSINESS_INFO,
@@ -20,6 +21,7 @@ import {
   isSaasProjectType,
 } from "@/lib/constants";
 import type { PricingPackageId } from "@/lib/constants";
+import type { AddonOption, InquiryScanFeature } from "@/lib/types";
 import { CurrencyCode, formatCurrency, getRegionalPricingConfig, isCurrencyCode } from "@/lib/currency";
 import { useCurrency } from "@/components/CurrencyProvider";
 import CurrencySelector from "@/components/CurrencySelector";
@@ -53,12 +55,38 @@ import {
   CheckCheck,
 } from "lucide-react";
 
+function parseScanFeatures(value: string | null): InquiryScanFeature[] {
+  if (!value || value.length > 6000) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .slice(0, 40)
+      .flatMap((item): InquiryScanFeature[] => {
+        if (typeof item === "string" && item.trim()) {
+          return [{ title: item.trim().slice(0, 120), evidence: "Detected on public URL scan." }];
+        }
+        if (
+          typeof item === "object" && item !== null &&
+          "title" in item && typeof item.title === "string" &&
+          "evidence" in item && typeof item.evidence === "string"
+        ) {
+          return [{ title: item.title.slice(0, 120), evidence: item.evidence.slice(0, 300) }];
+        }
+        return [];
+      });
+  } catch {
+    return [];
+  }
+}
+
 function CalculatorContent() {
   const searchParams = useSearchParams();
   const initialPackage = searchParams.get("package");
   const initialType = searchParams.get("projectType") || searchParams.get("type");
   const initialCurrency = searchParams.get("currency");
   const initialSourceUrl = searchParams.get("sourceUrl") || "";
+  const initialScanFeatures = parseScanFeatures(searchParams.get("scanFeatures"));
   const initialConfiguredPackage = isPricingPackageId(initialPackage) ? initialPackage : null;
   const normalizedInitialType = initialType === "E-Commerce Stores"
     ? "E-commerce store"
@@ -166,6 +194,7 @@ function CalculatorContent() {
   // Step 6: Advanced Features
   const [selectedAddons, setSelectedAddons] = useState<string[]>(seededAddons);
   const [customFeatureNotes, setCustomFeatureNotes] = useState("");
+  const [scanFeatures] = useState(initialScanFeatures);
 
   // Step 7: Disclaimer
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(true);
@@ -195,7 +224,7 @@ function CalculatorContent() {
   const calculation = useMemo(
     () => calculateBudget(
       adminPanelType,
-      getChargeableAddonIds(selectedAddons, selectedPricingPackage),
+      getChargeableAddonIds(selectedAddons, selectedPricingPackage, adminPanelType),
       selectedPricingConfig
     ),
     [adminPanelType, selectedAddons, selectedPricingPackage, selectedPricingConfig]
@@ -268,6 +297,13 @@ function CalculatorContent() {
   ];
 
   const addonOptions = Object.values(pricingConfig.addons);
+  const groupedAddonOptions = addonOptions
+    .filter((addon) => addon.enabled)
+    .reduce<Record<string, AddonOption[]>>((groups, addon) => {
+      const category = ADDON_CATEGORY_LABELS[addon.category];
+      (groups[category] ||= []).push(addon);
+      return groups;
+    }, {});
 
   // Toggle helpers
   const toggleProjectType = (type: string) => {
@@ -401,6 +437,7 @@ function CalculatorContent() {
         adminPanelType,
         adminFeatures,
         selectedAddons,
+        scanFeatures,
         pricingPackage: selectedPricingPackage,
         customFeatureNotes,
         currency,
@@ -551,6 +588,11 @@ function CalculatorContent() {
                 <span className="text-xl font-black text-white">
                   {formatEstimate(calculation.estimatedTotal)}
                 </span>
+                {calculation.monthlyAddonTotal > 0 && (
+                  <span className="block text-[10px] text-amber-300">
+                    + {formatEstimate(calculation.monthlyAddonTotal)} / month recurring
+                  </span>
+                )}
               </div>
             </div>
 
@@ -1198,13 +1240,33 @@ function CalculatorContent() {
                 Optional Advanced Features & Add-ons
               </h2>
               <p className="text-xs text-gray-600 mt-1">
-                Select any additional capabilities needed. Pakistan add-ons are PKR 10,000 each; international add-ons are a flat 100 units each in your selected currency. No duplicate charges.
+                Select the modules you need. Prices vary by module; international add-ons use the published regional starting price. Monthly maintenance is shown separately from one-time development.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {addonOptions.map((addon) => {
-                const isIncluded = getChargeableAddonIds([addon.id], selectedPricingPackage).length === 0;
+            {scanFeatures.length > 0 && (
+              <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <h3 className="text-xs font-extrabold text-emerald-950">URL scan features to record with this inquiry</h3>
+                <ul className="mt-2 space-y-1.5">
+                  {scanFeatures.map((feature, index) => (
+                    <li key={`${feature.title}-${index}`} className="text-[11px] leading-relaxed text-emerald-900">
+                      <strong>{feature.title}:</strong> {feature.evidence}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            <div className="space-y-3">
+              {Object.entries(groupedAddonOptions).map(([category, categoryAddons], categoryIndex) => (
+                <details key={category} open={categoryIndex === 0} className="rounded-lg border border-gray-200 bg-white">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 text-xs font-extrabold text-[#101216]">
+                    <span>{category}</span>
+                    <span className="text-[10px] font-semibold text-gray-500">{categoryAddons.length} add-ons</span>
+                  </summary>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 border-t border-gray-100 p-3">
+              {categoryAddons.map((addon) => {
+                const isIncluded = getChargeableAddonIds([addon.id], selectedPricingPackage, adminPanelType).length === 0;
                 const isSelected = selectedAddons.includes(addon.id);
                 return (
                   <div
@@ -1224,7 +1286,7 @@ function CalculatorContent() {
                           {addon.category}
                         </span>
                         <strong className={`text-xs font-black ${isIncluded ? "text-emerald-700" : "text-[#E31E36]"}`}>
-                          {isIncluded ? "Included" : `+${formatEstimate(addon.price)}`}
+                          {isIncluded ? "Included" : `+${formatEstimate(addon.price)}${addon.billingPeriod === "monthly" ? " / month" : ""}`}
                         </strong>
                       </div>
                       <h4 className="font-extrabold text-xs text-[#101216] mb-1">
@@ -1250,6 +1312,9 @@ function CalculatorContent() {
                   </div>
                 );
               })}
+                  </div>
+                </details>
+              ))}
             </div>
 
             <div>
@@ -1309,9 +1374,15 @@ function CalculatorContent() {
                   {calculation.selectedAddonDetails.map((item) => (
                     <div key={item.id} className="flex justify-between items-center text-gray-700">
                       <span>• {item.label}</span>
-                      <strong className="text-gray-900 font-bold">+{formatEstimate(item.price)}</strong>
+                      <strong className="text-gray-900 font-bold">+{formatEstimate(item.price)}{item.billingPeriod === "monthly" ? " / month" : ""}</strong>
                     </div>
                   ))}
+                </div>
+              )}
+              {calculation.monthlyAddonTotal > 0 && (
+                <div className="flex justify-between items-center text-xs text-amber-800">
+                  <span>Recurring add-ons (billed monthly)</span>
+                  <strong>+{formatEstimate(calculation.monthlyAddonTotal)} / month</strong>
                 </div>
               )}
 
@@ -1319,7 +1390,7 @@ function CalculatorContent() {
               <div className="flex justify-between items-baseline pt-2">
                 <div>
                   <span className="text-xs uppercase font-extrabold text-[#E31E36] tracking-wider block">
-                    Total Estimated Project Budget
+                    One-Time Development Estimate
                   </span>
                   <span className="text-xs text-gray-500">
                     (Estimated total for complete development)
@@ -1444,6 +1515,14 @@ function CalculatorContent() {
                   {formatCurrency(submittedCalculation.estimatedTotal, submittedCurrency, locale)}
                 </strong>
               </div>
+              {(submittedCalculation.monthlyAddonTotal || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Monthly Add-ons:</span>
+                  <strong className="text-[#101216] font-bold">
+                    {formatCurrency(submittedCalculation.monthlyAddonTotal, submittedCurrency, locale)} / month
+                  </strong>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-500">Initial Advance:</span>
                 <strong className="text-[#101216] font-bold">
