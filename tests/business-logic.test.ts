@@ -448,11 +448,49 @@ test("Website scan maps visible modules to priced add-ons and records evidence",
   assert.ok(detected.features.every((feature) => feature.evidence.length > 0));
 });
 
-test("Every extended add-on name can be captured from visible scan text", () => {
-  const detected = detectWebsiteFeatures(EXTENDED_ADDONS.map((addon) => addon.label).join(". "));
-  for (const addon of EXTENDED_ADDONS) {
-    assert.ok(detected.features.some((feature) => feature.title === addon.label), addon.label);
-    assert.ok(detected.addonIds.includes(addon.id), addon.id);
+test("URL scans recognize behavior signals across business, SaaS, security, and industry modules", () => {
+  const detected = detectWebsiteFeatures(
+    "Google login, edit pages, schema markup, confirmation emails, theme switcher, " +
+    "custom staff roles, upload documents, order statuses, Excel report export, " +
+    "scheduled backups, SKUs, product ratings and reviews, shipment tracking, " +
+    "digital menu, KOT system, clinic appointment scheduling, student attendance, " +
+    "parent portal, employer dashboard, course progress, quizzes and assessments, " +
+    "AI writing assistant, email sequences, 2FA, account recovery, session management, " +
+    "error tracking, performance optimization, data deletion workflow, monthly maintenance."
+  );
+  for (const addonId of [
+    "google_auth",
+    "cms",
+    "advanced_seo",
+    "email_notifications",
+    "theme_switcher",
+    "role_permissions",
+    "media_uploads",
+    "order_invoice_management",
+    "pdf_excel_export",
+    "automated_backups",
+    "advanced_product_management",
+    "product_reviews",
+    "order_tracking",
+    "restaurant_qr_menu",
+    "kitchen_order_tickets",
+    "clinic_appointments",
+    "school_attendance",
+    "parent_student_portal",
+    "employer_dashboard",
+    "course_progress",
+    "quizzes_assessments",
+    "ai_content_assistant",
+    "automated_email_workflows",
+    "two_factor_auth",
+    "password_reset",
+    "session_management",
+    "error_monitoring",
+    "performance_optimization",
+    "data_retention_tools",
+    "maintenance_updates",
+  ]) {
+    assert.ok(detected.addonIds.includes(addonId), `expected ${addonId} from scan signals`);
   }
 });
 

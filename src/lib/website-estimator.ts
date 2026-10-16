@@ -371,7 +371,7 @@ const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
   { id: "theme_switcher", pattern: /\b(dark mode|light mode|theme switcher|switch themes?)\b/i },
   { id: "admin_dashboard", pattern: /\b(admin|staff)\s+(dashboard|panel|portal)\b/i },
   { id: "user_accounts", pattern: /\b(customer accounts?|user registration|create account|customer login|sign[ -]?in|log[ -]?in)\b/i },
-  { id: "role_permissions", pattern: /\b(role[- ]based (access|permissions?)|custom roles|staff permissions?|user permissions?)\b/i },
+  { id: "role_permissions", pattern: /\b(role[- ]based (access|permissions?)|custom (staff )?roles?|staff permissions?|user permissions?)\b/i },
   { id: "media_uploads", pattern: /\b(file uploads?|media uploads?|upload (images|videos|pdfs|documents))\b/i },
   { id: "search_filter_sort", pattern: /\b(search and filters?|filter and sort|sorting and filtering|advanced search)\b/i },
   { id: "order_invoice_management", pattern: /\b(order management|manage orders|order statuses|order and invoice management)\b/i },
@@ -434,7 +434,7 @@ const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
   { id: "error_monitoring", pattern: /\b(error monitoring|error tracking|sentry integration)\b/i },
   { id: "performance_optimization", pattern: /\b(performance optimization|page speed optimization|core web vitals)\b/i },
   { id: "accessibility_improvements", pattern: /\b(accessibility improvements?|wcag compliance|keyboard accessibility)\b/i },
-  { id: "data_retention_tools", pattern: /\b(data retention|data deletion tools?|delete my data workflow)\b/i },
+  { id: "data_retention_tools", pattern: /\b(data retention|data deletion (tools?|workflow)|delete my data workflow)\b/i },
   { id: "maintenance_updates", pattern: /\b(monthly maintenance|maintenance and updates|ongoing maintenance plan)\b/i },
 
   { id: "restaurant_qr_menu", pattern: /\b(digital menu|restaurant qr menu|menu qr codes?)\b/i },
@@ -450,7 +450,7 @@ const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
   { id: "booking_refund_workflow", pattern: /\b(booking cancellations? and refunds?|booking refund workflow)\b/i },
   { id: "employer_dashboard", pattern: /\b(employer dashboard|employer job listings?)\b/i },
   { id: "cv_application_tracking", pattern: /\b(cv uploads?|resume uploads?|application tracking)\b/i },
-  { id: "course_progress", pattern: /\b(course progress tracking|learning progress dashboard)\b/i },
+  { id: "course_progress", pattern: /\b(course progress( tracking)?|learning progress dashboard)\b/i },
   { id: "quizzes_assessments", pattern: /\b(quizzes and assessments|online assessments?|student quizzes)\b/i },
   { id: "event_ticketing", pattern: /\b(digital event tickets?|qr check[- ]in|event ticketing)\b/i },
 ];
@@ -632,19 +632,6 @@ export function detectWebsiteFeatures(text: string): {
       });
     }
     if (addon.enabled) detectedAddonIds.add(rule.id);
-  }
-
-  const normalizedText = text.toLowerCase();
-  for (const addon of Object.values(DEFAULT_PRICING_CONFIG.addons)) {
-    if (!normalizedText.includes(addon.label.toLowerCase())) continue;
-    if (!features.some((feature) => feature.title === addon.label)) {
-      features.push({
-        title: addon.label,
-        explanation: addon.description,
-        evidence: `Public page text included the add-on name ${addon.label}.`,
-      });
-    }
-    if (addon.enabled) detectedAddonIds.add(addon.id);
   }
 
   if (features.length === 0) {
