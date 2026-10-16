@@ -3,13 +3,16 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 const SESSION_COOKIE_NAME = "dwd_admin_session";
-const SESSION_SECRET = process.env.SESSION_SECRET || "dwd_super_secret_session_key_2026_antigravity";
-
-// Default admin setup fallback for local development if environment variables not set
-const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@durraniwebdevelopers.com";
-const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Durrani2026!Secure";
+const SESSION_SECRET =
+  process.env.SESSION_SECRET ||
+  (process.env.NODE_ENV === "production"
+    ? null
+    : crypto.randomBytes(32).toString("hex"));
 
 export function signToken(payload: { email: string; timestamp: number }): string {
+  if (!SESSION_SECRET) {
+    throw new Error("SESSION_SECRET must be configured in production.");
+  }
   const json = JSON.stringify(payload);
   const hmac = crypto.createHmac("sha256", SESSION_SECRET);
   hmac.update(json);
@@ -19,6 +22,8 @@ export function signToken(payload: { email: string; timestamp: number }): string
 }
 
 export function verifyToken(token: string): { email: string; timestamp: number } | null {
+  if (!SESSION_SECRET) return null;
+
   try {
     const parts = token.split(".");
     if (parts.length !== 2) return null;
@@ -51,21 +56,8 @@ export function verifyToken(token: string): { email: string; timestamp: number }
   }
 }
 
-export function verifyAdminCredentials(email: string, pass: string): boolean {
-  const targetEmail = process.env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL;
-  const targetPassword = process.env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
-
-  if (
-    email.trim().toLowerCase() === targetEmail.trim().toLowerCase() &&
-    pass === targetPassword
-  ) {
-    return true;
-  }
-  return false;
-}
-
-export function setAdminSessionCookie(response: NextResponse, email: string): void {
-  const token = signToken({ email, timestamp: Date.now() });
+export function setAdminSessionCookie(response: NextResponse, username: string): void {
+  const token = signToken({ email: username, timestamp: Date.now() });
   response.cookies.set({
     name: SESSION_COOKIE_NAME,
     value: token,
@@ -73,7 +65,7 @@ export function setAdminSessionCookie(response: NextResponse, email: string): vo
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 7 * 24 * 60 * 60, // 7 days
+    maxAge: 7 * 24 * 60 * 60,
   });
 }
 

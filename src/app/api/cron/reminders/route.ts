@@ -5,9 +5,12 @@ import { PaymentReminder } from "@/lib/types";
 export async function GET(request: NextRequest) {
   // Authorization check for Vercel Cron or secure external runners
   const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET || "dwd_cron_secret_2026";
+  const cronSecret = process.env.CRON_SECRET;
 
-  if (process.env.NODE_ENV === "production" && authHeader !== `Bearer ${cronSecret}`) {
+  if (
+    process.env.NODE_ENV === "production" &&
+    (!cronSecret || authHeader !== `Bearer ${cronSecret}`)
+  ) {
     return NextResponse.json({ success: false, error: "Unauthorized cron execution" }, { status: 401 });
   }
 

@@ -5,6 +5,7 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { Inquiry, OrderStatus } from "@/lib/types";
 import { formatPKR, buildWhatsAppLink, BUSINESS_INFO } from "@/lib/constants";
+import { formatCurrency, isCurrencyCode } from "@/lib/currency";
 import {
   Inbox,
   Search,
@@ -18,6 +19,17 @@ import {
   FileCheck,
   ChevronDown,
 } from "lucide-react";
+
+function formatInquiryEstimate(inquiry: Inquiry): string {
+  if (
+    inquiry.internationalPricing &&
+    inquiry.internationalCalculation &&
+    isCurrencyCode(inquiry.currency)
+  ) {
+    return `${formatCurrency(inquiry.internationalCalculation.estimatedTotal, inquiry.currency)} (PKR base ${formatPKR(inquiry.calculation.estimatedTotal)})`;
+  }
+  return formatPKR(inquiry.calculation.estimatedTotal);
+}
 
 export default function AdminInquiriesPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -243,7 +255,7 @@ export default function AdminInquiriesPage() {
                           </span>
                         </td>
                         <td className="py-3.5 px-4 font-extrabold text-[#101216]">
-                          {formatPKR(inq.calculation.estimatedTotal)}
+                          {formatInquiryEstimate(inq)}
                         </td>
                         <td className="py-3.5 px-4">
                           <select
@@ -267,7 +279,7 @@ export default function AdminInquiriesPage() {
                           </button>
                           <a
                             href={buildWhatsAppLink(
-                              `Assalam-o-Alaikum ${inq.customerName}! This is Durrani Web Developers regarding your inquiry ${inq.id} for "${inq.businessName || inq.customerName}" (Estimated ${formatPKR(inq.calculation.estimatedTotal)}). Let's discuss your timeline and technical scope.`
+                              `Assalam-o-Alaikum ${inq.customerName}! This is Durrani Web Developers regarding your inquiry ${inq.id} for "${inq.businessName || inq.customerName}" (Estimated ${formatInquiryEstimate(inq)}). Let's discuss your timeline and technical scope.`
                             )}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -380,9 +392,14 @@ export default function AdminInquiriesPage() {
                 <div className="flex justify-between items-baseline pt-2 border-t border-red-200">
                   <span className="text-xs uppercase font-extrabold text-gray-600">Calculated Budget:</span>
                   <strong className="text-xl font-black text-[#E31E36]">
-                    {formatPKR(selectedInquiry.calculation.estimatedTotal)}
+                    {formatInquiryEstimate(selectedInquiry)}
                   </strong>
                 </div>
+                {selectedInquiry.internationalPricing && (
+                  <p className="text-[11px] text-gray-600">
+                    FX rate at inquiry time: 1 PKR = {selectedInquiry.exchangeRate} {selectedInquiry.currency}. Project accounting remains in PKR until the final quote is agreed.
+                  </p>
+                )}
               </div>
             </div>
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { DataStore } from "@/lib/store";
+import { notifyAdminOfSubmission } from "@/lib/admin-notifications";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     const randomSuffix = Math.floor(100000 + Math.random() * 900000);
     const inquiryId = `MSG-${randomSuffix}`;
 
-    DataStore.createInquiry({
+    const savedInquiry = DataStore.createInquiry({
       id: inquiryId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -75,6 +76,14 @@ export async function POST(request: NextRequest) {
       },
       disclaimerAccepted: true,
       adminNotes: `Contact form message: ${subject || "General Inquiry"}`,
+    });
+    await notifyAdminOfSubmission({
+      type: "Contact inquiry",
+      reference: savedInquiry.id,
+      customerName: savedInquiry.customerName,
+      customerEmail: savedInquiry.email,
+      customerPhone: savedInquiry.phone,
+      details: `${subject || "General Inquiry"}\n${message}`,
     });
 
     return NextResponse.json({

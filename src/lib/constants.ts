@@ -7,8 +7,8 @@ export const BUSINESS_INFO = {
   headline: "We Turn Your Ideas Into Powerful Web Applications",
   subHeadline: "Your Vision, Our Development",
   email: "durraniwebdevelopers@gmail.com",
-  phone: "03299669565",
-  phoneDisplay: "0329-9669565",
+  phone: "+923299669565",
+  phoneDisplay: "+923299669565",
   whatsappInternational: "923299669565",
   website: "www.durraniwebdevelopers.com",
   currency: "PKR",
@@ -87,6 +87,127 @@ export const DEFAULT_PRICING_CONFIG: PricingRuleConfig = {
     },
   },
 };
+
+export const ECOMMERCE_PACKAGES = {
+  ecommerce_business: {
+    label: "E-Commerce Business",
+    basePrice: 150000,
+    advance: 60000,
+  },
+  ecommerce_advanced: {
+    label: "E-Commerce Advanced",
+    basePrice: 200000,
+    maximumPrice: 300000,
+    advance: 80000,
+  },
+} as const;
+
+export const SAAS_PACKAGES = {
+  saas_starter: {
+    label: "SaaS Starter",
+    basePrice: 250000,
+    advance: 100000,
+    startingAt: false,
+  },
+  saas_business: {
+    label: "SaaS Business",
+    basePrice: 500000,
+    advance: 200000,
+    startingAt: false,
+  },
+  saas_enterprise: {
+    label: "SaaS Enterprise",
+    basePrice: 1000000,
+    advance: 400000,
+    startingAt: true,
+  },
+} as const;
+
+export type EcommercePackageId = keyof typeof ECOMMERCE_PACKAGES;
+export type SaasPackageId = keyof typeof SAAS_PACKAGES;
+export type PricingPackageId = EcommercePackageId | SaasPackageId;
+
+const PACKAGE_INCLUDED_ADDONS: Record<PricingPackageId, string[]> = {
+  ecommerce_business: ["supabase_db", "payment_gateway"],
+  ecommerce_advanced: ["supabase_db", "payment_gateway", "advanced_dashboard"],
+  saas_starter: ["supabase_db", "google_auth"],
+  saas_business: ["supabase_db", "google_auth", "payment_gateway", "advanced_dashboard"],
+  saas_enterprise: ["supabase_db", "google_auth", "payment_gateway", "advanced_dashboard"],
+};
+
+export function isEcommercePackageId(value: unknown): value is EcommercePackageId {
+  return typeof value === "string" && value in ECOMMERCE_PACKAGES;
+}
+
+export function isSaasPackageId(value: unknown): value is SaasPackageId {
+  return typeof value === "string" && value in SAAS_PACKAGES;
+}
+
+export function isPricingPackageId(value: unknown): value is PricingPackageId {
+  return isEcommercePackageId(value) || isSaasPackageId(value);
+}
+
+export function getChargeableAddonIds(
+  addonIds: string[],
+  packageId?: PricingPackageId | null
+): string[] {
+  if (!packageId) return addonIds;
+  const includedAddons = new Set(PACKAGE_INCLUDED_ADDONS[packageId]);
+  return addonIds.filter((id) => !includedAddons.has(id));
+}
+
+export function getEcommercePricingConfig(
+  config: PricingRuleConfig,
+  packageId: EcommercePackageId
+): PricingRuleConfig {
+  const ecommercePackage = ECOMMERCE_PACKAGES[packageId];
+  return {
+    ...config,
+    baseWithoutAdmin: ecommercePackage.basePrice,
+    baseWithAdmin: ecommercePackage.basePrice,
+    advanceDefault: ecommercePackage.advance,
+  };
+}
+
+export function getSaasPricingConfig(
+  config: PricingRuleConfig,
+  packageId: SaasPackageId
+): PricingRuleConfig {
+  const saasPackage = SAAS_PACKAGES[packageId];
+  return {
+    ...config,
+    baseWithoutAdmin: saasPackage.basePrice,
+    baseWithAdmin: saasPackage.basePrice,
+    advanceDefault: saasPackage.advance,
+  };
+}
+
+export function getPricingPackageConfig(
+  config: PricingRuleConfig,
+  packageId: PricingPackageId
+): PricingRuleConfig {
+  return isEcommercePackageId(packageId)
+    ? getEcommercePricingConfig(config, packageId)
+    : getSaasPricingConfig(config, packageId);
+}
+
+export function isEcommerceProjectType(projectType: string): boolean {
+  return /^(e[\s-]?commerce stores?|jewellery stores?|cosmetics(?:\s*(?:&|and)\s*beauty)?|fashion stores?|grocery stores?)$/i.test(
+    projectType.trim()
+  );
+}
+
+export function isSaasProjectType(projectType: string): boolean {
+  return /^saas(?:\s+(?:application|project|projects))?$/i.test(projectType.trim());
+}
+
+export function getDefaultPricingPackageForProjectType(
+  projectType: string
+): PricingPackageId | null {
+  if (isEcommerceProjectType(projectType)) return "ecommerce_business";
+  if (isSaasProjectType(projectType)) return "saas_starter";
+  return null;
+}
 
 export function calculateBudget(
   adminPanelType: "none" | "client_admin",

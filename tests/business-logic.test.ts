@@ -1,9 +1,47 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { calculateBudget, DEFAULT_PRICING_CONFIG, buildWhatsAppLink } from "../src/lib/constants";
-import { signToken, verifyToken, verifyAdminCredentials } from "../src/lib/auth";
+import { createHmac } from "crypto";
+import {
+  calculateBudget,
+  DEFAULT_PRICING_CONFIG,
+  BUSINESS_INFO,
+  buildWhatsAppLink,
+  ECOMMERCE_PACKAGES,
+  SAAS_PACKAGES,
+  getEcommercePricingConfig,
+  getSaasPricingConfig,
+  getChargeableAddonIds,
+  isEcommerceProjectType,
+  getDefaultPricingPackageForProjectType,
+} from "../src/lib/constants";
+import { signToken, verifyToken } from "../src/lib/auth";
+import {
+  hashAdminPassword,
+  verifyAdminPasswordHash,
+} from "../src/lib/admin-credentials";
 import { checkRateLimit } from "../src/lib/rateLimit";
 import { DataStore } from "../src/lib/store";
+import { buildInstallmentSchedule } from "../src/lib/client-finances";
+import { getPakistanDateKey } from "../src/lib/dates";
+import {
+  hashVisitorId,
+  isVisitorAnalyticsEvent,
+} from "../src/lib/visitor-analytics";
+import { detectWebsiteFeatures, estimateWebsite } from "../src/lib/website-estimator";
+import { currencyForCountry, getRegionalPricingConfig } from "../src/lib/currency";
+import {
+  describePaymentBackendError,
+  getPublicPaymentOptions,
+  PaymentConfigurationError,
+  validatePaymentSettings,
+} from "../src/lib/payment-server";
+import { DEFAULT_PAYMENT_SETTINGS } from "../src/lib/payment-types";
+import {
+  getSafepaySetupStatus,
+  isSafepayCurrency,
+  toSafepayMinorUnits,
+  verifySafepayWebhookSignature,
+} from "../src/lib/safepay";
 
 test("Package 1: Web App Without Client Admin Panel (PKR 35,000)", () => {
   const calc = calculateBudget("none", []);
@@ -69,6 +107,8 @@ test("Addon selection and deduplication protects against double charges", () => 
 
 test("WhatsApp link formatting with country code 92 and no leading zero", () => {
   const link = buildWhatsAppLink("Hello Durrani Web Developers");
+  assert.equal(BUSINESS_INFO.phone, "+923299669565");
+  assert.equal(BUSINESS_INFO.phoneDisplay, "+923299669565");
   assert.match(link, /^https:\/\/wa\.me\/923299669565\?text=/, "Must use 923299669565 without leading zero");
   assert.ok(link.includes("Hello%20Durrani%20Web%20Developers"), "Must properly url-encode message text");
 });
@@ -85,6 +125,17 @@ test("Admin Token Signing and Tamper Prevention", () => {
   const parts = token.split(".");
   const tamperedToken = `${parts[0]}.0000000000000000000000000000000000000000000000000000000000000000`;
   assert.equal(verifyToken(tamperedToken), null, "Tampered token must be rejected");
+});
+
+test("Admin password hashes are salted and verified without storing plaintext", async () => {
+  const password = "long-test-password-value";
+  const firstHash = await hashAdminPassword(password);
+  const secondHash = await hashAdminPassword(password);
+
+  assert.notEqual(firstHash, secondHash, "Each password hash must use a random salt");
+  assert.equal(await verifyAdminPasswordHash(password, firstHash), true);
+  assert.equal(await verifyAdminPasswordHash("incorrect-password", firstHash), false);
+  assert.equal(firstHash.includes(password), false);
 });
 
 test("Rate limiter threshold enforcement", () => {
@@ -107,4 +158,332 @@ test("DataStore Ledger Calculations & Isolation", () => {
   const pricingConfig = DataStore.getPricingConfig();
   assert.equal(pricingConfig.baseWithoutAdmin, 35000);
   assert.equal(pricingConfig.baseWithAdmin, 45000);
+});
+
+test("Client project installment schedule preserves the agreed total and clamps month ends", () => {
+  const installments = buildInstallmentSchedule("proj-test", 100, 3, "2026-01-31");
+
+  assert.deepEqual(
+    installments.map(({ installmentNumber, amount, dueDate }) => ({
+      installmentNumber,
+      amount,
+      dueDate,
+    })),
+    [
+      { installmentNumber: 1, amount: 33.33, dueDate: "2026-01-31" },
+      { installmentNumber: 2, amount: 33.33, dueDate: "2026-02-28" },
+      { installmentNumber: 3, amount: 33.34, dueDate: "2026-03-31" },
+    ]
+  );
+  assert.equal(installments.reduce((sum, installment) => sum + installment.amount, 0), 100);
+  assert.throws(
+    () => buildInstallmentSchedule("proj-test", 100, 3, "2026-02-30"),
+    /valid first installment due date/
+  );
+});
+
+test("Daily analytics use Pakistan dates and hash per-day visitor identifiers", () => {
+  assert.equal(getPakistanDateKey(new Date("2026-10-15T19:30:00.000Z")), "2026-10-16");
+  assert.match(hashVisitorId("daily-browser-id"), /^[0-9a-f]{64}$/);
+  assert.notEqual(hashVisitorId("daily-browser-id"), "daily-browser-id");
+  assert.equal(isVisitorAnalyticsEvent("visitor"), true);
+  assert.equal(isVisitorAnalyticsEvent("estimator"), true);
+  assert.equal(isVisitorAnalyticsEvent("payment"), false);
+});
+
+test("Website estimator maps visible store and admin signals to calculator pricing", () => {
+  const detected = detectWebsiteFeatures(
+    "Restaurant menu, add to cart, online ordering, staff admin dashboard"
+  );
+
+  assert.equal(detected.adminPanel, true);
+  assert.ok(detected.addonIds.includes("supabase_db"));
+  assert.equal(detected.features.some((feature) => feature.title === "Online order aur cart"), true);
+  assert.equal(detected.features.some((feature) => feature.title === "Product ya menu catalog"), true);
+  const manualPaymentSignals = detectWebsiteFeatures(
+    "Accepted payments: Easypaisa, JazzCash, Cash on Delivery"
+  );
+  assert.equal(manualPaymentSignals.addonIds.includes("payment_gateway"), false);
+});
+
+test("E-commerce packages use their published starting prices and advances", () => {
+  assert.equal(isEcommerceProjectType("E-Commerce Stores"), true);
+  assert.equal(isEcommerceProjectType("E-commerce store"), true);
+  assert.equal(isEcommerceProjectType("Jewellery Stores"), true);
+  assert.equal(isEcommerceProjectType("Cosmetics & Beauty"), true);
+  assert.equal(isEcommerceProjectType("Fashion Stores"), true);
+  assert.equal(isEcommerceProjectType("Grocery Stores"), true);
+  assert.equal(isEcommerceProjectType("Custom web application"), false);
+  assert.equal(getDefaultPricingPackageForProjectType("E-Commerce Stores"), "ecommerce_business");
+  assert.equal(getDefaultPricingPackageForProjectType("SaaS Projects"), "saas_starter");
+
+  const business = calculateBudget(
+    "client_admin",
+    [],
+    getEcommercePricingConfig(DEFAULT_PRICING_CONFIG, "ecommerce_business")
+  );
+  assert.equal(business.basePrice, ECOMMERCE_PACKAGES.ecommerce_business.basePrice);
+  assert.equal(business.advanceAmount, 60000);
+  assert.equal(business.regularInstallment, 8181.82);
+
+  const advanced = calculateBudget(
+    "client_admin",
+    [],
+    getEcommercePricingConfig(DEFAULT_PRICING_CONFIG, "ecommerce_advanced")
+  );
+  assert.equal(advanced.basePrice, ECOMMERCE_PACKAGES.ecommerce_advanced.basePrice);
+  assert.equal(advanced.advanceAmount, 80000);
+  assert.equal(advanced.regularInstallment, 10909.09);
+  assert.equal(advanced.finalInstallment, 10909.1);
+  assert.deepEqual(
+    getChargeableAddonIds(
+      ["supabase_db", "payment_gateway", "advanced_dashboard", "ai_chatbot"],
+      "ecommerce_business"
+    ),
+    ["advanced_dashboard", "ai_chatbot"]
+  );
+  assert.deepEqual(
+    getChargeableAddonIds(
+      ["supabase_db", "payment_gateway", "advanced_dashboard", "ai_chatbot"],
+      "ecommerce_advanced"
+    ),
+    ["ai_chatbot"]
+  );
+});
+
+test("SaaS budget plans use published prices, advances, and included features", () => {
+  const starter = calculateBudget(
+    "client_admin",
+    [],
+    getSaasPricingConfig(DEFAULT_PRICING_CONFIG, "saas_starter")
+  );
+  assert.equal(starter.basePrice, SAAS_PACKAGES.saas_starter.basePrice);
+  assert.equal(starter.advanceAmount, 100000);
+  assert.equal(starter.regularInstallment, 13636.36);
+
+  const business = calculateBudget(
+    "client_admin",
+    [],
+    getSaasPricingConfig(DEFAULT_PRICING_CONFIG, "saas_business")
+  );
+  assert.equal(business.basePrice, SAAS_PACKAGES.saas_business.basePrice);
+  assert.equal(business.advanceAmount, 200000);
+  assert.equal(business.regularInstallment, 27272.73);
+
+  const enterprise = calculateBudget(
+    "client_admin",
+    [],
+    getSaasPricingConfig(DEFAULT_PRICING_CONFIG, "saas_enterprise")
+  );
+  assert.equal(enterprise.basePrice, SAAS_PACKAGES.saas_enterprise.basePrice);
+  assert.equal(enterprise.advanceAmount, 400000);
+  assert.equal(enterprise.regularInstallment, 54545.45);
+  assert.deepEqual(
+    getChargeableAddonIds(
+      ["supabase_db", "google_auth", "payment_gateway", "advanced_dashboard", "ai_chatbot"],
+      "saas_starter"
+    ),
+    ["payment_gateway", "advanced_dashboard", "ai_chatbot"]
+  );
+  assert.deepEqual(
+    getChargeableAddonIds(
+      ["supabase_db", "google_auth", "payment_gateway", "advanced_dashboard", "ai_chatbot"],
+      "saas_business"
+    ),
+    ["ai_chatbot"]
+  );
+});
+
+test("Website estimator routes ecommerce stores to matching packages without duplicate core add-ons", () => {
+  const businessStore = detectWebsiteFeatures(
+    "Online shop with product catalog, shopping cart, and checkout."
+  );
+  assert.equal(businessStore.pricingPackage, "ecommerce_business");
+  assert.equal(businessStore.adminPanel, true);
+  assert.equal(businessStore.addonIds.includes("supabase_db"), false);
+  assert.equal(businessStore.addonIds.includes("payment_gateway"), false);
+
+  const advancedStore = detectWebsiteFeatures(
+    "Online store with products, add to cart, sales reports, and advanced inventory."
+  );
+  assert.equal(advancedStore.pricingPackage, "ecommerce_advanced");
+  assert.equal(advancedStore.addonIds.includes("advanced_dashboard"), false);
+});
+
+test("Website estimator ignores chatbot mentions unless the page invites users to open or use one", () => {
+  const informationalMention = detectWebsiteFeatures(
+    "Our budget calculator offers AI chatbots as an optional add-on. Learn about chatbot development. Pakistan add-ons include AI chatbots."
+  );
+  assert.equal(informationalMention.addonIds.includes("ai_chatbot"), false);
+  assert.equal(
+    informationalMention.features.some((feature) => feature.title === "Chatbot ya AI assistant"),
+    false
+  );
+
+  const chatbotCallToAction = detectWebsiteFeatures(
+    "Chat with our AI assistant now to get help."
+  );
+  assert.equal(chatbotCallToAction.addonIds.includes("ai_chatbot"), true);
+});
+
+test("Website estimator rejects local URLs before making a request", async () => {
+  await assert.rejects(
+    estimateWebsite("http://localhost/"),
+    /public website|URL|address|host|local|private/i
+  );
+});
+
+test("Website estimator rejects non-HTTP URL schemes", async () => {
+  await assert.rejects(
+    estimateWebsite("file:///etc/passwd"),
+    /HTTP|HTTPS|URL/i
+  );
+});
+
+test("International pricing doubles PKR rates before converting to the selected currency", () => {
+  const regionalConfig = getRegionalPricingConfig(DEFAULT_PRICING_CONFIG, "EUR", {
+    PKR: 1,
+    EUR: 0.003,
+  });
+
+  assert.equal(regionalConfig.baseWithoutAdmin, 210);
+  assert.equal(regionalConfig.baseWithAdmin, 270);
+  assert.equal(regionalConfig.addons.supabase_db.price, 100);
+  assert.equal(regionalConfig.addons.google_auth.price, 100);
+  assert.equal(regionalConfig.advanceDefault, 60);
+  const calculatorTotal = calculateBudget(
+    "none",
+    ["supabase_db"],
+    regionalConfig
+  );
+  assert.equal(calculatorTotal.estimatedTotal, 310);
+
+  const internationalEcommerce = getRegionalPricingConfig(
+    getEcommercePricingConfig(DEFAULT_PRICING_CONFIG, "ecommerce_business"),
+    "EUR",
+    { PKR: 1, EUR: 0.003 }
+  );
+  assert.equal(internationalEcommerce.baseWithAdmin, 900);
+  assert.equal(internationalEcommerce.advanceDefault, 360);
+});
+
+test("Regional currency maps Germany, UK, Canada, US, Australia, and other European regions", () => {
+  assert.equal(currencyForCountry(null), "PKR");
+  assert.equal(currencyForCountry(undefined), "PKR");
+  assert.equal(currencyForCountry("DE"), "EUR");
+  assert.equal(currencyForCountry("GB"), "GBP");
+  assert.equal(currencyForCountry("US"), "USD");
+  assert.equal(currencyForCountry("CA"), "CAD");
+  assert.equal(currencyForCountry("AU"), "AUD");
+  assert.equal(currencyForCountry("NO"), "NOK");
+  assert.equal(currencyForCountry("PL"), "PLN");
+  assert.equal(currencyForCountry("XX"), "USD");
+});
+
+test("Safepay checkout accepts supported quote currencies and converts amounts to minor units", () => {
+  assert.equal(isSafepayCurrency("PKR"), true);
+  assert.equal(isSafepayCurrency("EUR"), true);
+  assert.equal(isSafepayCurrency("INR"), false);
+  assert.equal(toSafepayMinorUnits("123.45", "USD"), 12345);
+  assert.equal(toSafepayMinorUnits("4000", "PKR"), 400000);
+  assert.throws(() => toSafepayMinorUnits("1.001", "EUR"), /decimal places/i);
+  assert.throws(() => toSafepayMinorUnits("0", "PKR"), /valid payment amount/i);
+});
+
+test("Safepay checkout only enables with Sandbox configuration and a public HTTPS URL", () => {
+  const variableNames = [
+    "SAFEPAY_PUBLIC_KEY",
+    "SAFEPAY_SECRET_KEY",
+    "SAFEPAY_WEBHOOK_SECRET",
+    "SAFEPAY_ENVIRONMENT",
+    "NEXT_PUBLIC_SITE_URL",
+  ] as const;
+  const previousValues = new Map(
+    variableNames.map((name) => [name, process.env[name]] as const)
+  );
+
+  try {
+    process.env.SAFEPAY_PUBLIC_KEY = "sandbox-public-key";
+    process.env.SAFEPAY_SECRET_KEY = "sandbox-secret-key";
+    process.env.SAFEPAY_WEBHOOK_SECRET = "sandbox-webhook-secret";
+    process.env.SAFEPAY_ENVIRONMENT = "sandbox";
+    process.env.NEXT_PUBLIC_SITE_URL = "https://dwd-sandbox.test";
+    assert.equal(getSafepaySetupStatus().configured, true);
+    assert.equal(getSafepaySetupStatus().environment, "sandbox");
+
+    process.env.SAFEPAY_ENVIRONMENT = "production";
+    const productionStatus = getSafepaySetupStatus();
+    assert.equal(productionStatus.configured, false);
+    assert.equal(productionStatus.environment, null);
+    assert.match(productionStatus.message, /production checkout is disabled/i);
+
+    process.env.SAFEPAY_ENVIRONMENT = "sandbox";
+    process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
+    assert.equal(getSafepaySetupStatus().configured, false);
+  } finally {
+    for (const name of variableNames) {
+      const previousValue = previousValues.get(name);
+      if (previousValue === undefined) delete process.env[name];
+      else process.env[name] = previousValue;
+    }
+  }
+});
+
+test("Safepay webhook signature checks signed payloads and rejects modified or malformed events", () => {
+  const payload = {
+    type: "payment.succeeded",
+    data: { tracker: "track_test", amount: 10000, currency: "PKR" },
+  };
+  const secret = "test-webhook-secret";
+  const signature = createHmac("sha512", secret)
+    .update(Buffer.from(JSON.stringify(payload)))
+    .digest("hex");
+
+  assert.equal(verifySafepayWebhookSignature(payload, signature, secret), true);
+  assert.equal(
+    verifySafepayWebhookSignature({ ...payload, type: "payment.failed" }, signature, secret),
+    false
+  );
+  assert.equal(verifySafepayWebhookSignature(payload, "bad-signature", secret), false);
+  assert.equal(verifySafepayWebhookSignature(payload, signature, ""), false);
+});
+
+test("Manual payment instructions only expose complete Pakistan methods", () => {
+  const settings = {
+    ...DEFAULT_PAYMENT_SETTINGS,
+    accountHolder: "Test Recipient",
+    walletNumber: "03000000000",
+    bankName: "Test Bank",
+    accountNumber: "000000000000",
+  };
+
+  assert.equal(validatePaymentSettings(settings), true);
+  assert.equal(validatePaymentSettings({ ...settings, bankTransferEnabled: "yes" }), false);
+
+  const pakistanOptions = getPublicPaymentOptions(settings, true);
+  assert.equal(pakistanOptions.methods.JazzCash, true);
+  assert.equal(pakistanOptions.methods.Easypaisa, true);
+  assert.equal(pakistanOptions.methods["Bank Transfer"], true);
+  assert.equal(pakistanOptions.cardCheckoutAvailable, false);
+
+  const internationalOptions = getPublicPaymentOptions(settings, false);
+  assert.equal(internationalOptions.methods.JazzCash, false);
+  assert.equal(internationalOptions.methods["Bank Transfer"], false);
+  assert.equal(internationalOptions.accountNumber, "");
+  assert.equal(internationalOptions.walletNumber, "");
+});
+
+test("Payment backend errors distinguish missing configuration, missing schema, and Storage", () => {
+  assert.match(
+    describePaymentBackendError(new PaymentConfigurationError(), "database"),
+    /NEXT_PUBLIC_SUPABASE_URL/
+  );
+  assert.match(
+    describePaymentBackendError({ code: "PGRST205" }, "database"),
+    /payment-workflow\.sql/
+  );
+  assert.match(
+    describePaymentBackendError({ code: "NoSuchBucket" }, "storage"),
+    /payment-receipts/
+  );
 });

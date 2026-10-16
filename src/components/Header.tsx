@@ -5,6 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { BUSINESS_INFO, buildWhatsAppLink } from "@/lib/constants";
+import RegionalPrice from "./RegionalPrice";
+import CurrencySelector from "./CurrencySelector";
 import {
   Menu,
   X,
@@ -16,6 +18,8 @@ import {
   ShieldAlert,
   ArrowRight,
   Sparkles,
+  Globe,
+  CreditCard,
 } from "lucide-react";
 
 export default function Header() {
@@ -32,7 +36,9 @@ export default function Header() {
     { name: "Portfolio", href: "/portfolio", icon: Briefcase },
     { name: "Pricing & Rates", href: "/pricing", icon: Sparkles },
     { name: "Budget Calculator", href: "/calculator", icon: Calculator },
+    { name: "URL Budget Estimator", href: "/website-estimator", icon: Globe },
     { name: "Track Order", href: "/track-order", icon: Search },
+    { name: "Payments", href: "/payment", icon: CreditCard },
     { name: "Contact", href: "/contact", icon: PhoneCall },
   ];
 
@@ -44,13 +50,13 @@ export default function Header() {
       {/* Top micro banner */}
       <div className="bg-[#E31E36] text-white text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center gap-2">
         <span className="hidden sm:inline">🚀 Looking for a high-performance web app?</span>
-        <span>Transparent starting packages from PKR 35,000 with flexible 11-month installments!</span>
+        <span>Starting packages from <RegionalPrice pkrAmount={35000} />; international rates apply by region.</span>
         <Link href="/calculator" className="underline font-bold hover:text-white/80 ml-1 inline-flex items-center gap-1">
           Calculate Now <ArrowRight className="w-3 h-3" />
         </Link>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo & Brand */}
           <Link href="/" className="flex items-center gap-3 group">
@@ -75,7 +81,7 @@ export default function Header() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-6 text-sm font-medium">
+          <nav className="hidden min-[1550px]:flex items-center gap-3 text-xs font-medium">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
               return (
@@ -127,7 +133,7 @@ export default function Header() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#242830] focus:outline-none"
+            className="min-[1550px]:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#242830] focus:outline-none"
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -137,7 +143,7 @@ export default function Header() {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-[#181B20] border-b border-[#242830] px-4 pt-3 pb-6 space-y-3">
+        <div className="min-[1550px]:hidden bg-[#181B20] border-b border-[#242830] px-4 pt-3 pb-6 space-y-3">
           <div className="grid grid-cols-1 gap-2">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
@@ -160,6 +166,7 @@ export default function Header() {
           </div>
 
           <div className="pt-3 border-t border-gray-800 flex flex-col gap-2">
+            <CurrencySelector className="w-full rounded-lg border border-gray-700 bg-[#101216] px-3 py-2.5 text-gray-200 text-sm" />
             <a
               href={buildWhatsAppLink(defaultWhatsAppText)}
               target="_blank"

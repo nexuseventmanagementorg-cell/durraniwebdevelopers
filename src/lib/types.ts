@@ -104,9 +104,14 @@ export interface Inquiry {
   // Step 6: Advanced Features
   selectedAddons: string[];
   customFeatureNotes?: string;
+  pricingPackage?: "ecommerce_business" | "ecommerce_advanced" | "saas_starter" | "saas_business" | "saas_enterprise";
 
   // Step 7 & 8: Pricing breakdown snapshot
   calculation: CalculationBreakdown;
+  currency?: string;
+  internationalPricing?: boolean;
+  exchangeRate?: number;
+  internationalCalculation?: CalculationBreakdown;
   disclaimerAccepted: boolean;
 
   // Admin follow-up
@@ -145,6 +150,9 @@ export interface Project {
   advanceRequired: number;
   advanceReceived: number;
   remainingBalance: number;
+  installmentsCount?: number;
+  monthlyInstallmentAmount?: number;
+  firstInstallmentDueDate?: string;
   status: OrderStatus;
   deliveryTimeline: string;
   deploymentUrl?: string;
@@ -245,6 +253,8 @@ export interface PortfolioProject {
   isPublic: boolean;
   approvedPublicBudget?: number;
   budgetLabel?: string;
+  adminPanelIncluded?: boolean;
+  includedAddonIds?: string[];
   featured: boolean;
   clientConsentForBudget: boolean;
 }

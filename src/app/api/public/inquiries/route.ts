@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataStore } from "@/lib/store";
-import { calculateBudget } from "@/lib/constants";
+import {
+  calculateBudget,
+  getChargeableAddonIds,
+  getPricingPackageConfig,
+  isPricingPackageId,
+} from "@/lib/constants";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { Inquiry } from "@/lib/types";
+import { CurrencyCode, isCurrencyCode, getRegionalPricingConfig } from "@/lib/currency";
+import { getExchangeRateSnapshot } from "@/lib/exchange-rates";
+import { notifyAdminOfSubmission } from "@/lib/admin-notifications";
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,13 +53,39 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (body.currency !== undefined && !isCurrencyCode(body.currency)) {
+      return NextResponse.json(
+        { success: false, error: "Please select a supported project currency." },
+        { status: 400 }
+      );
+    }
+    if (body.pricingPackage != null && !isPricingPackageId(body.pricingPackage)) {
+      return NextResponse.json(
+        { success: false, error: "Please select a supported pricing package." },
+        { status: 400 }
+      );
+    }
 
     const adminPanelType = body.adminPanelType === "client_admin" ? "client_admin" : "none";
-    const selectedAddons: string[] = Array.isArray(body.selectedAddons) ? body.selectedAddons : [];
+    const pricingPackage = isPricingPackageId(body.pricingPackage) ? body.pricingPackage : undefined;
+    const requestedAddons: string[] = Array.isArray(body.selectedAddons) ? body.selectedAddons : [];
+    const selectedAddons = getChargeableAddonIds(requestedAddons, pricingPackage);
+    const currency: CurrencyCode = isCurrencyCode(body.currency) ? body.currency : "PKR";
 
-    // Recalculate server-side to prevent client price tampering
-    const pricingConfig = DataStore.getPricingConfig();
+    // Persist the PKR base estimate for existing admin bookkeeping, and keep the
+    // visitor-facing regional estimate alongside it when the selected currency differs.
+    const storedPricingConfig = DataStore.getPricingConfig();
+    const pricingConfig = pricingPackage
+      ? getPricingPackageConfig(storedPricingConfig, pricingPackage)
+      : storedPricingConfig;
     const serverCalculation = calculateBudget(adminPanelType, selectedAddons, pricingConfig);
+    const exchangeSnapshot = currency === "PKR" ? null : await getExchangeRateSnapshot();
+    const regionalConfig = getRegionalPricingConfig(
+      pricingConfig,
+      currency,
+      exchangeSnapshot?.rates || { PKR: 1 }
+    );
+    const internationalCalculation = calculateBudget(adminPanelType, selectedAddons, regionalConfig);
 
     // Generate unique inquiry ID (e.g. DW-829104)
     const randomSuffix = Math.floor(100000 + Math.random() * 900000);
@@ -94,13 +128,35 @@ export async function POST(request: NextRequest) {
       adminFeatures: Array.isArray(body.adminFeatures) ? body.adminFeatures : [],
       selectedAddons,
       customFeatureNotes: (body.customFeatureNotes || "").trim(),
+      ...(pricingPackage ? { pricingPackage } : {}),
 
       calculation: serverCalculation,
+      currency,
+      internationalPricing: currency !== "PKR",
+      ...(currency !== "PKR"
+        ? {
+            exchangeRate: exchangeSnapshot?.rates[currency],
+            internationalCalculation,
+          }
+        : { internationalCalculation: serverCalculation }),
       disclaimerAccepted: true,
-      adminNotes: "Submitted via online interactive budget calculator.",
+      adminNotes: `Submitted via online interactive budget calculator.${pricingPackage ? ` Selected package: ${pricingPackage}.` : ""}`,
     };
 
     const savedInquiry = DataStore.createInquiry(newInquiry);
+    await notifyAdminOfSubmission({
+      type: "Project inquiry",
+      reference: savedInquiry.id,
+      customerName: savedInquiry.customerName,
+      customerEmail: savedInquiry.email,
+      customerPhone: savedInquiry.phone,
+      details: [
+        `Business: ${savedInquiry.businessName || "Not provided"}`,
+        `Project types: ${savedInquiry.projectTypes.join(", ")}`,
+        `Estimated budget: ${savedInquiry.calculation.estimatedTotal} PKR`,
+        `Country: ${savedInquiry.cityCountry || "Not provided"}`,
+      ].join("\n"),
+    });
 
     return NextResponse.json({
       success: true,
@@ -111,8 +167,13 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Inquiry submission failed", error);
     return NextResponse.json(
-      { success: false, error: "Failed to process inquiry submission" },
-      { status: 500 }
+      {
+        success: false,
+        error: error instanceof Error && /exchange[ -]rate/i.test(error.message)
+          ? error.message
+          : "Failed to process inquiry submission",
+      },
+      { status: error instanceof Error && /exchange[ -]rate/i.test(error.message) ? 503 : 500 }
     );
   }
 }

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { PortfolioProject } from "@/lib/types";
-import { formatPKR } from "@/lib/constants";
+import RegionalPrice from "@/components/RegionalPrice";
 import {
   Search,
   ExternalLink,
@@ -40,15 +40,7 @@ export default function PortfolioPage() {
     loadPortfolio();
   }, []);
 
-  const categories = [
-    "All",
-    "Restaurant web applications",
-    "Jewellery stores",
-    "Cosmetic and beauty stores",
-    "Fashion stores",
-    "Grocery stores",
-    "SaaS applications",
-  ];
+  const categories = ["All", ...Array.from(new Set(projects.map((project) => project.category)))];
 
   const filteredProjects = projects.filter((p) => {
     const matchesCategory =
@@ -69,10 +61,10 @@ export default function PortfolioPage() {
             Client Success & Production Apps
           </span>
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight">
-            Our Work & Completed Projects
+            Verified Client Projects
           </h1>
           <p className="text-sm sm:text-base text-gray-300 max-w-2xl mx-auto">
-            Explore web applications built by Durrani Web Developers. Each project is crafted for real-world reliability, fast performance, and commercial growth.
+            Explore real websites and applications developed by Durrani Web Developers. We add projects to our portfolio after they are live and ready to view.
           </p>
 
           <div className="pt-2">
@@ -155,7 +147,7 @@ export default function PortfolioPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredProjects.map((project) => (
+            {filteredProjects.map((project, index) => (
               <div
                 key={project.id}
                 className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-gray-400 shadow-sm hover:shadow-card transition flex flex-col justify-between group"
@@ -166,6 +158,8 @@ export default function PortfolioPage() {
                       src={project.imageUrl}
                       alt={project.title}
                       fill
+                      sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
+                      priority={index === 0}
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute top-3 left-3 bg-[#101216]/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-white border border-gray-700">
@@ -210,8 +204,13 @@ export default function PortfolioPage() {
                         {project.budgetLabel || "Publicly Approved Budget"}
                       </span>
                       <strong className="text-sm font-black text-[#E31E36]">
-                        {formatPKR(project.approvedPublicBudget)}
+                        <RegionalPrice pkrAmount={project.approvedPublicBudget} conversion="historical-fx" />
                       </strong>
+                      {project.budgetLabel === "Actual Project Fee" && (
+                        <span className="block text-[9px] text-gray-500">
+                          Original Pakistan fee; foreign currency is direct FX conversion
+                        </span>
+                      )}
                     </div>
                   ) : (
                     <span className="text-xs text-gray-400 italic">Custom Enterprise Scope</span>
@@ -231,7 +230,7 @@ export default function PortfolioPage() {
                         rel="noopener noreferrer"
                         className="text-xs font-bold text-white bg-[#101216] hover:bg-[#E31E36] px-3 py-1.5 rounded-lg inline-flex items-center gap-1 transition"
                       >
-                        Demo <ExternalLink className="w-3 h-3" />
+                        Live Website <ExternalLink className="w-3 h-3" />
                       </a>
                     )}
                   </div>
@@ -245,9 +244,9 @@ export default function PortfolioPage() {
         <div className="mt-16 bg-[#F4F5F7] p-6 rounded-2xl border border-gray-200 text-xs text-gray-600 flex items-start gap-3">
           <ShieldCheck className="w-5 h-5 text-[#E31E36] flex-shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <h4 className="font-bold text-[#101216]">Client Privacy & Public Budget Standards</h4>
+            <h4 className="font-bold text-[#101216]">Client Privacy & Budget Estimates</h4>
             <p className="leading-relaxed text-[11px]">
-              Durrani Web Developers strictly protects client confidentiality. We never publish private client contact records, outstanding balances, internal correspondence, or unapproved figures. Project budgets are only displayed when the client has given explicit consent for portfolio marketing, and represent the agreed development scope rather than arbitrary financial claims.
+              Durrani Web Developers strictly protects client confidentiality. We never publish private client contact records, outstanding balances, or internal correspondence. Any amount labelled “Estimated Calculator Budget” is our estimate based on publicly visible features and current calculator rates; it is not the client&apos;s confirmed invoice or agreed project fee. Final pricing depends on verified scope.
             </p>
           </div>
         </div>
@@ -269,6 +268,7 @@ export default function PortfolioPage() {
                 src={modalProject.imageUrl}
                 alt={modalProject.title}
                 fill
+                sizes="(max-width: 672px) 100vw, 672px"
                 className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
@@ -309,13 +309,27 @@ export default function PortfolioPage() {
                       {modalProject.budgetLabel || "Consented Project Budget"}
                     </span>
                     <span className="text-lg font-black text-[#E31E36]">
-                      {formatPKR(modalProject.approvedPublicBudget)}
+                      <RegionalPrice pkrAmount={modalProject.approvedPublicBudget} conversion="historical-fx" />
                     </span>
                   </div>
                   <span className="text-[10px] text-gray-500 font-medium max-w-[200px] text-right">
-                    Approved by client for portfolio publication
+                    {modalProject.clientConsentForBudget
+                      ? "Approved by client for portfolio publication"
+                      : modalProject.budgetLabel === "Estimated Calculator Budget"
+                        ? "Calculator-based estimate; final price depends on confirmed scope"
+                        : "Budget not published"}
                   </span>
                 </div>
+              )}
+              {modalProject.budgetLabel === "Estimated Calculator Budget" && (
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Estimate assumes the PKR 45,000 client-admin package plus the PKR 10,000 Supabase database add-on. Vercel deployment work is included in the web-app budget. We do not provide payment gateway accounts or other third-party accounts/subscriptions; clients arrange and pay providers directly.
+                </p>
+              )}
+              {modalProject.budgetLabel === "Actual Project Fee" && (
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Confirmed original Pakistan project fee. For visitors using another currency, the amount above is converted at the current exchange rate only; it is not the quote for a new international build.
+                </p>
               )}
 
               <div className="pt-4 border-t border-gray-200 flex items-center justify-between">
@@ -326,7 +340,7 @@ export default function PortfolioPage() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 bg-[#101216] hover:bg-black text-white px-5 py-2.5 rounded-xl font-bold text-xs"
                   >
-                    Open Live Demo <ExternalLink className="w-3.5 h-3.5 text-[#E31E36]" />
+                    Visit Live Website <ExternalLink className="w-3.5 h-3.5 text-[#E31E36]" />
                   </a>
                 ) : (
                   <span className="text-xs text-gray-400">Private Client Deployment</span>

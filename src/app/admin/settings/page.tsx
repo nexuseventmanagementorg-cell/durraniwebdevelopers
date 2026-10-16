@@ -3,13 +3,15 @@
 import React, { useState, useEffect } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import PaymentSettingsPanel from "@/components/admin/PaymentSettingsPanel";
+import StorageStatusPanel from "@/components/admin/StorageStatusPanel";
+import ChangeAdminPasswordPanel from "@/components/admin/ChangeAdminPasswordPanel";
 import { AuditLog, SystemSettings } from "@/lib/types";
 import { BUSINESS_INFO } from "@/lib/constants";
 import {
   Settings,
   ShieldCheck,
   Server,
-  Database,
   Lock,
   CheckCircle2,
   AlertTriangle,
@@ -120,6 +122,9 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
+          <PaymentSettingsPanel />
+          <ChangeAdminPasswordPanel />
+
           {/* Technical Environment & Integration Readiness */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm space-y-4">
@@ -143,26 +148,7 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm space-y-4">
-              <div className="flex items-center gap-2.5 text-[#101216]">
-                <Database className="w-5 h-5 text-[#E31E36]" />
-                <h3 className="font-black text-sm">Database & Supabase Status</h3>
-              </div>
-              <div className="space-y-2 text-xs text-gray-600">
-                <div className="flex justify-between items-center p-2.5 rounded-xl bg-gray-50 border border-gray-200">
-                  <span>Primary Data Store:</span>
-                  <strong className="text-black font-bold">Persistent Local Store (data/db.json)</strong>
-                </div>
-                <div className="flex justify-between items-center p-2.5 rounded-xl bg-gray-50 border border-gray-200">
-                  <span>Supabase PostgreSQL Schema:</span>
-                  <strong className="text-emerald-600 font-bold">Available in /supabase/schema.sql</strong>
-                </div>
-                <div className="flex justify-between items-center p-2.5 rounded-xl bg-gray-50 border border-gray-200">
-                  <span>Row Level Security (RLS):</span>
-                  <strong className="text-black font-bold">Configured & Enforced</strong>
-                </div>
-              </div>
-            </div>
+            <StorageStatusPanel />
           </div>
 
           {/* Audit Logs Table */}

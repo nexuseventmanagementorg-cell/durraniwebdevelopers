@@ -3,11 +3,13 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
+import { CurrencyProvider } from "@/components/CurrencyProvider";
+import VisitorAnalytics from "@/components/VisitorAnalytics";
 
 export const metadata: Metadata = {
   title: "Durrani Web Developers | Custom Web Applications & Enterprise Software",
   description:
-    "Professional web development business creating custom web applications, e-commerce stores, restaurant ordering systems, SaaS projects, and business management software. Transparent starting rates from PKR 35,000 with 11-month installment plans.",
+    "Professional web development business creating custom web applications, e-commerce stores, restaurant ordering systems, SaaS projects, and business management software. Pakistan starting rates in PKR; international estimates in local currencies.",
   keywords: [
     "Durrani Web Developers",
     "Web Application Development Pakistan",
@@ -31,10 +33,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-[#FFFFFF] text-[#101216] selection:bg-[#E31E36] selection:text-white">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <WhatsAppFloat />
+        <CurrencyProvider>
+          <VisitorAnalytics />
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+          <WhatsAppFloat />
+        </CurrencyProvider>
       </body>
     </html>
   );

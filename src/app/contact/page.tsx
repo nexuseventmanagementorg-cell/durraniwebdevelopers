@@ -259,7 +259,7 @@ export default function ContactPage() {
                 </label>
                 <textarea
                   rows={5}
-                  placeholder="Tell us about the web application you would like to build..."
+                  placeholder="Misal: Hamein apne kapron ke business ke liye online store chahiye. Customer products ki tasveerain, sizes aur prices dekh sake, cart mein items dale aur WhatsApp par order bhej sake. Admin panel ki zaroorat hai taake hum khud naye products aur stock update kar saken."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
