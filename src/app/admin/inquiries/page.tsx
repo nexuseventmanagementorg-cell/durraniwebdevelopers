@@ -18,7 +18,10 @@ import {
   X,
   FileCheck,
   ChevronDown,
+  Copy,
+  CheckCheck,
 } from "lucide-react";
+import { buildInquiryProjectBrief } from "@/lib/project-brief";
 
 function formatInquiryEstimate(inquiry: Inquiry): string {
   if (
@@ -35,6 +38,8 @@ export default function AdminInquiriesPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  const [projectBrief, setProjectBrief] = useState("");
+  const [briefCopied, setBriefCopied] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
@@ -103,6 +108,7 @@ export default function AdminInquiriesPage() {
         );
         if (selectedInquiry?.id === inquiryId) {
           setSelectedInquiry((prev: any) => ({ ...prev, status: newStatus }));
+          setProjectBrief("");
         }
         setActionSuccess(`Status updated to ${newStatus}`);
         setTimeout(() => setActionSuccess(""), 3000);
@@ -168,6 +174,7 @@ export default function AdminInquiriesPage() {
       if (!res.ok || !data.success) throw new Error(data.error || "Manual verification failed.");
       setInquiries((previous) => previous.map((inquiry) => inquiry.id === data.inquiry.id ? data.inquiry : inquiry));
       setSelectedInquiry(data.inquiry);
+      setProjectBrief("");
       setManualAdvanceModalOpen(false);
       setManualAdvanceConfirmed(false);
       setManualAdvanceReference("");
@@ -322,7 +329,11 @@ export default function AdminInquiriesPage() {
                         </td>
                         <td className="py-3.5 px-4 text-right space-x-2">
                           <button
-                            onClick={() => setSelectedInquiry(inq)}
+                            onClick={() => {
+                              setSelectedInquiry(inq);
+                              setProjectBrief("");
+                              setBriefCopied(false);
+                            }}
                             className="bg-gray-100 hover:bg-gray-200 text-[#101216] px-2.5 py-1.5 rounded-lg font-bold text-[11px] transition"
                           >
                             View Scope
@@ -457,6 +468,58 @@ export default function AdminInquiriesPage() {
                   </ul>
                 </section>
               )}
+
+              <section className="rounded-xl border border-gray-200 bg-white p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-extrabold text-sm text-[#101216]">Free project build brief</h3>
+                    <p className="mt-1 text-[11px] text-gray-500">
+                      {selectedInquiry.status === "Advance Received" || selectedInquiry.convertedProjectId
+                        ? "Creates a copyable scope, client-assets checklist, open questions, and QA handoff."
+                        : "Available after the quote and advance are verified; no project work starts before then."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={selectedInquiry.status !== "Advance Received" && !selectedInquiry.convertedProjectId}
+                    onClick={() => {
+                      setProjectBrief(buildInquiryProjectBrief(selectedInquiry));
+                      setBriefCopied(false);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#101216] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#E31E36] disabled:cursor-not-allowed disabled:bg-gray-300"
+                  >
+                    <FileCheck className="h-3.5 w-3.5" /> Generate Brief
+                  </button>
+                </div>
+                {projectBrief && (
+                  <div className="mt-4 space-y-2">
+                    <textarea
+                      readOnly
+                      rows={14}
+                      value={projectBrief}
+                      aria-label="Generated project build brief"
+                      className="w-full resize-y rounded-lg border border-gray-300 bg-gray-50 p-3 font-mono text-[10px] leading-relaxed text-gray-800"
+                    />
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(projectBrief);
+                            setBriefCopied(true);
+                          } catch {
+                            setBriefCopied(false);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-[11px] font-bold text-gray-700 hover:bg-gray-50"
+                      >
+                        {briefCopied ? <CheckCheck className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                        {briefCopied ? "Copied" : "Copy Brief"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </section>
 
               {/* Add-ons & Admin Tier */}
               <div className="bg-red-50/60 p-4 rounded-xl border border-red-200 space-y-2">

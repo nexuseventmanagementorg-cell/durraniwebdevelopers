@@ -31,6 +31,8 @@ import {
 } from "../src/lib/visitor-analytics";
 import { detectWebsiteFeatures, estimateWebsite } from "../src/lib/website-estimator";
 import { sendInquiryWhatsappConfirmation } from "../src/lib/admin-notifications";
+import { buildInquiryProjectBrief } from "../src/lib/project-brief";
+import type { Inquiry } from "../src/lib/types";
 import {
   canStartProjectAfterVerifiedAdvance,
   sumVerifiedInquiryAdvances,
@@ -295,6 +297,49 @@ test("Project start requires a sent quote and fully verified advance receipts", 
     ]),
     11000
   );
+});
+
+test("Free project brief captures scope, client assets, scan findings, and approval gates", () => {
+  const inquiry = {
+    id: "DW-123456",
+    createdAt: "2026-10-17T00:00:00.000Z",
+    updatedAt: "2026-10-17T00:00:00.000Z",
+    status: "Awaiting Advance",
+    customerName: "Test Client",
+    businessName: "Test Store",
+    email: "test@example.com",
+    phone: "03001234567",
+    cityCountry: "Lahore, Pakistan",
+    preferredContact: "whatsapp",
+    customerIntro: "",
+    projectTypes: ["E-commerce store"],
+    problemToSolve: "Sell products online with inventory control.",
+    targetAudience: "Local customers",
+    productsServices: "Clothing",
+    inspirationUrl: "https://example.com/reference",
+    isNewOrUpgrade: "new",
+    preferredLaunchDate: "Within 4 weeks",
+    expectedBudgetRange: "PKR 150,000",
+    displayFixedOnly: false,
+    needsProductCatalog: true,
+    productFeatures: ["variants", "stock"],
+    acceptOrdersOnline: true,
+    orderFeatures: ["cart", "checkout"],
+    needsReviewsOrAccounts: false,
+    adminPanelType: "client_admin",
+    adminFeatures: ["products", "stock"],
+    selectedAddons: ["inventory_management"],
+    scanFeatures: [{ title: "Inventory Management", evidence: "Stock controls were visible." }],
+    calculation: calculateBudget("client_admin", ["inventory_management"]),
+    disclaimerAccepted: true,
+  } as Inquiry;
+  const brief = buildInquiryProjectBrief(inquiry);
+
+  assert.match(brief, /Sell products online with inventory control/);
+  assert.match(brief, /Collect the product\/service catalog/);
+  assert.match(brief, /Inventory Management: Stock controls were visible/);
+  assert.match(brief, /advance: not confirmed; do not start development/);
+  assert.match(brief, /Kaleem Durrani's approval/);
 });
 
 test("Website estimator maps visible store and admin signals to calculator pricing", () => {
