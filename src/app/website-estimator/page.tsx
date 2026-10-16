@@ -62,7 +62,7 @@ export default function WebsiteEstimatorPage() {
 
       setEstimate(result.estimate as WebsiteEstimateResult);
       trackVisitorEvent("estimator").catch((trackingError) => {
-        console.error("Could not record today's URL estimator user count", trackingError);
+        console.error("Could not record all-time URL estimator user count", trackingError);
       });
     } catch (requestError) {
       console.error("Website estimate request failed", requestError);

@@ -1,6 +1,5 @@
 import { createHash } from "crypto";
 import { getPaymentSupabase } from "@/lib/payment-server";
-import { getPakistanDateKey } from "@/lib/dates";
 
 export const VISITOR_ANALYTICS_EVENTS = ["visitor", "calculator", "estimator"] as const;
 export type VisitorAnalyticsEvent = (typeof VISITOR_ANALYTICS_EVENTS)[number];
@@ -18,24 +17,20 @@ export async function recordVisitorEvent(
   visitorHash: string
 ): Promise<void> {
   const supabase = getPaymentSupabase();
-  const { error } = await supabase.rpc("record_daily_visitor_event", {
-    p_day: getPakistanDateKey(),
+  const { error } = await supabase.rpc("record_all_time_visitor_event", {
     p_event: event,
     p_visitor_hash: visitorHash,
   });
   if (error) throw error;
 }
 
-export async function getDailyVisitorCounts(): Promise<{
-  date: string;
+export async function getAllTimeVisitorCounts(): Promise<{
   counts: Record<VisitorAnalyticsEvent, number>;
 }> {
-  const date = getPakistanDateKey();
   const supabase = getPaymentSupabase();
   const { data, error } = await supabase
-    .from("daily_visitor_counts")
+    .from("all_time_visitor_counts")
     .select("event,visitor_count")
-    .eq("day", date);
   if (error) throw error;
 
   const counts: Record<VisitorAnalyticsEvent, number> = {
@@ -48,5 +43,5 @@ export async function getDailyVisitorCounts(): Promise<{
       counts[row.event] = Number(row.visitor_count);
     }
   }
-  return { date, counts };
+  return { counts };
 }

@@ -22,7 +22,6 @@ import {
 import { checkRateLimit } from "../src/lib/rateLimit";
 import { DataStore } from "../src/lib/store";
 import { buildInstallmentSchedule } from "../src/lib/client-finances";
-import { getPakistanDateKey } from "../src/lib/dates";
 import {
   hashVisitorId,
   isVisitorAnalyticsEvent,
@@ -182,10 +181,9 @@ test("Client project installment schedule preserves the agreed total and clamps 
   );
 });
 
-test("Daily analytics use Pakistan dates and hash per-day visitor identifiers", () => {
-  assert.equal(getPakistanDateKey(new Date("2026-10-15T19:30:00.000Z")), "2026-10-16");
-  assert.match(hashVisitorId("daily-browser-id"), /^[0-9a-f]{64}$/);
-  assert.notEqual(hashVisitorId("daily-browser-id"), "daily-browser-id");
+test("All-time analytics hash browser identifiers and accept supported events", () => {
+  assert.match(hashVisitorId("persistent-browser-id"), /^[0-9a-f]{64}$/);
+  assert.notEqual(hashVisitorId("persistent-browser-id"), "persistent-browser-id");
   assert.equal(isVisitorAnalyticsEvent("visitor"), true);
   assert.equal(isVisitorAnalyticsEvent("estimator"), true);
   assert.equal(isVisitorAnalyticsEvent("payment"), false);
