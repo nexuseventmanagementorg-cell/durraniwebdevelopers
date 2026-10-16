@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { Inquiry, OrderStatus } from "@/lib/types";
-import { formatPKR, buildWhatsAppLink, BUSINESS_INFO } from "@/lib/constants";
+import { formatPKR, buildWhatsAppLinkTo } from "@/lib/constants";
 import { formatCurrency, isCurrencyCode } from "@/lib/currency";
 import {
   Inbox,
@@ -152,6 +152,12 @@ export default function AdminInquiriesPage() {
       inq.phone.includes(searchQuery);
     return matchesStatus && matchesSearch;
   });
+  const selectedInquiryWhatsAppLink = selectedInquiry
+    ? buildWhatsAppLinkTo(
+        selectedInquiry.phone,
+        `Assalam-o-Alaikum ${selectedInquiry.customerName}! This is Durrani Web Developers regarding your inquiry ${selectedInquiry.id}.`
+      )
+    : null;
 
   return (
     <div className="min-h-screen bg-[#F4F5F7] flex">
@@ -229,7 +235,12 @@ export default function AdminInquiriesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {filteredInquiries.map((inq) => (
+                    {filteredInquiries.map((inq) => {
+                      const whatsappLink = buildWhatsAppLinkTo(
+                        inq.phone,
+                        `Assalam-o-Alaikum ${inq.customerName}! This is Durrani Web Developers regarding your inquiry ${inq.id} for "${inq.businessName || inq.customerName}" (Estimated ${formatInquiryEstimate(inq)}). Let's discuss your timeline and technical scope.`
+                      );
+                      return (
                       <tr key={inq.id} className="hover:bg-gray-50/80 transition">
                         <td className="py-3.5 px-4 font-black text-[#E31E36]">
                           {inq.id}
@@ -277,20 +288,26 @@ export default function AdminInquiriesPage() {
                           >
                             View Scope
                           </button>
-                          <a
-                            href={buildWhatsAppLink(
-                              `Assalam-o-Alaikum ${inq.customerName}! This is Durrani Web Developers regarding your inquiry ${inq.id} for "${inq.businessName || inq.customerName}" (Estimated ${formatInquiryEstimate(inq)}). Let's discuss your timeline and technical scope.`
-                            )}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white p-1.5 rounded-lg inline-flex items-center text-[11px] font-bold transition"
-                            title="Chat on WhatsApp"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                          </a>
+                          {whatsappLink ? (
+                            <a
+                              href={whatsappLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white p-1.5 rounded-lg inline-flex items-center text-[11px] font-bold transition"
+                              title={`Message ${inq.customerName} on WhatsApp`}
+                              aria-label={`Message ${inq.customerName} on WhatsApp`}
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                            </a>
+                          ) : (
+                            <span title="Customer phone number is unavailable" className="inline-flex p-1.5 text-gray-300">
+                              <MessageSquare className="w-3.5 h-3.5" />
+                            </span>
+                          )}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -449,16 +466,18 @@ export default function AdminInquiriesPage() {
 
             {/* Conversion CTA Footer */}
             <div className="pt-4 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3">
-              <a
-                href={buildWhatsAppLink(
-                  `Assalam-o-Alaikum ${selectedInquiry.customerName}! This is Durrani Web Developers regarding your inquiry ${selectedInquiry.id}.`
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow"
-              >
-                <MessageSquare className="w-4 h-4" /> Message on WhatsApp
-              </a>
+              {selectedInquiryWhatsAppLink ? (
+                <a
+                  href={selectedInquiryWhatsAppLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow"
+                >
+                  <MessageSquare className="w-4 h-4" /> Message {selectedInquiry.customerName} on WhatsApp
+                </a>
+              ) : (
+                <span className="text-xs text-gray-500">Customer WhatsApp number unavailable</span>
+              )}
 
               {selectedInquiry.convertedProjectId ? (
                 <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">

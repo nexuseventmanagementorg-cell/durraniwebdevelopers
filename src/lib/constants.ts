@@ -23,6 +23,18 @@ export function buildWhatsAppLink(message: string): string {
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
 
+export function buildWhatsAppLinkTo(phone: string, message: string): string | null {
+  const trimmedPhone = phone.trim();
+  let recipient = trimmedPhone.replace(/\D/g, "");
+  if (trimmedPhone.startsWith("00")) recipient = recipient.slice(2);
+  else if (!trimmedPhone.startsWith("+") && recipient.startsWith("0")) {
+    recipient = `92${recipient.slice(1)}`;
+  }
+
+  if (!/^\d{8,15}$/.test(recipient)) return null;
+  return `https://wa.me/${recipient}?text=${encodeURIComponent(message)}`;
+}
+
 export function formatPKR(amount: number): string {
   return `PKR ${amount.toLocaleString("en-PK", {
     minimumFractionDigits: 0,
