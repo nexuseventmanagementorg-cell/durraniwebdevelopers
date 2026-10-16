@@ -41,7 +41,6 @@ export default function AdminInquiriesPage() {
   // Conversion modal state
   const [convertModalOpen, setConvertModalOpen] = useState(false);
   const [timelineInput, setTimelineInput] = useState("3 to 4 Weeks");
-  const [advanceInput, setAdvanceInput] = useState("10000");
   const [converting, setConverting] = useState(false);
   const [actionSuccess, setActionSuccess] = useState("");
 
@@ -118,7 +117,6 @@ export default function AdminInquiriesPage() {
         body: JSON.stringify({
           inquiryId: selectedInquiry.id,
           deliveryTimeline: timelineInput,
-          initialAdvanceReceived: Number(advanceInput),
         }),
       });
 
@@ -275,7 +273,7 @@ export default function AdminInquiriesPage() {
                             className="text-[11px] font-bold bg-[#F4F5F7] border border-gray-300 rounded-lg px-2 py-1 text-gray-800 focus:outline-none focus:border-[#E31E36]"
                           >
                             {statusOptions.map((st) => (
-                              <option key={st} value={st}>
+                              <option key={st} value={st} disabled={st === "Advance Received"}>
                                 {st}
                               </option>
                             ))}
@@ -486,15 +484,16 @@ export default function AdminInquiriesPage() {
               ) : (
                 <button
                   type="button"
+                  disabled={selectedInquiry.status !== "Advance Received"}
                   onClick={() => {
                     setTimelineInput(selectedInquiry.preferredLaunchDate || "3 to 4 Weeks");
-                    setAdvanceInput(String(selectedInquiry.calculation.advanceAmount || 10000));
                     setConvertModalOpen(true);
                   }}
-                  className="bg-[#101216] hover:bg-[#E31E36] text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition inline-flex items-center gap-2"
+                  className="bg-[#101216] hover:bg-[#E31E36] disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition inline-flex items-center gap-2"
+                  title={selectedInquiry.status !== "Advance Received" ? "Verify the customer's advance receipt before creating the project." : "The verified advance meets the project start gate."}
                 >
                   <Briefcase className="w-4 h-4" />
-                  Convert Inquiry to Active Project
+                  {selectedInquiry.status === "Advance Received" ? "Create Approved Project" : "Verify Advance First"}
                 </button>
               )}
             </div>
@@ -510,7 +509,7 @@ export default function AdminInquiriesPage() {
               Convert Inquiry to Approved Project
             </h3>
             <p className="text-xs text-gray-600 leading-relaxed">
-              This will automatically register <strong>{selectedInquiry.customerName}</strong> in the Clients Directory and initialize a new active Project in the pipeline.
+              This will register <strong>{selectedInquiry.customerName}</strong> in the Clients Directory and create the project only after the verified receipts meet the required advance.
             </p>
 
             <div className="space-y-3 text-xs">
@@ -534,19 +533,12 @@ export default function AdminInquiriesPage() {
                 />
               </div>
 
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">
-                  Initial Advance Received (PKR)
-                </label>
-                <input
-                  type="number"
-                  value={advanceInput}
-                  onChange={(e) => setAdvanceInput(e.target.value)}
-                  className="w-full bg-white px-3 py-2 rounded-lg border border-gray-300 text-gray-800 focus:outline-none focus:border-[#E31E36]"
-                />
-                <span className="text-[10px] text-gray-400 mt-1 block">
-                  If advance has already been transferred via JazzCash/EasyPaisa, enter it to log the payment record immediately.
-                </span>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
+                <strong>Required verified advance:</strong>{" "}
+                {formatPKR(selectedInquiry.calculation.advanceAmount)}
+                <p className="mt-1 text-[10px] leading-relaxed">
+                  Verify the customer&apos;s receipt in Receipt Reviews. The project cannot be created from a manually entered amount.
+                </p>
               </div>
             </div>
 

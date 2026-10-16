@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/auth";
 import { DataStore } from "@/lib/store";
 import { getInquiries, getInquiryById, updateInquiry } from "@/lib/inquiry-storage";
+import { canStartProjectAfterVerifiedAdvance, getVerifiedInquiryAdvanceAmount } from "@/lib/inquiry-advance";
 import { Client, Project, OrderStatus } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -29,6 +30,36 @@ export async function PATCH(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ success: false, error: "Inquiry ID is required" }, { status: 400 });
+    }
+    if (status === "Advance Received") {
+      return NextResponse.json(
+        { success: false, error: "Advance Received is set automatically after an admin verifies the customer's payment receipt." },
+        { status: 409 }
+      );
+    }
+    if (status === "Awaiting Advance") {
+      const current = await getInquiryById(id);
+      if (!current) {
+        return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
+      }
+      if (current.status !== "Quotation Sent" && current.status !== "Awaiting Advance") {
+        return NextResponse.json(
+          { success: false, error: "Mark the final quotation as sent before awaiting an advance." },
+          { status: 409 }
+        );
+      }
+    }
+    if (["Approved", "In Development", "Testing", "Delivered", "Completed"].includes(status)) {
+      const current = await getInquiryById(id);
+      if (!current) {
+        return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
+      }
+      if (!current.convertedProjectId) {
+        return NextResponse.json(
+          { success: false, error: "Convert the inquiry to a project after verifying its advance before setting a project lifecycle status." },
+          { status: 409 }
+        );
+      }
     }
 
     const updates: Record<string, unknown> = {};
@@ -66,11 +97,20 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { inquiryId, deliveryTimeline, initialAdvanceReceived } = body;
+    const { inquiryId, deliveryTimeline } = body;
 
     const inquiry = await getInquiryById(inquiryId);
     if (!inquiry) {
       return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
+    }
+    if (inquiry.convertedProjectId) {
+      return NextResponse.json({ success: false, error: "This inquiry has already been converted to a project." }, { status: 409 });
+    }
+    if (inquiry.status !== "Awaiting Advance" && inquiry.status !== "Advance Received") {
+      return NextResponse.json(
+        { success: false, error: "Send and confirm the quotation first, then move the inquiry to Awaiting Advance." },
+        { status: 409 }
+      );
     }
 
     // 1. Check if client already exists or create new one
@@ -81,7 +121,22 @@ export async function POST(request: NextRequest) {
 
     const approvedPrice = inquiry.calculation.estimatedTotal;
     const advanceRequired = inquiry.calculation.advanceAmount;
-    const advanceReceived = Number(initialAdvanceReceived || 0);
+    const advanceReceived = await getVerifiedInquiryAdvanceAmount(inquiry.id);
+    if (!canStartProjectAfterVerifiedAdvance(inquiry.status, advanceReceived, advanceRequired)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Project start is blocked until an admin verifies receipts totaling at least PKR ${advanceRequired.toLocaleString("en-PK")} for this inquiry.`,
+        },
+        { status: 409 }
+      );
+    }
+    if (advanceReceived > approvedPrice) {
+      return NextResponse.json(
+        { success: false, error: "Verified payments exceed the approved project fee. Review the payment records before creating a project." },
+        { status: 409 }
+      );
+    }
     const remainingBalance = Math.max(0, approvedPrice - advanceReceived);
 
     if (!client) {

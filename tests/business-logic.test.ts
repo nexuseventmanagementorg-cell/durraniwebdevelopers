@@ -31,6 +31,10 @@ import {
 } from "../src/lib/visitor-analytics";
 import { detectWebsiteFeatures, estimateWebsite } from "../src/lib/website-estimator";
 import { sendInquiryWhatsappConfirmation } from "../src/lib/admin-notifications";
+import {
+  canStartProjectAfterVerifiedAdvance,
+  sumVerifiedInquiryAdvances,
+} from "../src/lib/inquiry-advance";
 import { currencyForCountry, getRegionalPricingConfig } from "../src/lib/currency";
 import {
   describePaymentBackendError,
@@ -275,6 +279,22 @@ test("WhatsApp inquiry confirmation requires opt-in and an approved template", a
       else process.env[key] = value;
     }
   }
+});
+
+test("Project start requires a sent quote and fully verified advance receipts", () => {
+  assert.equal(canStartProjectAfterVerifiedAdvance("New Inquiry", 10000, 10000), false);
+  assert.equal(canStartProjectAfterVerifiedAdvance("Quotation Sent", 10000, 10000), false);
+  assert.equal(canStartProjectAfterVerifiedAdvance("Awaiting Advance", 9999, 10000), false);
+  assert.equal(canStartProjectAfterVerifiedAdvance("Awaiting Advance", 10000, 10000), true);
+  assert.equal(canStartProjectAfterVerifiedAdvance("Advance Received", 12000, 10000), true);
+  assert.equal(
+    sumVerifiedInquiryAdvances([
+      { amount: 6000, status: "verified" },
+      { amount: 4000, status: "pending" },
+      { amount: "5000", status: "verified" },
+    ]),
+    11000
+  );
 });
 
 test("Website estimator maps visible store and admin signals to calculator pricing", () => {

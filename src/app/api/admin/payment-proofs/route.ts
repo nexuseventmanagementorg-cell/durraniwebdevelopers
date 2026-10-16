@@ -7,6 +7,11 @@ import {
   RECEIPT_BUCKET,
 } from "@/lib/payment-server";
 import type { PaymentProof } from "@/lib/payment-types";
+import { getInquiryById, updateInquiry } from "@/lib/inquiry-storage";
+import {
+  canStartProjectAfterVerifiedAdvance,
+  getVerifiedInquiryAdvanceAmount,
+} from "@/lib/inquiry-advance";
 
 interface GatewayPaymentRecord {
   id: string;
@@ -99,7 +104,7 @@ export async function PATCH(request: NextRequest) {
       })
       .eq("id", id)
       .eq("status", "pending")
-      .select("id,status")
+      .select("id,status,inquiry_reference,amount")
       .maybeSingle();
 
     if (error) throw error;
@@ -110,7 +115,30 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true, proof: data });
+    let inquiryAdvanced = false;
+    if (status === "verified" && data.inquiry_reference) {
+      try {
+        const inquiry = await getInquiryById(data.inquiry_reference);
+        if (inquiry && (inquiry.status === "Quotation Sent" || inquiry.status === "Awaiting Advance")) {
+          const verifiedAdvance = await getVerifiedInquiryAdvanceAmount(inquiry.id);
+          if (canStartProjectAfterVerifiedAdvance(
+            inquiry.status,
+            verifiedAdvance,
+            inquiry.calculation.advanceAmount
+          )) {
+            const updatedInquiry = await updateInquiry(inquiry.id, {
+              status: "Advance Received",
+              adminNotes: `${inquiry.adminNotes || ""}\nAdvance verified against receipt ${id} on ${new Date().toLocaleDateString()}.`.trim(),
+            });
+            inquiryAdvanced = updatedInquiry?.status === "Advance Received";
+          }
+        }
+      } catch (inquiryError) {
+        console.error(`Verified receipt ${id}, but inquiry stage could not be updated`, inquiryError);
+      }
+    }
+
+    return NextResponse.json({ success: true, proof: data, inquiryAdvanced });
   } catch (error) {
     logPaymentBackendError("Could not update payment receipt review", error);
     return NextResponse.json(
