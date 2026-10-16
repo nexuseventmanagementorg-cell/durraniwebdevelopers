@@ -75,7 +75,10 @@ export async function POST(request: NextRequest) {
       return new URL(project.demoUrl).hostname.toLowerCase() === sourceHost;
     });
     if (historicalProject?.approvedPublicBudget) {
-      if (historicalProject.adminPanelIncluded || historicalProject.includedAddonIds?.length) {
+      if (
+        !estimate.pricingPackage &&
+        (historicalProject.adminPanelIncluded || historicalProject.includedAddonIds?.length)
+      ) {
         const currencyRates = snapshot?.rates || { PKR: 1 };
         const pricingConfig = getRegionalPricingConfig(
           DataStore.getPricingConfig(),

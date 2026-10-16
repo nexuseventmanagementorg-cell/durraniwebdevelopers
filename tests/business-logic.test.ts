@@ -310,6 +310,40 @@ test("Website estimator routes ecommerce stores to matching packages without dup
   assert.equal(advancedStore.addonIds.includes("advanced_dashboard"), false);
 });
 
+test("Website estimator routes SaaS platforms to SaaS pricing tiers instead of generic web-app rates", () => {
+  const starter = detectWebsiteFeatures(
+    "SaaS cloud software platform with subscriptions and a customer dashboard."
+  );
+  assert.equal(starter.pricingPackage, "saas_starter");
+  assert.equal(starter.adminPanel, true);
+  assert.equal(starter.addonIds.includes("supabase_db"), false);
+  assert.equal(starter.addonIds.includes("google_auth"), false);
+  assert.equal(
+    calculateBudget(
+      "client_admin",
+      starter.addonIds,
+      getSaasPricingConfig(DEFAULT_PRICING_CONFIG, "saas_starter")
+    ).basePrice,
+    SAAS_PACKAGES.saas_starter.basePrice
+  );
+
+  const business = detectWebsiteFeatures(
+    "SaaS project management platform with team workspaces, billing, analytics dashboard, and API integration."
+  );
+  assert.equal(business.pricingPackage, "saas_business");
+  assert.equal(business.addonIds.includes("advanced_dashboard"), false);
+
+  const enterprise = detectWebsiteFeatures(
+    "Enterprise SaaS with multi-tenant workspaces, SSO, white-label controls, audit logs, and custom roles."
+  );
+  assert.equal(enterprise.pricingPackage, "saas_enterprise");
+
+  const ecommerce = detectWebsiteFeatures(
+    "SaaS-enabled e-commerce store with product catalog, shopping cart, and checkout."
+  );
+  assert.equal(ecommerce.pricingPackage, "ecommerce_business");
+});
+
 test("Website estimator ignores chatbot mentions unless the page invites users to open or use one", () => {
   const informationalMention = detectWebsiteFeatures(
     "Our budget calculator offers AI chatbots as an optional add-on. Learn about chatbot development. Pakistan add-ons include AI chatbots."
