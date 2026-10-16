@@ -7,6 +7,7 @@ import {
   EXTENDED_ADDONS,
   BUSINESS_INFO,
   buildWhatsAppLink,
+  buildWhatsAppLinkTo,
   ECOMMERCE_PACKAGES,
   SAAS_PACKAGES,
   getEcommercePricingConfig,
@@ -148,6 +149,18 @@ test("WhatsApp link formatting with country code 92 and no leading zero", () => 
   assert.equal(BUSINESS_INFO.phoneDisplay, "+923299669565");
   assert.match(link, /^https:\/\/wa\.me\/923299669565\?text=/, "Must use 923299669565 without leading zero");
   assert.ok(link.includes("Hello%20Durrani%20Web%20Developers"), "Must properly url-encode message text");
+});
+
+test("Admin WhatsApp links target the customer's normalized phone number", () => {
+  assert.match(
+    buildWhatsAppLinkTo("03367317379", "Inquiry DW-123456") || "",
+    /^https:\/\/wa\.me\/923367317379\?text=/
+  );
+  assert.match(
+    buildWhatsAppLinkTo("+923367317379", "Inquiry DW-123456") || "",
+    /^https:\/\/wa\.me\/923367317379\?text=/
+  );
+  assert.equal(buildWhatsAppLinkTo("Not provided", "Inquiry DW-123456"), null);
 });
 
 test("Admin Token Signing and Tamper Prevention", () => {
