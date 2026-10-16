@@ -134,6 +134,14 @@ export interface Inquiry {
   scanFeatures?: InquiryScanFeature[];
   customFeatureNotes?: string;
   pricingPackage?: "ecommerce_business" | "ecommerce_advanced" | "saas_starter" | "saas_business" | "saas_enterprise";
+  manualAdvanceVerification?: {
+    amount: number;
+    method: PaymentMethod;
+    transactionReference: string;
+    note: string;
+    verifiedAt: string;
+    verifiedBy: string;
+  };
 
   // Step 7 & 8: Pricing breakdown snapshot
   calculation: CalculationBreakdown;

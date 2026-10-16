@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
-import { Inquiry, OrderStatus } from "@/lib/types";
+import { Inquiry, OrderStatus, PaymentMethod } from "@/lib/types";
 import { formatPKR, buildWhatsAppLinkTo } from "@/lib/constants";
 import { formatCurrency, isCurrencyCode } from "@/lib/currency";
 import {
@@ -40,7 +40,13 @@ export default function AdminInquiriesPage() {
 
   // Conversion modal state
   const [convertModalOpen, setConvertModalOpen] = useState(false);
+  const [manualAdvanceModalOpen, setManualAdvanceModalOpen] = useState(false);
   const [timelineInput, setTimelineInput] = useState("3 to 4 Weeks");
+  const [manualAdvanceAmount, setManualAdvanceAmount] = useState("");
+  const [manualAdvanceMethod, setManualAdvanceMethod] = useState<PaymentMethod>("Bank Transfer");
+  const [manualAdvanceReference, setManualAdvanceReference] = useState("");
+  const [manualAdvanceNote, setManualAdvanceNote] = useState("");
+  const [manualAdvanceConfirmed, setManualAdvanceConfirmed] = useState(false);
   const [converting, setConverting] = useState(false);
   const [actionSuccess, setActionSuccess] = useState("");
 
@@ -135,6 +141,41 @@ export default function AdminInquiriesPage() {
       }));
     } catch (err: any) {
       alert(err.message || "Conversion failed.");
+    } finally {
+      setConverting(false);
+    }
+  };
+
+  const handleManualAdvanceVerification = async () => {
+    if (!selectedInquiry) return;
+    setConverting(true);
+    try {
+      const res = await fetch("/api/admin/inquiries", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedInquiry.id,
+          manualAdvanceVerification: {
+            amount: Number(manualAdvanceAmount),
+            method: manualAdvanceMethod,
+            transactionReference: manualAdvanceReference,
+            note: manualAdvanceNote,
+            confirmed: manualAdvanceConfirmed,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "Manual verification failed.");
+      setInquiries((previous) => previous.map((inquiry) => inquiry.id === data.inquiry.id ? data.inquiry : inquiry));
+      setSelectedInquiry(data.inquiry);
+      setManualAdvanceModalOpen(false);
+      setManualAdvanceConfirmed(false);
+      setManualAdvanceReference("");
+      setManualAdvanceNote("");
+      setActionSuccess(`Advance manually verified for ${data.inquiry.id}. Project creation is now unlocked.`);
+      setTimeout(() => setActionSuccess(""), 4000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Manual verification failed.");
     } finally {
       setConverting(false);
     }
@@ -482,19 +523,37 @@ export default function AdminInquiriesPage() {
                   ✓ Converted to Project #{selectedInquiry.convertedProjectId}
                 </span>
               ) : (
-                <button
-                  type="button"
-                  disabled={selectedInquiry.status !== "Advance Received"}
-                  onClick={() => {
-                    setTimelineInput(selectedInquiry.preferredLaunchDate || "3 to 4 Weeks");
-                    setConvertModalOpen(true);
-                  }}
-                  className="bg-[#101216] hover:bg-[#E31E36] disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition inline-flex items-center gap-2"
-                  title={selectedInquiry.status !== "Advance Received" ? "Verify the customer's advance receipt before creating the project." : "The verified advance meets the project start gate."}
-                >
-                  <Briefcase className="w-4 h-4" />
-                  {selectedInquiry.status === "Advance Received" ? "Create Approved Project" : "Verify Advance First"}
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedInquiry.status === "Awaiting Advance" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setManualAdvanceAmount(String(selectedInquiry.calculation.advanceAmount));
+                        setManualAdvanceMethod("Bank Transfer");
+                        setManualAdvanceReference("");
+                        setManualAdvanceNote("");
+                        setManualAdvanceConfirmed(false);
+                        setManualAdvanceModalOpen(true);
+                      }}
+                      className="bg-white hover:bg-amber-50 text-amber-900 px-4 py-2.5 rounded-xl text-xs font-bold border border-amber-300 transition"
+                    >
+                      Verify Advance Manually
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={selectedInquiry.status !== "Advance Received"}
+                    onClick={() => {
+                      setTimelineInput(selectedInquiry.preferredLaunchDate || "3 to 4 Weeks");
+                      setConvertModalOpen(true);
+                    }}
+                    className="bg-[#101216] hover:bg-[#E31E36] disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition inline-flex items-center gap-2"
+                    title={selectedInquiry.status !== "Advance Received" ? "Verify the customer's advance receipt before creating the project." : "The verified advance meets the project start gate."}
+                  >
+                    <Briefcase className="w-4 h-4" />
+                    {selectedInquiry.status === "Advance Received" ? "Create Approved Project" : "Advance Verification Required"}
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -557,6 +616,91 @@ export default function AdminInquiriesPage() {
                 className="bg-[#E31E36] hover:bg-[#C8162D] text-white px-5 py-2 rounded-xl text-xs font-bold shadow-glow disabled:opacity-50"
               >
                 {converting ? "Converting..." : "Approve & Create Project"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {manualAdvanceModalOpen && selectedInquiry && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-gray-300">
+            <div>
+              <h3 className="text-lg font-black text-[#101216]">Manually Verify Client Advance</h3>
+              <p className="mt-1 text-xs leading-relaxed text-gray-600">
+                Free manual fallback. Check your bank/wallet/cash record first. This action records your verification and unlocks project creation.
+              </p>
+            </div>
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Verified amount received (PKR)</label>
+                <input
+                  type="number"
+                  min={selectedInquiry.calculation.advanceAmount}
+                  max={selectedInquiry.calculation.estimatedTotal}
+                  value={manualAdvanceAmount}
+                  onChange={(event) => setManualAdvanceAmount(event.target.value)}
+                  className="w-full bg-white px-3 py-2 rounded-lg border border-gray-300 text-gray-800"
+                />
+                <span className="mt-1 block text-[10px] text-gray-500">
+                  Minimum required: {formatPKR(selectedInquiry.calculation.advanceAmount)}
+                </span>
+              </div>
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Payment method</label>
+                <select
+                  value={manualAdvanceMethod}
+                  onChange={(event) => setManualAdvanceMethod(event.target.value as PaymentMethod)}
+                  className="w-full bg-white px-3 py-2 rounded-lg border border-gray-300 text-gray-800"
+                >
+                  <option>Bank Transfer</option>
+                  <option>JazzCash</option>
+                  <option>Easypaisa</option>
+                  <option>Manual Entry / Cash</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Transaction / receipt reference</label>
+                <input
+                  value={manualAdvanceReference}
+                  onChange={(event) => setManualAdvanceReference(event.target.value)}
+                  maxLength={100}
+                  className="w-full bg-white px-3 py-2 rounded-lg border border-gray-300 text-gray-800"
+                  placeholder="Provider transaction ID or cash receipt number"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Verification note</label>
+                <textarea
+                  value={manualAdvanceNote}
+                  onChange={(event) => setManualAdvanceNote(event.target.value)}
+                  maxLength={500}
+                  rows={2}
+                  className="w-full bg-white px-3 py-2 rounded-lg border border-gray-300 text-gray-800"
+                  placeholder="Where/how did you verify the funds?"
+                />
+              </div>
+              <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-950">
+                <input
+                  type="checkbox"
+                  checked={manualAdvanceConfirmed}
+                  onChange={(event) => setManualAdvanceConfirmed(event.target.checked)}
+                  className="mt-0.5 accent-[#E31E36]"
+                />
+                <span>I personally verified that these funds were received. I am not relying only on an unverified screenshot.</span>
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-gray-200 pt-3">
+              <button type="button" onClick={() => setManualAdvanceModalOpen(false)} className="rounded-xl bg-gray-100 px-4 py-2 text-xs font-bold text-gray-700">
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={converting || !manualAdvanceConfirmed || !manualAdvanceReference.trim() || !manualAdvanceNote.trim()}
+                onClick={handleManualAdvanceVerification}
+                className="rounded-xl bg-[#E31E36] px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {converting ? "Saving verification..." : "Confirm Funds Received"}
               </button>
             </div>
           </div>

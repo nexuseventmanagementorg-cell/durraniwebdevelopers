@@ -140,6 +140,14 @@ Calculator and contact inquiries are saved in the private Supabase `inquiries` t
 3. A customer can optionally consent to an automatic WhatsApp reference confirmation. Create and approve a WhatsApp message template whose body includes `Hello {{1}}, your inquiry was received. Your reference is {{2}}. We will follow up shortly.` Then set `WHATSAPP_CUSTOMER_TEMPLATE_NAME` and optionally `WHATSAPP_CUSTOMER_TEMPLATE_LANGUAGE` in Vercel. The existing `WHATSAPP_API_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and `WHATSAPP_GRAPH_API_VERSION` are reused. Without an approved template, the saved reference still appears and the customer can send it to DWD using the WhatsApp button.
 4. Redeploy after applying the migration and environment variables. Verify a test submission appears in `/admin/inquiries` and its reference works on `/track-order`.
 
+### Free quotation-to-project gate
+
+The project-start gate does not require an AI subscription or payment API. Move an inquiry to **Quotation Sent**, then **Awaiting Advance** only after the client accepts the final quote. Verify a submitted receipt in **Receipt Reviews**; when verified receipts meet the required advance, the inquiry becomes **Advance Received** and project creation unlocks.
+
+If a client paid outside the receipt workflow, use **Verify Advance Manually** in the inquiry detail. The authenticated admin must enter the received amount, payment method, transaction reference, verification note, and confirm that funds were checked directly. This is an auditable human override, not an AI or bank verification. The system blocks project creation until that confirmation or an equivalent verified receipt exists.
+
+The current free milestone gates quoting and advance verification. It does not yet generate or deploy client websites automatically. A later build-brief and preview workflow can be added without a paid AI API; fully automated AI generation would need a local model or a separately funded API and a worker that remains available.
+
 ### Private payment receipt setup
 
 Receipt files and editable transfer instructions require a **dedicated Durrani Web Developers Supabase project**. Do not reuse a customer or GRILLVI database.

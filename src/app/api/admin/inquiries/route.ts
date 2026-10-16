@@ -3,7 +3,7 @@ import { verifyAdminRequest } from "@/lib/auth";
 import { DataStore } from "@/lib/store";
 import { getInquiries, getInquiryById, updateInquiry } from "@/lib/inquiry-storage";
 import { canStartProjectAfterVerifiedAdvance, getVerifiedInquiryAdvanceAmount } from "@/lib/inquiry-advance";
-import { Client, Project, OrderStatus } from "@/lib/types";
+import { Client, Project, OrderStatus, PaymentMethod } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
   if (!verifyAdminRequest(request)) {
@@ -30,6 +30,55 @@ export async function PATCH(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ success: false, error: "Inquiry ID is required" }, { status: 400 });
+    }
+    if (body.manualAdvanceVerification && typeof body.manualAdvanceVerification === "object") {
+      const current = await getInquiryById(id);
+      if (!current) {
+        return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
+      }
+      if (current.status !== "Awaiting Advance") {
+        return NextResponse.json({ success: false, error: "Send the final quotation before manually verifying its advance." }, { status: 409 });
+      }
+
+      const manual = body.manualAdvanceVerification as Record<string, unknown>;
+      const amount = Number(manual.amount);
+      const allowedMethods = ["JazzCash", "Easypaisa", "Bank Transfer", "Manual Entry / Cash"] as const;
+      const method = typeof manual.method === "string" &&
+        allowedMethods.includes(manual.method as (typeof allowedMethods)[number])
+        ? manual.method as PaymentMethod
+        : null;
+      const transactionReference = typeof manual.transactionReference === "string"
+        ? manual.transactionReference.trim().slice(0, 100)
+        : "";
+      const note = typeof manual.note === "string" ? manual.note.trim().slice(0, 500) : "";
+      if (
+        manual.confirmed !== true ||
+        !Number.isFinite(amount) ||
+        amount < current.calculation.advanceAmount ||
+        amount > current.calculation.estimatedTotal ||
+        !method ||
+        !transactionReference ||
+        !note
+      ) {
+        return NextResponse.json({ success: false, error: "Confirm the received funds, enter the verified amount, payment method, transaction reference, and verification note." }, { status: 400 });
+      }
+
+      const verifiedAt = new Date().toISOString();
+      const manualAdvanceVerification = {
+        amount,
+        method,
+        transactionReference,
+        note,
+        verifiedAt,
+        verifiedBy: "Admin",
+      };
+      const updated = await updateInquiry(id, {
+        status: "Advance Received",
+        manualAdvanceVerification,
+        adminNotes: `${current.adminNotes || ""}\nManual advance verified by admin on ${verifiedAt}: ${transactionReference}. ${note}`.trim(),
+      });
+      if (!updated) return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
+      return NextResponse.json({ success: true, inquiry: updated });
     }
     if (status === "Advance Received") {
       return NextResponse.json(
@@ -121,7 +170,8 @@ export async function POST(request: NextRequest) {
 
     const approvedPrice = inquiry.calculation.estimatedTotal;
     const advanceRequired = inquiry.calculation.advanceAmount;
-    const advanceReceived = await getVerifiedInquiryAdvanceAmount(inquiry.id);
+    const advanceReceived = inquiry.manualAdvanceVerification?.amount ??
+      await getVerifiedInquiryAdvanceAmount(inquiry.id);
     if (!canStartProjectAfterVerifiedAdvance(inquiry.status, advanceReceived, advanceRequired)) {
       return NextResponse.json(
         {
@@ -205,12 +255,14 @@ export async function POST(request: NextRequest) {
         clientId: client.id,
         clientName: client.name,
         amount: advanceReceived,
-        method: "Manual Entry / Cash",
-        transactionRef: `CONV-ADV-${inquiry.id}`,
+        method: inquiry.manualAdvanceVerification?.method || "Manual Entry / Cash",
+        transactionRef: inquiry.manualAdvanceVerification?.transactionReference || `VERIFIED-${inquiry.id}`,
         paymentDate: new Date().toISOString(),
         status: "Paid",
         verifiedByAdmin: true,
-        adminNotes: `Initial advance recorded on inquiry conversion.`,
+        adminNotes: inquiry.manualAdvanceVerification
+          ? `Manually verified by ${inquiry.manualAdvanceVerification.verifiedBy}: ${inquiry.manualAdvanceVerification.note}`
+          : "Initial advance was confirmed from an admin-verified payment receipt.",
         createdAt: new Date().toISOString(),
       });
     }
