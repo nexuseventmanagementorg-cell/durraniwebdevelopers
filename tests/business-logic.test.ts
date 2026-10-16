@@ -29,6 +29,7 @@ import {
   isVisitorAnalyticsEvent,
 } from "../src/lib/visitor-analytics";
 import { detectWebsiteFeatures, estimateWebsite } from "../src/lib/website-estimator";
+import { sendInquiryWhatsappConfirmation } from "../src/lib/admin-notifications";
 import { currencyForCountry, getRegionalPricingConfig } from "../src/lib/currency";
 import {
   describePaymentBackendError,
@@ -224,6 +225,43 @@ test("All-time analytics hash browser identifiers and accept supported events", 
   assert.equal(isVisitorAnalyticsEvent("visitor"), true);
   assert.equal(isVisitorAnalyticsEvent("estimator"), true);
   assert.equal(isVisitorAnalyticsEvent("payment"), false);
+});
+
+test("WhatsApp inquiry confirmation requires opt-in and an approved template", async () => {
+  const envKeys = [
+    "WHATSAPP_API_TOKEN",
+    "WHATSAPP_PHONE_NUMBER_ID",
+    "WHATSAPP_CUSTOMER_TEMPLATE_NAME",
+  ] as const;
+  const previousValues = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
+  for (const key of envKeys) delete process.env[key];
+
+  try {
+    assert.equal(
+      await sendInquiryWhatsappConfirmation({
+        customerName: "Test Customer",
+        customerPhone: "03001234567",
+        reference: "DW-123456",
+        optedIn: false,
+      }),
+      "not_requested"
+    );
+    assert.equal(
+      await sendInquiryWhatsappConfirmation({
+        customerName: "Test Customer",
+        customerPhone: "03001234567",
+        reference: "DW-123456",
+        optedIn: true,
+      }),
+      "not_configured"
+    );
+  } finally {
+    for (const key of envKeys) {
+      const value = previousValues[key];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
 });
 
 test("Website estimator maps visible store and admin signals to calculator pricing", () => {

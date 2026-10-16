@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/auth";
 import { DataStore } from "@/lib/store";
+import { getInquiries } from "@/lib/inquiry-storage";
 
 export async function GET(request: NextRequest) {
   if (!verifyAdminRequest(request)) {
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   const clients = DataStore.getClients();
   const projects = DataStore.getProjects();
-  const inquiries = DataStore.getInquiries();
+  const inquiries = await getInquiries();
   const payments = DataStore.getPayments();
   const reminders = DataStore.getReminders();
   const auditLogs = DataStore.getAuditLogs();

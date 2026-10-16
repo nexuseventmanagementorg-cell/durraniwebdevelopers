@@ -369,6 +369,19 @@ export default function AdminInquiriesPage() {
                 </div>
               </div>
 
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[11px]">
+                <strong>WhatsApp confirmation:</strong>{" "}
+                {selectedInquiry.whatsappConfirmationConsent
+                  ? selectedInquiry.whatsappConfirmationStatus === "sent"
+                    ? "Customer opted in; sent"
+                    : selectedInquiry.whatsappConfirmationStatus === "failed"
+                      ? "Customer opted in; delivery failed"
+                      : selectedInquiry.whatsappConfirmationStatus === "not_configured"
+                        ? "Customer opted in; template not configured"
+                        : "Customer opted in; not sent"
+                  : "No automatic confirmation consent"}
+              </div>
+
               {selectedInquiry.scanFeatures && selectedInquiry.scanFeatures.length > 0 && (
                 <section className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">

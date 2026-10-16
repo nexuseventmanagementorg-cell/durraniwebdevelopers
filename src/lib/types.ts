@@ -101,6 +101,8 @@ export interface Inquiry {
   phone: string;
   cityCountry: string;
   preferredContact: "whatsapp" | "email" | "phone";
+  whatsappConfirmationConsent?: boolean;
+  whatsappConfirmationStatus?: "sent" | "failed" | "not_configured" | "not_requested";
   customerIntro: string;
 
   // Step 2: Project Type

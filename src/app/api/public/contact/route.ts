@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { DataStore } from "@/lib/store";
+import { saveInquiry } from "@/lib/inquiry-storage";
 import { notifyAdminOfSubmission } from "@/lib/admin-notifications";
 
 export async function POST(request: NextRequest) {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const randomSuffix = Math.floor(100000 + Math.random() * 900000);
     const inquiryId = `MSG-${randomSuffix}`;
 
-    const savedInquiry = DataStore.createInquiry({
+    const savedInquiry = await saveInquiry({
       id: inquiryId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

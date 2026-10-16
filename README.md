@@ -111,15 +111,14 @@ Runs the automated unit test suite verifying:
 
 ## 🗄 Database & Supabase Deployment
 
-The application features a dual data architecture:
-1. **Core application store**: `DataStore` continues to use `data/db.json` for inquiries, clients, projects, invoices, the existing financial ledger, and general settings.
-2. **Supabase PostgreSQL schema**: Core tables are defined in `supabase/schema.sql`. The separate `supabase/payment-workflow.sql` migration adds Supabase-backed payment instructions and private customer receipt submissions; those payment workflows do not imply that the rest of `DataStore` has migrated from JSON.
+The application uses Supabase PostgreSQL for calculator/contact inquiry submissions and payment workflows. Other legacy client, project, invoice, and financial-ledger records still use `DataStore` and `data/db.json`.
 
 To deploy to Supabase:
 1. Create a new project at [supabase.com](https://supabase.com).
 2. Go to the **SQL Editor** in your Supabase dashboard.
 3. Open `supabase/schema.sql`, copy all contents, and execute.
-4. Copy your project URL, anon key, and service role key into your Vercel Environment Variables:
+4. Run [`supabase/website-inquiries.sql`](./supabase/website-inquiries.sql) to enable durable calculator inquiries and private server-side access.
+5. Copy your project URL, anon key, and service role key into your Vercel Environment Variables:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
@@ -131,6 +130,15 @@ The public footer reports all-time unique visitors, visitors who opened the budg
 1. Run [`supabase/visitor-analytics.sql`](./supabase/visitor-analytics.sql) in the dedicated DWD Supabase SQL Editor, including when upgrading an existing daily-count setup.
 2. Configure `NEXT_PUBLIC_SUPABASE_URL` and the server-only `SUPABASE_SERVICE_ROLE_KEY` in local `.env.local` and Vercel.
 3. Restart/redeploy and load any public page. If Supabase or the migration is unavailable, the footer explicitly shows that visitor counts are unavailable rather than showing a false zero.
+
+### Durable calculator inquiries
+
+Calculator and contact inquiries are saved in the private Supabase `inquiries` table so Vercel deployments can return a reference and the admin inbox can load the same record.
+
+1. Run [`supabase/website-inquiries.sql`](./supabase/website-inquiries.sql) in the dedicated DWD Supabase SQL Editor.
+2. Confirm `NEXT_PUBLIC_SUPABASE_URL` and the server-only `SUPABASE_SERVICE_ROLE_KEY` are configured in Vercel.
+3. A customer can optionally consent to an automatic WhatsApp reference confirmation. Create and approve a WhatsApp message template whose body includes `Hello {{1}}, your inquiry was received. Your reference is {{2}}. We will follow up shortly.` Then set `WHATSAPP_CUSTOMER_TEMPLATE_NAME` and optionally `WHATSAPP_CUSTOMER_TEMPLATE_LANGUAGE` in Vercel. The existing `WHATSAPP_API_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and `WHATSAPP_GRAPH_API_VERSION` are reused. Without an approved template, the saved reference still appears and the customer can send it to DWD using the WhatsApp button.
+4. Redeploy after applying the migration and environment variables. Verify a test submission appears in `/admin/inquiries` and its reference works on `/track-order`.
 
 ### Private payment receipt setup
 

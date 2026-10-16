@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { DataStore } from "@/lib/store";
+import { getInquiryById } from "@/lib/inquiry-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const inquiry = DataStore.getInquiryById(ref.trim());
+    const inquiry = await getInquiryById(ref.trim());
     if (!inquiry) {
       return NextResponse.json(
         { success: false, error: "No inquiry found matching this reference code." },

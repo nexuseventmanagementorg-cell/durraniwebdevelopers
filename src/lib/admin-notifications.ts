@@ -11,6 +11,67 @@ export interface AdminSubmissionAlert {
 
 type DeliveryResult = "sent" | "failed" | "not_configured";
 
+export type InquiryConfirmationResult = "sent" | "failed" | "not_configured" | "not_requested";
+
+export async function sendInquiryWhatsappConfirmation(input: {
+  customerName: string;
+  customerPhone: string;
+  reference: string;
+  optedIn: boolean;
+}): Promise<InquiryConfirmationResult> {
+  if (!input.optedIn) return "not_requested";
+
+  const token = process.env.WHATSAPP_API_TOKEN?.trim();
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  const templateName = process.env.WHATSAPP_CUSTOMER_TEMPLATE_NAME?.trim();
+  if (!token || !phoneNumberId || !templateName) return "not_configured";
+
+  const version = process.env.WHATSAPP_GRAPH_API_VERSION?.trim() || "v23.0";
+  const language = process.env.WHATSAPP_CUSTOMER_TEMPLATE_LANGUAGE?.trim() || "en";
+  const phoneDigits = input.customerPhone.replace(/\D/g, "");
+  const recipient = phoneDigits.startsWith("0") ? `92${phoneDigits.slice(1)}` : phoneDigits;
+  if (
+    !/^\d{7,20}$/.test(phoneNumberId) || !/^\d{8,15}$/.test(recipient) ||
+    !/^v\d+\.\d+$/.test(version) || !/^[a-z0-9_]{1,512}$/i.test(templateName) ||
+    !/^[a-z]{2,3}(?:_[A-Z]{2})?$/.test(language)
+  ) return "failed";
+
+  try {
+    const response = await fetch(`https://graph.facebook.com/${version}/${phoneNumberId}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: recipient,
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: language },
+          components: [{
+            type: "body",
+            parameters: [
+              { type: "text", text: input.customerName.slice(0, 100) },
+              { type: "text", text: input.reference },
+            ],
+          }],
+        },
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) {
+      console.error(`Customer WhatsApp confirmation failed for ${input.reference} (HTTP ${response.status}).`);
+      return "failed";
+    }
+    return "sent";
+  } catch (error) {
+    console.error(`Customer WhatsApp confirmation failed for ${input.reference}`, error);
+    return "failed";
+  }
+}
+
 function getWhatsAppConfig() {
   const token = process.env.WHATSAPP_API_TOKEN?.trim();
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();

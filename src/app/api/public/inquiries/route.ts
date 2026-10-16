@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataStore } from "@/lib/store";
+import { InquiryStorageError, saveInquiry, updateInquiry } from "@/lib/inquiry-storage";
 import {
   calculateBudget,
   getChargeableAddonIds,
@@ -10,7 +11,10 @@ import { checkRateLimit } from "@/lib/rateLimit";
 import { Inquiry, InquiryScanFeature } from "@/lib/types";
 import { CurrencyCode, isCurrencyCode, getRegionalPricingConfig } from "@/lib/currency";
 import { getExchangeRateSnapshot } from "@/lib/exchange-rates";
-import { notifyAdminOfSubmission } from "@/lib/admin-notifications";
+import {
+  notifyAdminOfSubmission,
+  sendInquiryWhatsappConfirmation,
+} from "@/lib/admin-notifications";
 
 function sanitizeScanFeatures(value: unknown): InquiryScanFeature[] {
   if (!Array.isArray(value)) return [];
@@ -125,6 +129,7 @@ export async function POST(request: NextRequest) {
       cityCountry: (body.cityCountry || "").trim(),
       preferredContact: body.preferredContact || "whatsapp",
       customerIntro: (body.customerIntro || "").trim(),
+      whatsappConfirmationConsent: body.whatsappConfirmationConsent === true,
 
       projectTypes: Array.isArray(body.projectTypes) && body.projectTypes.length > 0
         ? body.projectTypes
@@ -165,7 +170,24 @@ export async function POST(request: NextRequest) {
       adminNotes: `Submitted via online interactive budget calculator.${pricingPackage ? ` Selected package: ${pricingPackage}.` : ""}${scanFeatures.length ? ` Includes ${scanFeatures.length} URL scan evidence items.` : ""}`,
     };
 
-    const savedInquiry = DataStore.createInquiry(newInquiry);
+    const savedInquiry = await saveInquiry(newInquiry);
+    const whatsappConfirmation = await sendInquiryWhatsappConfirmation({
+      customerName: savedInquiry.customerName,
+      customerPhone: savedInquiry.phone,
+      reference: savedInquiry.id,
+      optedIn: savedInquiry.whatsappConfirmationConsent === true,
+    });
+    const inquiryWithWhatsappStatus = {
+      ...savedInquiry,
+      whatsappConfirmationStatus: whatsappConfirmation,
+    };
+    try {
+      await updateInquiry(savedInquiry.id, {
+        whatsappConfirmationStatus: whatsappConfirmation,
+      });
+    } catch (error) {
+      console.error("WhatsApp confirmation status could not be saved", error);
+    }
     await notifyAdminOfSubmission({
       type: "Project inquiry",
       reference: savedInquiry.id,
@@ -183,20 +205,25 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      inquiry: savedInquiry,
+      inquiry: inquiryWithWhatsappStatus,
+      whatsappConfirmation,
       referenceId: savedInquiry.id,
       message: "Project inquiry submitted successfully! Durrani Web Developers will review your requirements.",
     });
   } catch (error) {
     console.error("Inquiry submission failed", error);
+    const isUnavailable = error instanceof InquiryStorageError ||
+      (error instanceof Error && /exchange[ -]rate/i.test(error.message));
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error && /exchange[ -]rate/i.test(error.message)
-          ? error.message
+        error: isUnavailable
+          ? error instanceof InquiryStorageError
+            ? "We couldn't save your inquiry just now. Please try again or contact us on WhatsApp."
+            : error.message
           : "Failed to process inquiry submission",
       },
-      { status: error instanceof Error && /exchange[ -]rate/i.test(error.message) ? 503 : 500 }
+      { status: isUnavailable ? 503 : 500 }
     );
   }
 }
