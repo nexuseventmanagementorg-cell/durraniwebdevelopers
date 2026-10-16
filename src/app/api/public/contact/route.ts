@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
         adminFee: 0,
         addonsTotal: 0,
         selectedAddonDetails: [],
+        monthlyAddonTotal: 0,
         contingencyAmount: 0,
         estimatedTotal: 0,
         advanceAmount: 0,

@@ -4,6 +4,7 @@ import { createHmac } from "crypto";
 import {
   calculateBudget,
   DEFAULT_PRICING_CONFIG,
+  EXTENDED_ADDONS,
   BUSINESS_INFO,
   buildWhatsAppLink,
   ECOMMERCE_PACKAGES,
@@ -11,6 +12,7 @@ import {
   getEcommercePricingConfig,
   getSaasPricingConfig,
   getChargeableAddonIds,
+  mergePricingConfigWithDefaults,
   isEcommerceProjectType,
   getDefaultPricingPackageForProjectType,
 } from "../src/lib/constants";
@@ -102,6 +104,41 @@ test("Addon selection and deduplication protects against double charges", () => 
 
   const sum = Number((calc.regularInstallment * 10 + calc.finalInstallment).toFixed(2));
   assert.equal(sum, 55000.0, "Sum of installments must equal 55,000.00 exactly");
+});
+
+test("Expanded add-ons preserve saved prices and separate monthly maintenance", () => {
+  const merged = mergePricingConfigWithDefaults({
+    addons: {
+      ...DEFAULT_PRICING_CONFIG.addons,
+      google_auth: { ...DEFAULT_PRICING_CONFIG.addons.google_auth, price: 23000 },
+    },
+  });
+  assert.equal(merged.addons.google_auth.price, 23000);
+  assert.equal(merged.addons.cms.price, 15000);
+  assert.equal(merged.addons.multi_tenant_architecture.price, 50000);
+
+  const calculation = calculateBudget("none", ["maintenance_updates", "cms"], merged);
+  assert.equal(calculation.addonsTotal, 15000);
+  assert.equal(calculation.monthlyAddonTotal, 15000);
+  assert.equal(
+    calculation.selectedAddonDetails.find((addon) => addon.id === "maintenance_updates")?.billingPeriod,
+    "monthly"
+  );
+});
+
+test("Client admin and e-commerce packages do not double-charge included modules", () => {
+  assert.deepEqual(
+    getChargeableAddonIds(["admin_dashboard"], null, "client_admin"),
+    []
+  );
+  assert.deepEqual(
+    getChargeableAddonIds(
+      ["admin_dashboard", "inventory_management", "order_invoice_management", "discount_coupons"],
+      "ecommerce_business",
+      "client_admin"
+    ),
+    ["discount_coupons"]
+  );
 });
 
 test("WhatsApp link formatting with country code 92 and no leading zero", () => {
@@ -358,6 +395,67 @@ test("Website estimator ignores chatbot mentions unless the page invites users t
   assert.equal(chatbotCallToAction.addonIds.includes("ai_chatbot"), true);
 });
 
+test("Website scan maps visible modules to priced add-ons and records evidence", () => {
+  const detected = detectWebsiteFeatures(
+    "Online store with product variants, inventory management and low-stock alerts, " +
+    "coupon codes, wishlists, product reviews, shipping rules, order tracking, abandoned carts, " +
+    "bulk product import, multiple warehouses, responsive design, content management system, " +
+    "advanced SEO, multilingual support, email notifications, dark mode, role-based permissions, " +
+    "file uploads, CSV report export, automated backups, audit trail, API integration, " +
+    "multi-tenant SaaS platform, subscription plans, usage limits, vendor management, " +
+    "commission payouts, white-label branding, two-factor authentication, digital event tickets, " +
+    "sign in with Google, and a bespoke workflow."
+  );
+
+  for (const addonId of [
+    "responsive_design",
+    "cms",
+    "advanced_seo",
+    "multilingual_support",
+    "email_notifications",
+    "theme_switcher",
+    "advanced_product_management",
+    "inventory_management",
+    "discount_coupons",
+    "wishlist",
+    "product_reviews",
+    "shipping_rules",
+    "order_tracking",
+    "abandoned_cart",
+    "bulk_product_import",
+    "multi_warehouse",
+    "role_permissions",
+    "media_uploads",
+    "pdf_excel_export",
+    "automated_backups",
+    "audit_trail",
+    "api_integration",
+    "multi_tenant_architecture",
+    "subscription_plans",
+    "usage_metering",
+    "vendor_management",
+    "commission_payouts",
+    "white_label",
+    "two_factor_auth",
+    "event_ticketing",
+    "custom_advanced_feature",
+  ]) {
+    assert.ok(detected.addonIds.includes(addonId), `expected ${addonId} from scan text`);
+  }
+  assert.ok(detected.features.some((feature) => feature.title === "Responsive Design Enhancement"));
+  assert.ok(detected.features.some((feature) => feature.title === "Google Authentication"));
+  assert.equal(detected.addonIds.includes("google_auth"), false);
+  assert.ok(detected.features.every((feature) => feature.evidence.length > 0));
+});
+
+test("Every extended add-on name can be captured from visible scan text", () => {
+  const detected = detectWebsiteFeatures(EXTENDED_ADDONS.map((addon) => addon.label).join(". "));
+  for (const addon of EXTENDED_ADDONS) {
+    assert.ok(detected.features.some((feature) => feature.title === addon.label), addon.label);
+    assert.ok(detected.addonIds.includes(addon.id), addon.id);
+  }
+});
+
 test("Website estimator rejects local URLs before making a request", async () => {
   await assert.rejects(
     estimateWebsite("http://localhost/"),
@@ -382,6 +480,7 @@ test("International pricing doubles PKR rates before converting to the selected 
   assert.equal(regionalConfig.baseWithAdmin, 270);
   assert.equal(regionalConfig.addons.supabase_db.price, 100);
   assert.equal(regionalConfig.addons.google_auth.price, 100);
+  assert.equal(regionalConfig.addons.maintenance_updates.price, 100);
   assert.equal(regionalConfig.advanceDefault, 60);
   const calculatorTotal = calculateBudget(
     "none",

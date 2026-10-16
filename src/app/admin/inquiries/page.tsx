@@ -369,6 +369,26 @@ export default function AdminInquiriesPage() {
                 </div>
               </div>
 
+              {selectedInquiry.scanFeatures && selectedInquiry.scanFeatures.length > 0 && (
+                <section className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-bold text-emerald-950">URL scan features captured</h3>
+                    {selectedInquiry.inspirationUrl && (
+                      <span className="break-all text-[11px] text-emerald-800">
+                        Scanned URL: {selectedInquiry.inspirationUrl}
+                      </span>
+                    )}
+                  </div>
+                  <ul className="mt-3 space-y-2">
+                    {selectedInquiry.scanFeatures.map((feature, index) => (
+                      <li key={`${feature.title}-${index}`} className="text-[11px] leading-relaxed text-emerald-950">
+                        <strong>{feature.title}:</strong> {feature.evidence}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
               {/* Add-ons & Admin Tier */}
               <div className="bg-red-50/60 p-4 rounded-xl border border-red-200 space-y-2">
                 <div className="flex justify-between items-center font-bold">
@@ -384,10 +404,21 @@ export default function AdminInquiriesPage() {
                   <span>Selected Modular Add-ons:</span>
                   <span className="font-bold">
                     {selectedInquiry.selectedAddons.length > 0
-                      ? selectedInquiry.selectedAddons.join(", ")
+                      ? selectedInquiry.calculation.selectedAddonDetails?.map((addon) => addon.label).join(", ") || selectedInquiry.selectedAddons.join(", ")
                       : "None"}
                   </span>
                 </div>
+
+                {(selectedInquiry.calculation.monthlyAddonTotal || 0) > 0 && (
+                  <div className="flex justify-between items-center pt-2 border-t border-red-200 text-gray-700">
+                    <span>Recurring monthly add-ons:</span>
+                    <strong>
+                      {selectedInquiry.internationalPricing && selectedInquiry.internationalCalculation && isCurrencyCode(selectedInquiry.currency)
+                        ? `${formatCurrency(selectedInquiry.internationalCalculation.monthlyAddonTotal || 0, selectedInquiry.currency)} / month (${formatPKR(selectedInquiry.calculation.monthlyAddonTotal || 0)} PKR base)`
+                        : `${formatPKR(selectedInquiry.calculation.monthlyAddonTotal || 0)} / month`}
+                    </strong>
+                  </div>
+                )}
 
                 <div className="flex justify-between items-baseline pt-2 border-t border-red-200">
                   <span className="text-xs uppercase font-extrabold text-gray-600">Calculated Budget:</span>

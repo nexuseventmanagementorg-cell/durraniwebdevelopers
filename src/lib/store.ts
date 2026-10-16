@@ -13,7 +13,7 @@ import {
   AuditLog,
   SystemSettings,
 } from "./types";
-import { DEFAULT_PRICING_CONFIG, calculateBudget } from "./constants";
+import { DEFAULT_PRICING_CONFIG, calculateBudget, mergePricingConfigWithDefaults } from "./constants";
 
 interface DatabaseSchema {
   inquiries: Inquiry[];
@@ -453,21 +453,22 @@ export class DataStore {
   // Pricing configuration
   static getPricingConfig(): PricingRuleConfig {
     const data = this.ensureDataFile();
-    return data.pricingConfig || DEFAULT_PRICING_CONFIG;
+    return mergePricingConfigWithDefaults(data.pricingConfig);
   }
 
   static updatePricingConfig(config: PricingRuleConfig, actor: string = "Admin"): PricingRuleConfig {
     const data = this.ensureDataFile();
-    data.pricingConfig = config;
+    const mergedConfig = mergePricingConfigWithDefaults(config);
+    data.pricingConfig = mergedConfig;
     this.addAuditLog({
       action: "PRICING_RULES_UPDATED",
       actor,
       targetType: "pricing",
       targetId: "config",
-      details: `Pricing rules updated. Base without admin: PKR ${config.baseWithoutAdmin}, Base with admin: PKR ${config.baseWithAdmin}.`,
+      details: `Pricing rules updated. Base without admin: PKR ${mergedConfig.baseWithoutAdmin}, Base with admin: PKR ${mergedConfig.baseWithAdmin}.`,
     }, data);
     this.writeData(data);
-    return config;
+    return mergedConfig;
   }
 
   // Reminders

@@ -32,10 +32,25 @@ export type PaymentMethod =
 export interface AddonOption {
   id: string;
   label: string;
-  category: "auth" | "database" | "payment" | "admin" | "ai" | "custom" | "feature";
+  category:
+    | "auth"
+    | "database"
+    | "payment"
+    | "admin"
+    | "ai"
+    | "custom"
+    | "feature"
+    | "website"
+    | "business"
+    | "ecommerce"
+    | "saas"
+    | "automation"
+    | "security"
+    | "industry";
   price: number;
   description: string;
   enabled: boolean;
+  billingPeriod?: "one_time" | "monthly";
 }
 
 export interface PricingRuleConfig {
@@ -51,7 +66,13 @@ export interface CalculationBreakdown {
   basePrice: number;
   adminFee: number;
   addonsTotal: number;
-  selectedAddonDetails: { id: string; label: string; price: number }[];
+  selectedAddonDetails: {
+    id: string;
+    label: string;
+    price: number;
+    billingPeriod?: "one_time" | "monthly";
+  }[];
+  monthlyAddonTotal: number;
   contingencyAmount: number;
   estimatedTotal: number;
   advanceAmount: number;
@@ -60,6 +81,11 @@ export interface CalculationBreakdown {
   regularInstallment: number;
   finalInstallment: number;
   dailyCost: number;
+}
+
+export interface InquiryScanFeature {
+  title: string;
+  evidence: string;
 }
 
 export interface Inquiry {
@@ -103,6 +129,7 @@ export interface Inquiry {
 
   // Step 6: Advanced Features
   selectedAddons: string[];
+  scanFeatures?: InquiryScanFeature[];
   customFeatureNotes?: string;
   pricingPackage?: "ecommerce_business" | "ecommerce_advanced" | "saas_starter" | "saas_business" | "saas_enterprise";
 

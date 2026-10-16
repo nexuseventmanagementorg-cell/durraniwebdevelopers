@@ -35,6 +35,7 @@ export default function WebsiteEstimatorPage() {
             : "Custom web application",
           adminPanel: estimate.adminPanel ? "client_admin" : "none",
           addons: estimate.addons.map((addon) => addon.id).join(","),
+          scanFeatures: JSON.stringify(estimate.features.map(({ title }) => title)),
           ...(estimate.pricingPackage ? { package: estimate.pricingPackage } : {}),
         });
         return `/calculator?${params.toString()}`;
@@ -233,9 +234,18 @@ export default function WebsiteEstimatorPage() {
                   {estimate.addons.map((addon) => (
                     <div key={addon.id} className="flex justify-between gap-4">
                       <span className="text-gray-600">{addon.title}</span>
-                      <strong>{formatCurrency(addon.price, estimate.currency, locale)}</strong>
+                      <strong>
+                        {formatCurrency(addon.price, estimate.currency, locale)}
+                        {addon.billingPeriod === "monthly" ? " / month" : ""}
+                      </strong>
                     </div>
                   ))}
+                  {estimate.monthlyAddonTotal > 0 && (
+                    <div className="flex justify-between gap-4 border-t border-gray-100 pt-3 text-amber-800">
+                      <strong>Recurring monthly add-ons</strong>
+                      <strong>{formatCurrency(estimate.monthlyAddonTotal, estimate.currency, locale)} / month</strong>
+                    </div>
+                  )}
                   <div className="flex justify-between gap-4 border-t border-gray-200 pt-3 text-[#E31E36]">
                     <strong>Andazati total</strong>
                     <strong>{formatCurrency(estimate.estimatedTotal, estimate.currency, locale)}</strong>

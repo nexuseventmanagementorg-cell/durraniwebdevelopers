@@ -1,7 +1,12 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { DEFAULT_PRICING_CONFIG, buildWhatsAppLink } from "@/lib/constants";
+import {
+  ADDON_CATEGORY_LABELS,
+  DEFAULT_PRICING_CONFIG,
+  EXTENDED_ADDONS,
+  buildWhatsAppLink,
+} from "@/lib/constants";
 import RegionalPrice from "@/components/RegionalPrice";
 import PricingPackageImage from "@/components/PricingPackageImage";
 import {
@@ -20,7 +25,25 @@ import {
 } from "lucide-react";
 
 export default function PricingPage() {
-  const addons = Object.values(DEFAULT_PRICING_CONFIG.addons);
+  const featuredAddonIds = new Set([
+    "google_auth",
+    "supabase_db",
+    "payment_gateway",
+    "advanced_dashboard",
+    "ai_chatbot",
+    "custom_advanced_feature",
+  ]);
+  const addons = Object.values(DEFAULT_PRICING_CONFIG.addons).filter((addon) =>
+    featuredAddonIds.has(addon.id)
+  );
+  const extendedAddonGroups = EXTENDED_ADDONS.reduce<Record<string, typeof EXTENDED_ADDONS>>(
+    (groups, addon) => {
+      const label = ADDON_CATEGORY_LABELS[addon.category];
+      (groups[label] ||= []).push(addon);
+      return groups;
+    },
+    {}
+  );
   const ecommercePackages = [
     {
       title: "E-Commerce Business",
@@ -492,7 +515,7 @@ export default function PricingPage() {
               Apni Zaroorat Ke Mutabiq Optional Features
             </h2>
             <p className="text-xs text-gray-600 mt-2">
-              Har add-on optional hai. Neeche asaan misaal dekhein aur sirf woh feature chunein jo aapke business ke kaam aaye. Har add-on ki starting price <RegionalPrice pkrAmount={10000} /> hai.
+              Har add-on optional hai. Starting prices scope ke mutabiq alag hain; monthly maintenance ki recurring fee one-time development price se alag hai.
             </p>
           </div>
 
@@ -520,7 +543,7 @@ export default function PricingPage() {
                           {addon.category}
                         </span>
                         <strong className="text-xs font-black text-[#E31E36] whitespace-nowrap">
-                          Starting +<RegionalPrice pkrAmount={addon.price} />
+                          Starting +<RegionalPrice pkrAmount={addon.price} conversion="international-addon" />
                         </strong>
                       </div>
                       <h3 className="font-bold text-sm text-[#101216] mb-2">
@@ -576,6 +599,58 @@ export default function PricingPage() {
             <p className="text-[11px] text-gray-600 mt-3 leading-relaxed">
               Yeh sirf misaali estimate hai, final quotation nahi. Database ki zaroorat, selected features aur project scope review ke baad total confirm hota hai. Hum third-party accounts ya subscriptions provide nahi karte; agar client ko zaroorat ho to woh provider se khud le aur uski usage fees seedha ada kare. Vercel par deployment ka hamara kaam web-app budget mein included hai; Vercel ka paid hosting plan ismein shamil nahi.
             </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 bg-[#F4F5F7] border-t border-gray-200">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mb-8">
+            <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
+              Extended Modules
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-[#101216] mt-1">
+              Business aur industry ke mutabiq add-ons
+            </h2>
+            <p className="text-xs text-gray-600 mt-2">
+              Yeh starting estimates hain. Complex scope, third-party accounts, gateway fees, hosting, aur API usage alag ho sakte hain.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {Object.entries(extendedAddonGroups).map(([group, groupAddons], groupIndex) => (
+              <details
+                key={group}
+                open={groupIndex === 0}
+                className="rounded-lg border border-gray-200 bg-white"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 font-bold text-sm text-[#101216]">
+                  <span>{group}</span>
+                  <span className="text-xs font-semibold text-gray-500">{groupAddons.length} modules</span>
+                </summary>
+                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                  {groupAddons.map((addon) => (
+                    <div key={addon.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3">
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-xs text-[#101216]">{addon.label}</h3>
+                        <p className="mt-1 text-[11px] leading-relaxed text-gray-600">{addon.description}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center justify-between sm:justify-end gap-4">
+                        <strong className="text-xs font-black text-[#E31E36]">
+                          <RegionalPrice pkrAmount={addon.price} conversion="international-addon" />{addon.billingPeriod === "monthly" ? " / month" : " starting"}
+                        </strong>
+                        <Link
+                          href={`/calculator?addon=${addon.id}`}
+                          className="text-xs font-bold text-[#E31E36] hover:underline"
+                        >
+                          Add to estimate
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ))}
           </div>
         </div>
       </section>

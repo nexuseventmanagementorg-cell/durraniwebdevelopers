@@ -7,10 +7,25 @@ import {
   isPricingPackageId,
 } from "@/lib/constants";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { Inquiry } from "@/lib/types";
+import { Inquiry, InquiryScanFeature } from "@/lib/types";
 import { CurrencyCode, isCurrencyCode, getRegionalPricingConfig } from "@/lib/currency";
 import { getExchangeRateSnapshot } from "@/lib/exchange-rates";
 import { notifyAdminOfSubmission } from "@/lib/admin-notifications";
+
+function sanitizeScanFeatures(value: unknown): InquiryScanFeature[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 80).flatMap((feature): InquiryScanFeature[] => {
+    if (typeof feature === "string" && feature.trim()) {
+      return [{ title: feature.trim().slice(0, 120), evidence: "Detected on public URL scan." }];
+    }
+    if (
+      typeof feature !== "object" || feature === null ||
+      !("title" in feature) || typeof feature.title !== "string" ||
+      !("evidence" in feature) || typeof feature.evidence !== "string"
+    ) return [];
+    return [{ title: feature.title.trim().slice(0, 120), evidence: feature.evidence.trim().slice(0, 300) }];
+  }).filter((feature) => feature.title.length > 0);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -68,13 +83,19 @@ export async function POST(request: NextRequest) {
 
     const adminPanelType = body.adminPanelType === "client_admin" ? "client_admin" : "none";
     const pricingPackage = isPricingPackageId(body.pricingPackage) ? body.pricingPackage : undefined;
-    const requestedAddons: string[] = Array.isArray(body.selectedAddons) ? body.selectedAddons : [];
-    const selectedAddons = getChargeableAddonIds(requestedAddons, pricingPackage);
+    const storedPricingConfig = DataStore.getPricingConfig();
+    const requestedAddonValues: unknown[] = Array.isArray(body.selectedAddons)
+      ? (body.selectedAddons as unknown[]).slice(0, 500)
+      : [];
+    const requestedAddons = Array.from(new Set(requestedAddonValues.filter(
+      (id): id is string => typeof id === "string" && Object.hasOwn(storedPricingConfig.addons, id)
+    ))).slice(0, 100);
+    const selectedAddons = getChargeableAddonIds(requestedAddons, pricingPackage, adminPanelType);
+    const scanFeatures = sanitizeScanFeatures(body.scanFeatures);
     const currency: CurrencyCode = isCurrencyCode(body.currency) ? body.currency : "PKR";
 
     // Persist the PKR base estimate for existing admin bookkeeping, and keep the
     // visitor-facing regional estimate alongside it when the selected currency differs.
-    const storedPricingConfig = DataStore.getPricingConfig();
     const pricingConfig = pricingPackage
       ? getPricingPackageConfig(storedPricingConfig, pricingPackage)
       : storedPricingConfig;
@@ -127,6 +148,7 @@ export async function POST(request: NextRequest) {
       adminPanelType,
       adminFeatures: Array.isArray(body.adminFeatures) ? body.adminFeatures : [],
       selectedAddons,
+      ...(scanFeatures.length > 0 ? { scanFeatures } : {}),
       customFeatureNotes: (body.customFeatureNotes || "").trim(),
       ...(pricingPackage ? { pricingPackage } : {}),
 
@@ -140,7 +162,7 @@ export async function POST(request: NextRequest) {
           }
         : { internationalCalculation: serverCalculation }),
       disclaimerAccepted: true,
-      adminNotes: `Submitted via online interactive budget calculator.${pricingPackage ? ` Selected package: ${pricingPackage}.` : ""}`,
+      adminNotes: `Submitted via online interactive budget calculator.${pricingPackage ? ` Selected package: ${pricingPackage}.` : ""}${scanFeatures.length ? ` Includes ${scanFeatures.length} URL scan evidence items.` : ""}`,
     };
 
     const savedInquiry = DataStore.createInquiry(newInquiry);
@@ -154,6 +176,7 @@ export async function POST(request: NextRequest) {
         `Business: ${savedInquiry.businessName || "Not provided"}`,
         `Project types: ${savedInquiry.projectTypes.join(", ")}`,
         `Estimated budget: ${savedInquiry.calculation.estimatedTotal} PKR`,
+        `Recurring add-ons: ${savedInquiry.calculation.monthlyAddonTotal || 0} PKR/month`,
         `Country: ${savedInquiry.cityCountry || "Not provided"}`,
       ].join("\n"),
     });

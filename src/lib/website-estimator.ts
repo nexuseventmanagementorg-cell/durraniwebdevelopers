@@ -75,7 +75,13 @@ export interface WebsiteEstimateResult {
   features: WebsiteEstimateFeature[];
   basePackage: string;
   basePrice: number;
-  addons: { id: string; title: string; price: number }[];
+  addons: {
+    id: string;
+    title: string;
+    price: number;
+    billingPeriod?: "one_time" | "monthly";
+  }[];
+  monthlyAddonTotal: number;
   estimatedTotal: number;
   assumptions: string[];
   warnings: string[];
@@ -354,6 +360,101 @@ function getCandidateLinks(html: string, baseUrl: string): string[] {
     .map(([url]) => url);
 }
 
+const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
+  { id: "google_auth", pattern: /\b(google authentication|google login|sign in with google|continue with google)\b/i },
+  { id: "custom_advanced_feature", pattern: /\b(custom advanced feature|bespoke workflow|custom functionality)\b/i },
+  { id: "responsive_design", pattern: /\b(responsive design|mobile[- ]friendly|mobile[- ]optimized)\b/i },
+  { id: "cms", pattern: /\b(cms|content management system|edit (pages|content|banners)|manage (pages|content|banners))\b/i },
+  { id: "advanced_seo", pattern: /\b(advanced seo|search engine optimization|structured data|schema markup|canonical url)\b/i },
+  { id: "multilingual_support", pattern: /\b(multilingual|multiple languages|language switcher|translated content)\b/i },
+  { id: "email_notifications", pattern: /\b(email notifications?|confirmation emails?|contact form emails?)\b/i },
+  { id: "theme_switcher", pattern: /\b(dark mode|light mode|theme switcher|switch themes?)\b/i },
+  { id: "admin_dashboard", pattern: /\b(admin|staff)\s+(dashboard|panel|portal)\b/i },
+  { id: "user_accounts", pattern: /\b(customer accounts?|user registration|create account|customer login|sign[ -]?in|log[ -]?in)\b/i },
+  { id: "role_permissions", pattern: /\b(role[- ]based (access|permissions?)|custom roles|staff permissions?|user permissions?)\b/i },
+  { id: "media_uploads", pattern: /\b(file uploads?|media uploads?|upload (images|videos|pdfs|documents))\b/i },
+  { id: "search_filter_sort", pattern: /\b(search and filters?|filter and sort|sorting and filtering|advanced search)\b/i },
+  { id: "order_invoice_management", pattern: /\b(order management|manage orders|order statuses|order and invoice management)\b/i },
+  { id: "activity_logs", pattern: /\b(activity logs?|admin action logs?|user activity history)\b/i },
+  { id: "pdf_excel_export", pattern: /\b(pdf|excel|csv) (report|data|records?) export|export (reports?|records?) to (pdf|excel|csv)\b/i },
+  { id: "automated_backups", pattern: /\b(automated backups?|scheduled backups?|backup and restore)\b/i },
+  { id: "audit_trail", pattern: /\b(audit trails?|who changed|change history|record of changes)\b/i },
+  { id: "api_integration", pattern: /\b(api integration|connect to (an? )?(external|third[- ]party) service|system integration)\b/i },
+
+  { id: "advanced_product_management", pattern: /\b(product variants?|skus?|product attributes|variant management)\b/i },
+  { id: "inventory_management", pattern: /\b(inventory management|stock management|low[- ]stock alerts?)\b/i },
+  { id: "discount_coupons", pattern: /\b(coupons?|promo codes?|discount codes?)\b/i },
+  { id: "wishlist", pattern: /\b(wishlists?|save (products?|items?) for later|favourite products?)\b/i },
+  { id: "product_reviews", pattern: /\b(product reviews?|ratings? and reviews?|customer ratings?)\b/i },
+  { id: "shipping_rules", pattern: /\b(shipping rules?|delivery charges? by|delivery fee calculation)\b/i },
+  { id: "order_tracking", pattern: /\b(order tracking|track (my |your )?order|shipment tracking)\b/i },
+  { id: "abandoned_cart", pattern: /\b(abandoned carts?|recover (unfinished|abandoned) carts?)\b/i },
+  { id: "invoice_receipts", pattern: /\b(order invoices?|purchase receipts?|downloadable invoices?)\b/i },
+  { id: "product_qr_codes", pattern: /\b(product qr codes?|qr labels? for products?)\b/i },
+  { id: "loyalty_rewards", pattern: /\b(loyalty points?|rewards program|repeat[- ]customer rewards?)\b/i },
+  { id: "bulk_product_import", pattern: /\b(bulk product imports?|import products? from (csv|excel)|product catalog import)\b/i },
+  { id: "product_comparison", pattern: /\b(product comparisons?|compare products?)\b/i },
+  { id: "multi_warehouse", pattern: /\b(multiple warehouses?|multi[- ]warehouse|warehouse stock)\b/i },
+
+  { id: "multi_tenant_architecture", pattern: /\b(multi[- ]tenant|separate tenant workspaces?|tenant data isolation)\b/i },
+  { id: "subscription_plans", pattern: /\b(subscription (plans?|management)|monthly and annual plans?|free basic pro enterprise plans?)\b/i },
+  { id: "usage_metering", pattern: /\b(usage limits?|usage metering|api call limits?|storage limits?)\b/i },
+  { id: "saas_super_admin", pattern: /\b(super admin|platform owner dashboard|manage all tenants)\b/i },
+  { id: "vendor_management", pattern: /\b(vendor management|seller registration|vendor dashboard|multi[- ]vendor)\b/i },
+  { id: "commission_payouts", pattern: /\b(commission (and|&)? ?payouts?|seller settlements?|vendor commissions?)\b/i },
+  { id: "team_invitations", pattern: /\b(team invitations?|invite team members?|workspace members?)\b/i },
+  { id: "white_label", pattern: /\b(white[- ]label|client[- ]specific branding|custom logos? per tenant)\b/i },
+  { id: "automated_onboarding", pattern: /\b(onboarding wizard|automated onboarding|setup checklist)\b/i },
+  { id: "trial_expiry", pattern: /\b(trial periods?|trial expiry|plan expiration)\b/i },
+  { id: "referral_affiliate", pattern: /\b(referral (program|system)|affiliate system|referral links?)\b/i },
+  { id: "usage_based_billing", pattern: /\b(usage[- ]based billing|billing by usage|pay per api call)\b/i },
+  { id: "tenant_domains", pattern: /\b(tenant[- ]specific domains?|custom domains? for (each )?tenant)\b/i },
+  { id: "data_import_export", pattern: /\b(tenant data import|data import and export|bulk data export)\b/i },
+  { id: "feature_flags", pattern: /\b(feature flags?|plan[- ]based access|plan[- ]gated features?)\b/i },
+  { id: "in_app_notifications", pattern: /\b(in[- ]app notifications?|application notifications?)\b/i },
+  { id: "support_tickets", pattern: /\b(support ticket systems?|customer support tickets?)\b/i },
+  { id: "knowledge_base", pattern: /\b(knowledge bases?|customer help cent(er|re)|help articles?)\b/i },
+  { id: "platform_audit_monitoring", pattern: /\b(platform[- ]wide monitoring|platform audit|system monitoring dashboard)\b/i },
+
+  { id: "ai_product_recommendations", pattern: /\b(ai product recommendations?|personalized product suggestions?)\b/i },
+  { id: "ai_content_assistant", pattern: /\b(ai content assistant|generate (product )?descriptions? with ai|ai writing assistant)\b/i },
+  { id: "smart_search", pattern: /\b(semantic search|ai[- ]powered search|smart search)\b/i },
+  { id: "automated_email_workflows", pattern: /\b(automated email workflows?|email sequences?|drip email campaigns?)\b/i },
+  { id: "scheduled_reports", pattern: /\b(scheduled reports?|weekly reports? by email|monthly report generation)\b/i },
+  { id: "document_generation", pattern: /\b(generate (custom )?(certificates?|pdf documents?)|document generation)\b/i },
+  { id: "third_party_webhooks", pattern: /\b(third[- ]party webhooks?|webhook notifications?)\b/i },
+  { id: "crm_integration", pattern: /\b(crm integration|sync leads? (to|with) (a )?crm)\b/i },
+  { id: "calendar_integration", pattern: /\b(calendar integration|sync bookings? (to|with) (google|outlook)? ?calendar)\b/i },
+
+  { id: "two_factor_auth", pattern: /\b(two[- ]factor authentication|2fa|multi[- ]factor authentication)\b/i },
+  { id: "login_rate_limiting", pattern: /\b(login rate limiting|limit login attempts?|brute[- ]force protection)\b/i },
+  { id: "password_reset", pattern: /\b(password reset|forgot password workflow|account recovery)\b/i },
+  { id: "session_management", pattern: /\b(session management|active sessions?|revoke sessions?)\b/i },
+  { id: "security_hardening", pattern: /\b(security hardening|security audit|hardened configuration)\b/i },
+  { id: "error_monitoring", pattern: /\b(error monitoring|error tracking|sentry integration)\b/i },
+  { id: "performance_optimization", pattern: /\b(performance optimization|page speed optimization|core web vitals)\b/i },
+  { id: "accessibility_improvements", pattern: /\b(accessibility improvements?|wcag compliance|keyboard accessibility)\b/i },
+  { id: "data_retention_tools", pattern: /\b(data retention|data deletion tools?|delete my data workflow)\b/i },
+  { id: "maintenance_updates", pattern: /\b(monthly maintenance|maintenance and updates|ongoing maintenance plan)\b/i },
+
+  { id: "restaurant_qr_menu", pattern: /\b(digital menu|restaurant qr menu|menu qr codes?)\b/i },
+  { id: "kitchen_order_tickets", pattern: /\b(kitchen order tickets?|kot system|kitchen display system)\b/i },
+  { id: "table_reservations", pattern: /\b(table reservations?|reserve a table)\b/i },
+  { id: "clinic_appointments", pattern: /\b(clinic appointments?|patient appointment scheduling)\b/i },
+  { id: "staff_schedules", pattern: /\b(doctor schedules?|staff schedules?|provider availability)\b/i },
+  { id: "school_attendance", pattern: /\b(student attendance|school attendance management)\b/i },
+  { id: "parent_student_portal", pattern: /\b(parent portal|student portal|parent and student portal)\b/i },
+  { id: "property_filters", pattern: /\b(property filters?|real estate filters?|filter properties by)\b/i },
+  { id: "real_estate_agent_dashboard", pattern: /\b(real estate agent dashboard|agent listing dashboard)\b/i },
+  { id: "booking_calendar", pattern: /\b(booking availability calendar|availability calendar|booking calendar)\b/i },
+  { id: "booking_refund_workflow", pattern: /\b(booking cancellations? and refunds?|booking refund workflow)\b/i },
+  { id: "employer_dashboard", pattern: /\b(employer dashboard|employer job listings?)\b/i },
+  { id: "cv_application_tracking", pattern: /\b(cv uploads?|resume uploads?|application tracking)\b/i },
+  { id: "course_progress", pattern: /\b(course progress tracking|learning progress dashboard)\b/i },
+  { id: "quizzes_assessments", pattern: /\b(quizzes and assessments|online assessments?|student quizzes)\b/i },
+  { id: "event_ticketing", pattern: /\b(digital event tickets?|qr check[- ]in|event ticketing)\b/i },
+];
+
 export function detectWebsiteFeatures(text: string): {
   features: WebsiteEstimateFeature[];
   adminPanel: boolean;
@@ -485,7 +586,7 @@ export function detectWebsiteFeatures(text: string): {
       explanation: "Kisi external service ya doosray software ke saath integration ka ishara mila.",
       evidence: "Page text mein API, webhook, ya system sync ka zikr mila.",
     });
-    addonIds.push("custom_advanced_feature");
+    addonIds.push("api_integration");
   }
 
   const needsPersistentData = productCatalog || ordering || booking || accounts;
@@ -517,6 +618,35 @@ export function detectWebsiteFeatures(text: string): {
   if (payment && addonIds.includes("payment_gateway")) {
     assumptions.push("Payment add-on sirf visible gateway/card-payment signals par lagaya gaya hai; gateway account, third-party fees, aur exact integration scope shamil nahi.");
   }
+
+  const detectedAddonIds = new Set(addonIds);
+  for (const rule of ADDON_SCAN_RULES) {
+    if (!has(rule.pattern)) continue;
+    const addon = DEFAULT_PRICING_CONFIG.addons[rule.id];
+    if (!addon) continue;
+    if (!features.some((feature) => feature.title === addon.label)) {
+      features.push({
+        title: addon.label,
+        explanation: addon.description,
+        evidence: `Public page text matched a signal for ${addon.label.toLowerCase()}.`,
+      });
+    }
+    if (addon.enabled) detectedAddonIds.add(rule.id);
+  }
+
+  const normalizedText = text.toLowerCase();
+  for (const addon of Object.values(DEFAULT_PRICING_CONFIG.addons)) {
+    if (!normalizedText.includes(addon.label.toLowerCase())) continue;
+    if (!features.some((feature) => feature.title === addon.label)) {
+      features.push({
+        title: addon.label,
+        explanation: addon.description,
+        evidence: `Public page text included the add-on name ${addon.label}.`,
+      });
+    }
+    if (addon.enabled) detectedAddonIds.add(addon.id);
+  }
+
   if (features.length === 0) {
     features.push({
       title: "Public informational website",
@@ -533,7 +663,11 @@ export function detectWebsiteFeatures(text: string): {
     features,
     adminPanel: ecommerceStore || saasApplication || adminPanel,
     pricingPackage,
-    addonIds: Array.from(new Set(getChargeableAddonIds(addonIds, pricingPackage))),
+    addonIds: Array.from(getChargeableAddonIds(
+      Array.from(detectedAddonIds),
+      pricingPackage,
+      adminPanel ? "client_admin" : "none"
+    )),
     assumptions,
   };
 }
@@ -608,7 +742,9 @@ export async function estimateWebsite(
       id: addon.id,
       title: addon.label,
       price: addon.price,
+      billingPeriod: addon.billingPeriod,
     })),
+    monthlyAddonTotal: calculation.monthlyAddonTotal,
     estimatedTotal: calculation.estimatedTotal,
     assumptions: detected.assumptions,
     warnings,

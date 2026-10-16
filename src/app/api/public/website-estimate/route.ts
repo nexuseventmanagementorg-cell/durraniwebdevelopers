@@ -99,7 +99,9 @@ export async function POST(request: NextRequest) {
           id: addon.id,
           title: addon.label,
           price: addon.price,
+          billingPeriod: addon.billingPeriod,
         }));
+        estimate.monthlyAddonTotal = knownScopeCalculation.monthlyAddonTotal;
         estimate.estimatedTotal = knownScopeCalculation.estimatedTotal;
         estimate.assumptions = estimate.assumptions.filter(
           (assumption) => !assumption.startsWith("Client admin panel public page")
