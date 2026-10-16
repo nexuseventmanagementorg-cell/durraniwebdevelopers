@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     success: true,
     authenticated: true,
     user: {
-      email: payload?.email || "admin@durraniwebdevelopers.com",
+      username: payload?.email || "",
       role: "SuperAdmin",
     },
   });

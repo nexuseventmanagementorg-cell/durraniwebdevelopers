@@ -1,7 +1,9 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { formatPKR, DEFAULT_PRICING_CONFIG, buildWhatsAppLink } from "@/lib/constants";
+import { DEFAULT_PRICING_CONFIG, buildWhatsAppLink } from "@/lib/constants";
+import RegionalPrice from "@/components/RegionalPrice";
+import PricingPackageImage from "@/components/PricingPackageImage";
 import {
   Check,
   X as CrossIcon,
@@ -19,6 +21,102 @@ import {
 
 export default function PricingPage() {
   const addons = Object.values(DEFAULT_PRICING_CONFIG.addons);
+  const ecommercePackages = [
+    {
+      title: "E-Commerce Business",
+      id: "ecommerce_business",
+      summary: "Professional online store with client admin panel support.",
+      image: "/Professional%20E-Commerce%20Store%20Solutions.png",
+      imageAlt: "E-Commerce Business package with a PKR 150,000 price and included store features",
+      price: 150000,
+      priceLabel: "Package price",
+    },
+    {
+      title: "E-Commerce Advanced",
+      id: "ecommerce_advanced",
+      summary: "Feature-rich online store built for growth and advanced workflows.",
+      image: "/Advanced%20E-Commerce%20Web%20Development%20Package.png",
+      imageAlt: "E-Commerce Advanced package with a PKR 200,000 to 300,000 price range and included features",
+      price: 200000,
+      maxPrice: 300000,
+      priceLabel: "Estimated package range",
+    },
+  ];
+  const saasPackages = [
+    {
+      id: "saas_starter",
+      title: "SaaS Starter",
+      summary: "Multi-vendor marketplace platform for startups and small businesses.",
+      image: "/SaaS%20Starter%20Marketplace%20Package%20(1).png",
+      imageAlt: "SaaS Starter marketplace package, PKR 250,000 with PKR 100,000 advance",
+      price: 250000,
+      advance: 100000,
+    },
+    {
+      id: "saas_business",
+      title: "SaaS Business",
+      summary: "Scalable marketplace with vendor dashboards, commissions, and advanced analytics.",
+      image: "/SaaS%20Business%20Platform%20Marketing%20Poster%20(1).png",
+      imageAlt: "SaaS Business marketplace package, PKR 500,000 with PKR 200,000 advance",
+      price: 500000,
+      advance: 200000,
+    },
+    {
+      id: "saas_enterprise",
+      title: "SaaS Enterprise",
+      summary: "Multi-tenant enterprise platform with advanced architecture and dedicated support.",
+      image: "/SaaS%20Enterprise%20Platform%20Showcase.png",
+      imageAlt: "SaaS Enterprise package starting at PKR 1,000,000 with PKR 400,000 advance",
+      price: 1000000,
+      advance: 400000,
+      startingAt: true,
+    },
+  ];
+  const addonDetails: Record<
+    string,
+    { image: string; explanation: string; example: string; bestFor: string; note?: string }
+  > = {
+    google_auth: {
+      image: "/New%20folder/Screenshot%202026-10-15%20160822.png",
+      explanation: "User apne Google account se sign in kar sakta hai, alag password banane ki zaroorat nahi hoti.",
+      example: "Customer “Continue with Google” dabata hai aur apne Google account se website mein login ho jata hai.",
+      bestFor: "SaaS apps, customer accounts aur members ke private portals.",
+    },
+    supabase_db: {
+      image: "/New%20folder/Screenshot%202026-10-15%20160904.png",
+      explanation: "Website ka data online database mein save hota hai, jaise products, orders, users aur settings.",
+      example: "Admin naya product add kare; woh website dobara kholne ya update/deploy ke baad bhi mojood rahe.",
+      bestFor: "Online stores, CRM aur order-management systems.",
+      note: "Database ki zaroorat aur scope project ke mutabiq confirm hoga. Supabase ka account/paid plan ya koi third-party subscription hum provide, purchase ya manage nahi karte; client zaroorat par provider se khud arrange karta hai.",
+    },
+    payment_gateway: {
+      image: "/New%20folder/Screenshot%202026-10-15%20160931.png",
+      explanation: "Customer website par payment kar sakta hai ya payment ki details submit kar sakta hai.",
+      example: "Customer bank transfer ya supported JazzCash/Easypaisa option choose kare aur admin transaction reference verify kare.",
+      bestFor: "Online stores, bookings aur aise projects jahan online payment lena ho.",
+      note: "Payment integration ki development approved scope ke mutabiq ho sakti hai, lekin gateway account hum provide nahi karte. Client account khud provider se arrange karta hai aur provider ki fees seedha ada karta hai.",
+    },
+    advanced_dashboard: {
+      image: "/New%20folder/Screenshot%202026-10-15%20160959.png",
+      explanation: "Admin charts aur reports ke zariye business ki performance aik jagah dekh sakta hai.",
+      example: "Mahine ki total sales, wasool payments, baqi balance aur sab se zyada bikne wale products ki report.",
+      bestFor: "E-commerce stores, restaurants aur business dashboards.",
+    },
+    ai_chatbot: {
+      image: "/New%20folder/Screenshot%202026-10-15%20161037.png",
+      explanation: "Website ka chatbot customers ke aam sawalon ka jawab available business ya product information se de sakta hai.",
+      example: "Customer pooche “Is bracelet ki price kya hai?” aur bot saved product details mein se jawab de.",
+      bestFor: "Product catalog wali websites aur customer-support portals.",
+      note: "AI service/API account, subscription ya usage plan hum provide, purchase ya manage nahi karte. Client ko zaroorat par provider se khud account lena aur uske charges ada karne honge.",
+    },
+    custom_advanced_feature: {
+      image: "/New%20folder/Screenshot%202026-10-15%20161109.png",
+      explanation: "Aapke project ke liye koi khaas feature jo standard package ya listed add-ons mein nahi hai.",
+      example: "Automatic PDF invoice, delivery fee calculator, ya kisi doosray software ke saath data connection.",
+      bestFor: "Aise business workflows jinhein tayyar feature se poora na kiya ja sake.",
+      note: "Yeh configurable starting estimate hai; complex feature ki final price requirements aur scope dekh kar confirm hoti hai.",
+    },
+  };
 
   return (
     <div className="bg-[#FFFFFF] text-[#101216] min-h-screen">
@@ -32,7 +130,7 @@ export default function PricingPage() {
             Clear, Predictable Web App Pricing
           </h1>
           <p className="text-sm sm:text-base text-gray-300 max-w-2xl mx-auto">
-            Choose between our managed backend solution or an autonomous client admin dashboard. Start with a modest advance and pay the remaining balance across 11 monthly installments.
+            Pakistan rates are in PKR. International rates are double the Pakistan equivalents and displayed in your regional currency using the latest available exchange rate. Choose a managed backend solution or client admin dashboard, then review the installment plan in the calculator.
           </p>
 
           <div className="pt-2">
@@ -81,14 +179,14 @@ export default function PricingPage() {
                 </p>
 
                 <div className="mt-6 flex items-baseline gap-2">
-                  <span className="text-4xl font-black text-[#101216]">PKR 35,000</span>
+                  <RegionalPrice pkrAmount={35000} className="text-4xl font-black text-[#101216]" />
                   <span className="text-xs text-gray-500 font-medium">starting price</span>
                 </div>
 
                 {/* Daily Cost */}
                 <div className="mt-3 bg-gray-50 p-3 rounded-lg border border-gray-200 text-xs flex justify-between items-center text-gray-600">
                   <span>Daily Cost:</span>
-                  <strong className="text-[#101216] font-bold">PKR 95.89 (per day)</strong>
+                  <strong className="text-[#101216] font-bold"><RegionalPrice pkrAmount={35000 / 365} /> (per day)</strong>
                 </div>
 
                 {/* 12-Month Installment Schedule Card */}
@@ -98,22 +196,22 @@ export default function PricingPage() {
                       <CreditCard className="w-4 h-4 text-[#E31E36]" />
                       Advance Payment (at start):
                     </span>
-                    <strong className="text-[#101216] font-black">{formatPKR(10000)}</strong>
+                    <strong className="text-[#101216] font-black"><RegionalPrice pkrAmount={10000} /></strong>
                   </div>
                   <div className="flex justify-between items-center text-gray-600 pb-2 border-b border-gray-200">
                     <span>Remaining Balance:</span>
-                    <strong className="text-[#101216] font-bold">{formatPKR(25000)}</strong>
+                    <strong className="text-[#101216] font-bold"><RegionalPrice pkrAmount={25000} /></strong>
                   </div>
                   <div className="flex justify-between items-center text-gray-700">
                     <span className="flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-emerald-600" />
                       10 Monthly Installments:
                     </span>
-                    <strong className="text-[#101216] font-black">PKR 2,272.73 / mo</strong>
+                    <strong className="text-[#101216] font-black"><RegionalPrice pkrAmount={2272.73} /> / mo</strong>
                   </div>
                   <div className="flex justify-between items-center text-gray-600 pt-1 text-[11px]">
                     <span>11th & Final Adjusted Installment:</span>
-                    <strong className="text-[#E31E36] font-bold">PKR 2,272.70</strong>
+                    <strong className="text-[#E31E36] font-bold"><RegionalPrice pkrAmount={2272.70} /></strong>
                   </div>
                 </div>
 
@@ -138,7 +236,7 @@ export default function PricingPage() {
                   <div className="flex items-start gap-2">
                     <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
                     <span className="text-gray-600 text-[11px] leading-relaxed">
-                      Durrani Web Developers manages the backend updates exclusively. Changes are requested via support.
+                      Durrani Web Developers manages backend updates exclusively. Product and catalog updates are not included and may incur additional charges; request them via support.
                     </span>
                   </div>
                 </div>
@@ -177,14 +275,14 @@ export default function PricingPage() {
                 </p>
 
                 <div className="mt-6 flex items-baseline gap-2">
-                  <span className="text-4xl font-black text-[#E31E36]">PKR 45,000</span>
+                  <RegionalPrice pkrAmount={45000} className="text-4xl font-black text-[#E31E36]" />
                   <span className="text-xs text-gray-500 font-medium">starting price</span>
                 </div>
 
                 {/* Daily Cost */}
                 <div className="mt-3 bg-red-50/60 p-3 rounded-lg border border-red-200 text-xs flex justify-between items-center text-gray-700">
                   <span>Daily Cost:</span>
-                  <strong className="text-[#E31E36] font-bold">PKR 123.29 (per day)</strong>
+                  <strong className="text-[#E31E36] font-bold"><RegionalPrice pkrAmount={45000 / 365} /> (per day)</strong>
                 </div>
 
                 {/* 12-Month Installment Schedule Card */}
@@ -194,22 +292,22 @@ export default function PricingPage() {
                       <CreditCard className="w-4 h-4 text-[#E31E36]" />
                       Advance Payment (at start):
                     </span>
-                    <strong className="text-[#101216] font-black">{formatPKR(10000)}</strong>
+                    <strong className="text-[#101216] font-black"><RegionalPrice pkrAmount={10000} /></strong>
                   </div>
                   <div className="flex justify-between items-center text-gray-600 pb-2 border-b border-gray-200">
                     <span>Remaining Balance:</span>
-                    <strong className="text-[#101216] font-bold">{formatPKR(35000)}</strong>
+                    <strong className="text-[#101216] font-bold"><RegionalPrice pkrAmount={35000} /></strong>
                   </div>
                   <div className="flex justify-between items-center text-gray-700">
                     <span className="flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-emerald-600" />
                       10 Monthly Installments:
                     </span>
-                    <strong className="text-[#E31E36] font-black">PKR 3,181.82 / mo</strong>
+                    <strong className="text-[#E31E36] font-black"><RegionalPrice pkrAmount={3181.82} /> / mo</strong>
                   </div>
                   <div className="flex justify-between items-center text-gray-600 pt-1 text-[11px]">
                     <span>11th & Final Adjusted Installment:</span>
-                    <strong className="text-[#E31E36] font-bold">PKR 3,181.80</strong>
+                    <strong className="text-[#E31E36] font-bold"><RegionalPrice pkrAmount={3181.80} /></strong>
                   </div>
                 </div>
 
@@ -254,6 +352,135 @@ export default function PricingPage() {
         </div>
       </section>
 
+      {/* E-Commerce Packages */}
+      <section className="py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
+              Online Store Packages
+            </span>
+            <h2 className="text-3xl font-black text-[#101216] mt-1">
+              E-Commerce Packages &amp; Rates
+            </h2>
+            <p className="text-xs text-gray-600 mt-2">
+              Choose a store package to get started. Final pricing depends on your requirements and confirmed project scope.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {ecommercePackages.map((packageDetails) => (
+              <article
+                key={packageDetails.title}
+                className="bg-[#F4F5F7] rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col"
+              >
+                <div className="p-6 sm:p-8">
+                  <h3 className="text-2xl font-black text-[#101216]">
+                    {packageDetails.title}
+                  </h3>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {packageDetails.summary}
+                  </p>
+                  <div className="mt-5">
+                    <span className="block text-[10px] uppercase tracking-wider font-bold text-gray-500">
+                      {packageDetails.priceLabel}
+                    </span>
+                    <strong className="text-2xl sm:text-3xl font-black text-[#E31E36]">
+                      <RegionalPrice pkrAmount={packageDetails.price} />
+                      {packageDetails.maxPrice && (
+                        <>
+                          {" – "}
+                          <RegionalPrice pkrAmount={packageDetails.maxPrice} />
+                        </>
+                      )}
+                    </strong>
+                  </div>
+                </div>
+
+                <PricingPackageImage
+                  src={packageDetails.image}
+                  alt={packageDetails.imageAlt}
+                  title={packageDetails.title}
+                  width={1312}
+                  height={1199}
+                  sizes="(max-width: 767px) 100vw, 50vw"
+                />
+
+                <div className="p-6 sm:p-8 pt-5">
+                  <Link
+                    href={`/calculator?package=${packageDetails.id}`}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-[#E31E36] hover:bg-[#C8162D] text-white py-3 rounded-xl font-bold text-xs shadow-glow transition"
+                  >
+                    Configure This Package
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SaaS Packages */}
+      <section className="py-20 bg-[#F4F5F7]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
+              Marketplace &amp; Platform Plans
+            </span>
+            <h2 className="text-3xl font-black text-[#101216] mt-1">
+              SaaS Project Packages &amp; Rates
+            </h2>
+            <p className="text-xs text-gray-600 mt-2">
+              Pakistan rates are in PKR. International rates are doubled and converted to your regional currency. Enterprise pricing starts at the listed amount; final scope is confirmed after review.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {saasPackages.map((packageDetails) => (
+              <article
+                key={packageDetails.id}
+                className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col"
+              >
+                <div className="p-6">
+                  <h3 className="text-xl font-black text-[#101216]">{packageDetails.title}</h3>
+                  <p className="text-xs text-gray-600 mt-1 min-h-8">{packageDetails.summary}</p>
+                  <div className="mt-4">
+                    <span className="block text-[10px] uppercase tracking-wider font-bold text-gray-500">
+                      {packageDetails.startingAt ? "Starting price" : "Package price"}
+                    </span>
+                    <strong className="text-2xl font-black text-[#E31E36]">
+                      <RegionalPrice pkrAmount={packageDetails.price} />
+                      {packageDetails.startingAt && "+"}
+                    </strong>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-2">
+                    Advance payment: <strong className="text-[#101216]"><RegionalPrice pkrAmount={packageDetails.advance} /></strong>
+                    {" · "}remaining balance in 11 monthly installments
+                  </p>
+                </div>
+                <PricingPackageImage
+                  src={packageDetails.image}
+                  alt={packageDetails.imageAlt}
+                  title={packageDetails.title}
+                  width={1536}
+                  height={1024}
+                  sizes="(max-width: 1023px) 100vw, 33vw"
+                />
+                <div className="p-6 pt-5 mt-auto">
+                  <Link
+                    href={`/calculator?package=${packageDetails.id}`}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-[#E31E36] hover:bg-[#C8162D] text-white py-3 rounded-xl font-bold text-xs shadow-glow transition"
+                  >
+                    Configure This Package
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Optional Feature Add-ons List */}
       <section className="py-20 bg-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -262,45 +489,93 @@ export default function PricingPage() {
               Modular Extensions
             </span>
             <h2 className="text-3xl font-black text-[#101216] mt-1">
-              Optional Add-on Features & Integrations
+              Apni Zaroorat Ke Mutabiq Optional Features
             </h2>
             <p className="text-xs text-gray-600 mt-2">
-              Every add-on is completely optional. Choose only what your business genuinely needs. Configurable starting rules (+PKR 10,000 each).
+              Har add-on optional hai. Neeche asaan misaal dekhein aur sirf woh feature chunein jo aapke business ke kaam aaye. Har add-on ki starting price <RegionalPrice pkrAmount={10000} /> hai.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {addons.map((addon) => (
-              <div
-                key={addon.id}
-                className="bg-[#F4F5F7] p-5 rounded-2xl border border-gray-200 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-[10px] uppercase font-bold text-gray-500 bg-white px-2 py-0.5 rounded">
-                      {addon.category}
-                    </span>
-                    <strong className="text-xs font-black text-[#E31E36]">
-                      +{formatPKR(addon.price)}
-                    </strong>
+            {addons.map((addon) => {
+              const details = addonDetails[addon.id];
+              return (
+                <div
+                  key={addon.id}
+                  className="bg-[#F4F5F7] rounded-2xl border border-gray-200 overflow-hidden flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="relative aspect-[16/10] bg-gray-200">
+                      <Image
+                        src={details.image}
+                        alt={`${addon.label} feature example`}
+                        fill
+                        sizes="(max-width: 639px) 100vw, (max-width: 767px) 50vw, 33vw"
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="p-5">
+                      <div className="flex justify-between items-center mb-3 gap-2">
+                        <span className="text-[10px] uppercase font-bold text-gray-500 bg-white px-2 py-0.5 rounded">
+                          {addon.category}
+                        </span>
+                        <strong className="text-xs font-black text-[#E31E36] whitespace-nowrap">
+                          Starting +<RegionalPrice pkrAmount={addon.price} />
+                        </strong>
+                      </div>
+                      <h3 className="font-bold text-sm text-[#101216] mb-2">
+                        {addon.label}
+                      </h3>
+                      <p className="text-xs text-gray-700 leading-relaxed">
+                        {details.explanation}
+                      </p>
+                      <div className="mt-3 rounded-lg bg-white p-3 border border-gray-100">
+                        <p className="text-[10px] font-bold text-[#101216]">Misal:</p>
+                        <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                          {details.example}
+                        </p>
+                      </div>
+                      <p className="text-[11px] text-gray-600 mt-3 leading-relaxed">
+                        <span className="font-bold text-gray-700">Zyada kaam aata hai:</span>{" "}
+                        {details.bestFor}
+                      </p>
+                      {details.note && (
+                        <p className="text-[11px] text-amber-800 mt-3 leading-relaxed">
+                          {details.note}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <h3 className="font-bold text-sm text-[#101216] mb-1">
-                    {addon.label}
-                  </h3>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    {addon.description}
-                  </p>
+
+                  <div className="px-5 pb-5">
+                    <div className="pt-3 border-t border-gray-200">
+                      <Link
+                        href={`/calculator?addon=${addon.id}`}
+                        className="text-xs font-bold text-[#E31E36] hover:underline inline-flex items-center gap-1"
+                      >
+                        Calculator mein chunein &rarr;
+                      </Link>
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-gray-200">
-                  <Link
-                    href={`/calculator?addon=${addon.id}`}
-                    className="text-xs font-bold text-[#E31E36] hover:underline inline-flex items-center gap-1"
-                  >
-                    Select in Calculator &rarr;
-                  </Link>
-                </div>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+
+          <div className="mt-8 max-w-3xl mx-auto rounded-2xl border border-gray-200 bg-[#F4F5F7] p-6">
+            <h3 className="font-extrabold text-sm text-[#101216]">
+              Misaal: Add-ons se estimate kaise banta hai?
+            </h3>
+            <div className="mt-4 space-y-2 text-xs text-gray-700">
+              <div className="flex justify-between gap-4"><span>Base web application</span><strong><RegionalPrice pkrAmount={35000} /></strong></div>
+              <div className="flex justify-between gap-4"><span>Supabase database (starting)</span><strong>+<RegionalPrice pkrAmount={10000} /></strong></div>
+              <div className="flex justify-between gap-4"><span>Payment integration (starting)</span><strong>+<RegionalPrice pkrAmount={10000} /></strong></div>
+              <div className="flex justify-between gap-4"><span>Google authentication (starting)</span><strong>+<RegionalPrice pkrAmount={10000} /></strong></div>
+              <div className="flex justify-between gap-4 border-t border-gray-300 pt-2 text-[#101216]"><span className="font-bold">Andazati total</span><strong className="text-[#E31E36]"><RegionalPrice pkrAmount={65000} /></strong></div>
+            </div>
+            <p className="text-[11px] text-gray-600 mt-3 leading-relaxed">
+              Yeh sirf misaali estimate hai, final quotation nahi. Database ki zaroorat, selected features aur project scope review ke baad total confirm hota hai. Hum third-party accounts ya subscriptions provide nahi karte; agar client ko zaroorat ho to woh provider se khud le aur uski usage fees seedha ada kare. Vercel par deployment ka hamara kaam web-app budget mein included hai; Vercel ka paid hosting plan ismein shamil nahi.
+            </p>
           </div>
         </div>
       </section>
@@ -326,7 +601,7 @@ export default function PricingPage() {
               <div className="flex items-start gap-2">
                 <span className="font-bold text-[#E31E36] mt-0.5">•</span>
                 <span>
-                  <strong>Third-Party Costs Are Separate:</strong> Custom domains (.com, .pk), paid SMS/WhatsApp API bundles, and payment gateway merchant transaction percentages are billed by their respective providers.
+                  <strong>Third-Party Accounts Are Not Provided:</strong> Hum paid domains, subscriptions, payment gateway accounts ya external API accounts provide, purchase, ya manage nahi karte. Zaroorat par client account/plan seedha provider se arrange karke uski fees provider ko ada karta hai. Hamara Vercel deployment kaam agreed web-app budget mein included hai; koi alag deployment fee nahi. Vercel ka paid hosting plan included nahi.
                 </span>
               </div>
               <div className="flex items-start gap-2">

@@ -3,10 +3,10 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   BUSINESS_INFO,
-  formatPKR,
   buildWhatsAppLink,
 } from "@/lib/constants";
 import { DataStore } from "@/lib/store";
+import RegionalPrice from "@/components/RegionalPrice";
 import {
   Calculator,
   ArrowRight,
@@ -31,37 +31,81 @@ import {
 } from "lucide-react";
 
 export default function HomePage() {
-  const portfolioHighlights = DataStore.getPortfolio(false).slice(0, 3);
+  const publicProjects = DataStore.getPortfolio(false);
+  const portfolioHighlights = publicProjects.slice(0, 3);
+  const publicLiveProjectCount = publicProjects.filter((project) =>
+    ["Completed", "Live", "Delivered"].includes(project.status)
+  ).length;
 
   const processSteps = [
     {
       step: "01",
       title: "Requirements & Calculator",
-      desc: "Complete our interactive questionnaire. The system instantly calculates your estimated transparent budget.",
+      image: "/New folder/New folder/Screenshot 2026-10-15 160822.png",
+      imageAlt: "Website budget estimator with project types and live price estimate",
+      desc: "Calculator mein project type, admin panel aur required features select karein. Aapki choices se foran aik ibtidai budget estimate tayyar hota hai.",
+      details: [
+        "Restaurant, e-commerce, SaaS ya custom application choose karein.",
+        "Admin panel aur optional features add karein.",
+        "Estimate aapke selected project currency mein dekhein.",
+      ],
+      benefit: "Kaam shuru karne se pehle kharchay ka andaza mil jata hai.",
       icon: Calculator,
     },
     {
       step: "02",
       title: "Direct WhatsApp Review",
-      desc: "Durrani Web Developers personally reviews your requirements, confirms timeline, and clarifies technical scope.",
+      image: "/New folder/New folder/Screenshot 2026-10-15 175337.png",
+      imageAlt: "Business owner reviewing a WhatsApp conversation on a laptop and phone",
+      desc: "Aapki bheji hui requirements hum khud review karte hain aur WhatsApp par seedhi baat karke project ki zarooriyat aur timeline confirm karte hain.",
+      details: [
+        "Features, pages aur technical requirements confirm hoti hain.",
+        "Images, product details aur doosre content ki zaroorat discuss hoti hai.",
+        "Delivery ka mutawaqqa waqt aur extra kharchay clear kiye jate hain.",
+      ],
+      benefit: "Aapko automated jawab ke bajaye apne project ke mutabiq mashwara milta hai.",
       icon: PhoneCall,
     },
     {
       step: "03",
       title: "Scope & Advance Payment",
-      desc: "Advance payment (PKR 10,000 starting) is verified via JazzCash, EasyPaisa, or direct Bank Transfer.",
+      image: "/New folder/New folder/Screenshot 2026-10-15 175408.png",
+      imageAlt: "Mobile checkout screen showing payment choices and an order summary",
+      desc: "Requirements final hone par aapko written quotation milti hai. Ismein agreed features, final price, advance aur baqi payment ka schedule wazeh hota hai.",
+      details: [
+        "Pakistan ke starting packages PKR 35,000 aur PKR 45,000 se shuru hote hain.",
+        "Pakistan ka default advance PKR 10,000 hai; international quote currency ke mutabiq hoti hai.",
+        "Payment method aur milestones final quotation mein confirm hote hain.",
+      ],
+      benefit: "Payment bhejne se pehle aapko maloom hota hai ke kis cheez ki kitni cost hai.",
       icon: ShieldCheck,
     },
     {
       step: "04",
       title: "Architecture & Development",
-      desc: "We build your application using modern Next.js, TypeScript, Tailwind, and Supabase cloud database.",
+      image: "/New folder/New folder/Screenshot 2026-10-15 175437.png",
+      imageAlt: "Web application dashboard on a laptop, representing application development",
+      desc: "Advance payment verify aur project scope approve hone ke baad development shuru hoti hai. Application agreed features aur business workflow ke mutabiq banayi jati hai.",
+      details: [
+        "Next.js, TypeScript aur Tailwind CSS se responsive interface.",
+        "Agreed pages, forms, admin panel aur workflows ki tayyari.",
+        "Database, login ya integrations sirf approved scope ke mutabiq configure hote hain.",
+      ],
+      benefit: "Aapke business ke liye functional application banti hai, sirf demo screens nahi.",
       icon: Code2,
     },
     {
       step: "05",
       title: "Testing & Vercel Delivery",
-      desc: "Final testing, deployment to Vercel, training handover, and initiation of agreed installment milestones.",
+      image: "/New folder/New folder/Screenshot 2026-10-15 175507.png",
+      imageAlt: "Laptop displaying a successful production deployment",
+      desc: "Handover se pehle agreed features check kiye jate hain. Phir application live deploy hoti hai aur aapko agreed access aur basic handover diya jata hai.",
+      details: [
+        "Mobile/desktop layout, forms aur agreed workflows test hote hain.",
+        "Configured login, database aur uploads check kiye jate hain.",
+        "Vercel par live link, agreed admin access aur basic training milti hai.",
+      ],
+      benefit: "Aapko internet par chalne wali tested application aur uska live link milta hai.",
       icon: CheckCircle2,
     },
   ];
@@ -80,19 +124,19 @@ export default function HomePage() {
   const faqs = [
     {
       q: "What is the difference between having Client Admin Access and not having it?",
-      a: "With our PKR 35,000 package (Without Client Admin Access), Durrani Web Developers maintains the backend administration exclusively for you. You do not receive admin dashboard login credentials; catalog and backend changes are handled by our team. With the PKR 45,000 package, you receive your own secure, dedicated client dashboard to manage products, categories, orders, customers, and inventory independently.",
+      a: "Pakistan starting rates are PKR 35,000 without Client Admin Access and PKR 45,000 with it. International starting prices are double the Pakistan rates and shown in the selected local currency. Without Client Admin Access, Durrani Web Developers maintains the backend; requested catalog changes may incur extra charges. With Client Admin, you receive a dashboard to manage products, categories, orders, customers, and inventory.",
     },
     {
       q: "How does the 11-month installment plan work?",
-      a: "To make enterprise-grade software accessible to businesses, our starting packages allow an initial PKR 10,000 advance, with the remaining balance spread evenly across 11 monthly installments (e.g. 10 installments of PKR 2,272.73 and a final adjustment of PKR 2,272.70 for the PKR 35,000 package). Exact schedules are formalized upon scope approval.",
+      a: "Pakistan package examples use a PKR 10,000 advance and spread the remaining balance over 11 monthly installments. International base packages are doubled and converted to local currency; each international add-on is 100 units. Exact schedules are confirmed after scope review.",
     },
     {
-      q: "Are domain names and cloud hosting included in the price?",
-      a: "Deployment to Vercel and initial architecture setup are included. Custom top-level domains (such as .com or .pk) and any paid third-party API tiers or payment gateway merchant account fees are paid directly to the respective providers by the client.",
+      q: "Are domains, third-party accounts, and Vercel deployment included?",
+      a: "Vercel par web app deploy karne ka hamara kaam agreed web-app budget mein included hai; alag deployment fee nahi. Iska matlab Vercel ka paid plan ya hosting subscription included hona nahi hai. Hum custom domains, paid third-party subscriptions, payment gateway accounts ya external API accounts provide, purchase ya manage nahi karte. Agar project ko inki zaroorat ho to client account/plan seedha provider se arrange aur uski fees provider ko ada karta hai. Agreed scope mein integration development ho sakti hai, lekin third-party account ya usage charges hamare budget mein shamil nahi.",
     },
     {
       q: "Can I customize the features and add special integrations?",
-      a: "Yes! Our budget calculator allows you to select optional add-ons like Google OAuth, Supabase PostgreSQL, JazzCash/EasyPaisa checkout, AI chatbots, and bespoke software workflows (starting at +PKR 10,000 each).",
+      a: "Yes! The budget calculator lets you select optional add-ons like Google OAuth, Supabase PostgreSQL, payment integration, AI chatbots, and bespoke workflows. Pakistan add-ons start at PKR 10,000 each; each international add-on is a flat 100 units in the selected currency.",
     },
     {
       q: "How quickly can my web application be delivered?",
@@ -108,9 +152,9 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f242d_1px,transparent_1px),linear-gradient(to_bottom,#1f242d_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 xl:gap-12 items-center">
             {/* Left Column */}
-            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+            <div className="lg:col-span-12 mx-auto w-full max-w-5xl space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 bg-[#242830] border border-[#E31E36]/30 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-200">
                 <span className="w-2 h-2 rounded-full bg-[#E31E36] animate-ping" />
                 <span className="text-[#E31E36] font-bold">Durrani Web Developers</span>
@@ -168,28 +212,79 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right Column: Visual Flyer Graphic */}
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="relative w-full max-w-md bg-gradient-to-b from-[#242830] to-[#181B20] p-4 rounded-2xl border border-gray-700 shadow-card-dark">
-                <div className="relative w-full h-[460px] rounded-xl overflow-hidden border border-gray-800">
-                  <Image
-                    src="/rates-flyer.jpg"
-                    alt="Durrani Web Developers Pricing and Rates Flyer"
-                    fill
-                    className="object-contain"
-                    priority
-                  />
-                </div>
+            <div className="lg:col-span-12 mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-gray-700 shadow-card-dark">
+              <Image
+                src="/hero_banner.jpeg"
+                alt="Durrani Web Developers web application development banner"
+                width={1600}
+                height={595}
+                priority
+                className="h-auto w-full"
+              />
+            </div>
+
+            {/* Intro Video */}
+            <div className="lg:col-span-12 flex justify-center">
+              <div className="w-full max-w-5xl rounded-2xl border border-gray-700 bg-gradient-to-b from-[#242830] to-[#181B20] p-3 shadow-card-dark sm:p-5">
+                <video
+                  controls
+                  playsInline
+                  preload="metadata"
+                  aria-label="Durrani Web Developers introduction video"
+                  className="aspect-video w-full rounded-xl border border-gray-800 bg-black object-contain"
+                >
+                  <source src="/logoanimation2.mp4" type="video/mp4" />
+                  Your browser does not support HTML video.
+                </video>
                 <div className="mt-3 flex items-center justify-between text-xs px-2 text-gray-400">
-                  <span className="flex items-center gap-1 font-semibold text-white">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Verified Pricing Structure
-                  </span>
-                  <Link href="/pricing" className="text-[#E31E36] font-bold hover:underline">
-                    View Full Rate Details &rarr;
-                  </Link>
+                  <span className="font-semibold text-white">Durrani Web Developers</span>
+                  <span>Ideas • Code • Real Solutions</span>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#F4F5F7] px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:p-5">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3 px-1">
+            <div>
+              <span className="text-xs font-extrabold uppercase tracking-widest text-[#E31E36]">
+                Pricing overview
+              </span>
+              <h2 className="mt-1 text-xl font-black text-[#101216] sm:text-2xl">
+                Rates & Web Application Packages
+              </h2>
+            </div>
+            <Link href="/pricing" className="text-sm font-bold text-[#E31E36] hover:underline">
+              View pricing details &rarr;
+            </Link>
+          </div>
+          <Image
+            src="/rates-flyer.jpg"
+            alt="Durrani Web Developers rates and web application packages flyer"
+            width={1024}
+            height={1536}
+            className="mx-auto h-auto w-full rounded-xl"
+          />
+        </div>
+      </section>
+
+      <section className="bg-white py-10 border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-gray-200 bg-[#F4F5F7] p-6 text-center">
+            <span className="block text-3xl font-black text-[#E31E36]">{publicLiveProjectCount}</span>
+            <span className="mt-1 block text-sm font-bold text-[#101216]">
+              {publicLiveProjectCount === 1 ? "Real live / delivered project publicly featured" : "Real live / delivered projects publicly featured"}
+            </span>
+            <Link href="/portfolio" className="mt-2 inline-flex text-xs font-bold text-[#E31E36] hover:underline">
+              See verified portfolio <ArrowRight className="ml-1 h-3.5 w-3.5" />
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-[#F4F5F7] p-6 text-center">
+            <span className="block text-lg font-black text-[#101216]">Not publicly disclosed</span>
+            <span className="mt-1 block text-sm font-bold text-gray-600">Lifetime revenue is not published or inferred from estimates.</span>
           </div>
         </div>
       </section>
@@ -205,7 +300,7 @@ export default function HomePage() {
               Flexible Packages For Your Web Application
             </h2>
             <p className="text-gray-600 text-sm mt-2">
-              Transparent starting rates with easy installment options. All prices in Pakistani Rupees (PKR).
+              Pakistan rates are in PKR. International prices are doubled and converted to your selected local currency.
             </p>
           </div>
 
@@ -230,33 +325,33 @@ export default function HomePage() {
                 </p>
 
                 <div className="mt-6 flex items-baseline gap-2">
-                  <span className="text-4xl font-black text-[#101216]">PKR 35,000</span>
+                  <RegionalPrice pkrAmount={35000} className="text-4xl font-black text-[#101216]" />
                   <span className="text-xs text-gray-500">starting price</span>
                 </div>
 
                 <div className="mt-3 bg-gray-50 p-3 rounded-lg border border-gray-200 text-xs flex justify-between items-center text-gray-600">
                   <span>Daily Cost:</span>
-                  <strong className="text-[#101216] font-bold">PKR 95.89 (per day)</strong>
+                  <strong className="text-[#101216] font-bold"><RegionalPrice pkrAmount={35000 / 365} /> (per day)</strong>
                 </div>
 
                 {/* Payment Breakdown */}
                 <div className="mt-6 space-y-3 bg-[#F4F5F7] p-4 rounded-xl text-xs">
                   <div className="flex justify-between items-center pb-2 border-b border-gray-200">
                     <span className="text-gray-600">Advance Payment (at the start):</span>
-                    <strong className="text-[#101216] font-bold">{formatPKR(10000)}</strong>
+                    <strong className="text-[#101216] font-bold"><RegionalPrice pkrAmount={10000} /></strong>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b border-gray-200">
                     <span className="text-gray-600">Remaining Balance:</span>
-                    <strong className="text-[#101216] font-bold">{formatPKR(25000)}</strong>
+                    <strong className="text-[#101216] font-bold"><RegionalPrice pkrAmount={25000} /></strong>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Monthly Payment (for 11 months):</span>
-                    <strong className="text-[#E31E36] font-bold">PKR 2,272.73 / mo</strong>
+                    <strong className="text-[#E31E36] font-bold"><RegionalPrice pkrAmount={2272.73} /> / mo</strong>
                   </div>
                 </div>
 
                 <p className="text-[11px] text-gray-500 mt-4 leading-relaxed italic">
-                  * Durrani Web Developers maintains the backend administration exclusively. Changes to products and content are requested via support.
+                  * Durrani Web Developers maintains the backend administration exclusively. Product and content updates are not included and may incur additional charges; request them via support.
                 </p>
               </div>
 
@@ -295,28 +390,28 @@ export default function HomePage() {
                 </p>
 
                 <div className="mt-6 flex items-baseline gap-2">
-                  <span className="text-4xl font-black text-[#E31E36]">PKR 45,000</span>
+                  <RegionalPrice pkrAmount={45000} className="text-4xl font-black text-[#E31E36]" />
                   <span className="text-xs text-gray-500">starting price</span>
                 </div>
 
                 <div className="mt-3 bg-red-50/60 p-3 rounded-lg border border-red-200 text-xs flex justify-between items-center text-gray-700">
                   <span>Daily Cost:</span>
-                  <strong className="text-[#E31E36] font-bold">PKR 123.29 (per day)</strong>
+                  <strong className="text-[#E31E36] font-bold"><RegionalPrice pkrAmount={45000 / 365} /> (per day)</strong>
                 </div>
 
                 {/* Payment Breakdown */}
                 <div className="mt-6 space-y-3 bg-[#F4F5F7] p-4 rounded-xl text-xs">
                   <div className="flex justify-between items-center pb-2 border-b border-gray-200">
                     <span className="text-gray-600">Advance Payment (at the start):</span>
-                    <strong className="text-[#101216] font-bold">{formatPKR(10000)}</strong>
+                    <strong className="text-[#101216] font-bold"><RegionalPrice pkrAmount={10000} /></strong>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b border-gray-200">
                     <span className="text-gray-600">Remaining Balance:</span>
-                    <strong className="text-[#101216] font-bold">{formatPKR(35000)}</strong>
+                    <strong className="text-[#101216] font-bold"><RegionalPrice pkrAmount={35000} /></strong>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Monthly Payment (for 11 months):</span>
-                    <strong className="text-[#E31E36] font-bold">PKR 3,181.82 / mo</strong>
+                    <strong className="text-[#E31E36] font-bold"><RegionalPrice pkrAmount={3181.82} /> / mo</strong>
                   </div>
                 </div>
 
@@ -419,7 +514,9 @@ export default function HomePage() {
                 </div>
                 <div className="mt-5 pt-3 border-t border-gray-200 group-hover:border-gray-800">
                   <Link
-                    href={`/calculator?type=${encodeURIComponent(ind.name)}`}
+                    href={ind.name === "SaaS Projects"
+                      ? "/calculator?package=saas_starter&type=SaaS%20Projects"
+                      : `/calculator?type=${encodeURIComponent(ind.name)}`}
                     className="text-xs font-bold text-[#E31E36] group-hover:text-rose-400 inline-flex items-center gap-1"
                   >
                     Calculate Budget &rarr;
@@ -443,19 +540,25 @@ export default function HomePage() {
                 Completed Web Applications
               </h2>
               <p className="text-xs text-gray-400 mt-1">
-                Verified client projects. Only publicly consented project budgets are shown.
+                Real client work, added when it is live. Any calculator-based amount is clearly labelled as an estimate.
               </p>
             </div>
             <Link
               href="/portfolio"
               className="inline-flex items-center gap-2 bg-[#242830] hover:bg-[#2E3440] text-white px-4 py-2.5 rounded-lg text-xs font-bold border border-gray-700 mt-4 md:mt-0 transition"
             >
-              View Full Portfolio Archive <ExternalLink className="w-3.5 h-3.5 text-[#E31E36]" />
+              View Full Portfolio <ExternalLink className="w-3.5 h-3.5 text-[#E31E36]" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {portfolioHighlights.map((item) => (
+          <div
+            className={`grid grid-cols-1 gap-8 ${
+              portfolioHighlights.length > 1
+                ? "md:grid-cols-2 lg:grid-cols-3"
+                : "max-w-xl mx-auto"
+            }`}
+          >
+            {portfolioHighlights.map((item, index) => (
               <div
                 key={item.id}
                 className="bg-[#181B20] rounded-2xl overflow-hidden border border-gray-800 hover:border-[#E31E36]/40 transition group flex flex-col justify-between"
@@ -466,6 +569,8 @@ export default function HomePage() {
                       src={item.imageUrl}
                       alt={item.title}
                       fill
+                      sizes="(max-width: 767px) 100vw, (max-width: 1279px) 33vw, 400px"
+                      priority={index === 0}
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute top-3 left-3 bg-[#101216]/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-gray-200 border border-gray-700">
@@ -507,8 +612,13 @@ export default function HomePage() {
                         {item.budgetLabel || "Project Budget"}
                       </span>
                       <strong className="text-sm font-black text-[#E31E36]">
-                        {formatPKR(item.approvedPublicBudget)}
+                        <RegionalPrice pkrAmount={item.approvedPublicBudget} conversion="historical-fx" />
                       </strong>
+                      {item.budgetLabel === "Actual Project Fee" && (
+                        <span className="block text-[9px] text-gray-500">
+                          Original PKR fee converted at current FX only
+                        </span>
+                      )}
                     </div>
                   ) : (
                     <span className="text-xs text-gray-500 italic">Custom Scope</span>
@@ -521,7 +631,7 @@ export default function HomePage() {
                       rel="noopener noreferrer"
                       className="text-xs font-bold text-gray-300 hover:text-white inline-flex items-center gap-1"
                     >
-                      Demo <ExternalLink className="w-3 h-3 text-[#E31E36]" />
+                      Live Website <ExternalLink className="w-3 h-3 text-[#E31E36]" />
                     </a>
                   )}
                 </div>
@@ -532,7 +642,7 @@ export default function HomePage() {
       </section>
 
       {/* 5. ORDERING PROCESS */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-[#F4F5F7] border-y border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
@@ -542,32 +652,74 @@ export default function HomePage() {
               How Our Ordering Process Works
             </h2>
             <p className="text-gray-600 text-sm mt-2">
-              From requirement submission to live production deployment on Vercel.
+              Project select karne se le kar tested website live hone tak har qadam aapko pehle se maloom hoga.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {processSteps.map((step) => (
               <div
                 key={step.step}
-                className="bg-[#F4F5F7] p-6 rounded-2xl border border-gray-200 flex flex-col justify-between"
+                className="group bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-lg hover:border-[#E31E36]/30 transition-all duration-300 flex flex-col"
               >
-                <div>
-                  <span className="text-2xl font-black text-[#E31E36] block mb-3">
-                    {step.step}
+                <div className="relative h-48 sm:h-56 overflow-hidden bg-gray-200">
+                  <Image
+                    src={step.image}
+                    alt={step.imageAlt}
+                    fill
+                    sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#101216]/70 via-transparent to-transparent" />
+                  <span className="absolute top-4 left-4 rounded-full bg-white px-3 py-1 text-xs font-black text-[#E31E36] shadow">
+                    STEP {step.step}
                   </span>
-                  <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#101216] shadow-sm mb-4">
-                    <step.icon className="w-5 h-5 text-[#E31E36]" />
+                  <div className="absolute bottom-4 left-4 flex items-center gap-2 text-white">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E31E36] shadow-lg">
+                      <step.icon className="h-5 w-5" />
+                    </span>
+                    <span className="text-xs font-bold uppercase tracking-wider">Durrani Web Developers</span>
                   </div>
+                </div>
+
+                <div className="flex flex-1 flex-col p-6">
                   <h3 className="font-extrabold text-sm text-[#101216] mb-2">
                     {step.title}
                   </h3>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     {step.desc}
                   </p>
+                  <ul className="mt-4 space-y-2.5">
+                    {step.details.map((detail) => (
+                      <li key={detail} className="flex items-start gap-2 text-xs leading-relaxed text-gray-600">
+                        <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-600" />
+                        <span>{detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-5 border-t border-gray-100 pt-4">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#E31E36]">
+                      Aapko kya faida?
+                    </span>
+                    <p className="mt-1 text-xs font-semibold leading-relaxed text-[#101216]">
+                      {step.benefit}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-white p-5 sm:flex-row sm:px-7">
+            <p className="max-w-3xl text-xs leading-relaxed text-gray-600">
+              Note: Hum custom domains, paid third-party subscriptions, payment gateway accounts ya external API accounts provide nahi karte; zaroorat par client inhein provider se khud arrange aur pay karta hai. Vercel par app deploy karne ka hamara kaam web-app budget mein included hai, alag deployment fee nahi; Vercel ka paid plan/hosting subscription ismein shamil nahi. Payment verify hone ke baad hi received mark hoti hai.
+            </p>
+            <Link
+              href="/calculator"
+              className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-xl bg-[#E31E36] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#C8162D]"
+            >
+              Apna Project Shuru Karein <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </section>

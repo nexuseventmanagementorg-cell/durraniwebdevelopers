@@ -1,10 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { BUSINESS_INFO, buildWhatsAppLink } from "@/lib/constants";
+import RegionalPrice from "./RegionalPrice";
+import CurrencySelector from "./CurrencySelector";
 import {
   Mail,
   Phone,
@@ -14,10 +16,48 @@ import {
   ExternalLink,
   Code2,
   CheckCircle2,
+  Calculator,
+  Eye,
+  Globe,
 } from "lucide-react";
+
+interface DailyVisitorCounts {
+  visitor: number;
+  calculator: number;
+  estimator: number;
+}
 
 export default function Footer() {
   const pathname = usePathname();
+  const [visitorCounts, setVisitorCounts] = useState<DailyVisitorCounts | null>(null);
+  const [analyticsUnavailable, setAnalyticsUnavailable] = useState(false);
+
+  const refreshVisitorCounts = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const response = await fetch("/api/public/analytics", { cache: "no-store", signal });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Visitor analytics are unavailable.");
+      }
+      setVisitorCounts(result.counts as DailyVisitorCounts);
+      setAnalyticsUnavailable(false);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      console.error("Could not refresh today's visitor counts", error);
+      setAnalyticsUnavailable(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
+    const controller = new AbortController();
+    void refreshVisitorCounts(controller.signal);
+    const interval = window.setInterval(() => void refreshVisitorCounts(), 30_000);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+    };
+  }, [pathname, refreshVisitorCounts]);
 
   // Do not render public footer in admin panel
   if (pathname.startsWith("/admin")) {
@@ -48,7 +88,7 @@ export default function Footer() {
               Let’s Build Your Production Web Application Today
             </h3>
             <p className="text-gray-400 text-sm max-w-xl mt-1">
-              Starting from PKR 35,000 with 11 flexible monthly installments. Get an exact instant estimate using our interactive budget calculator.
+              Starting from <RegionalPrice pkrAmount={35000} /> (PKR 35,000 Pakistan base); plans and currency adjust for your selected region.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -183,17 +223,57 @@ export default function Footer() {
             <div className="bg-[#181B20] p-3 rounded-lg border border-[#242830] text-[11px] text-gray-400 space-y-2 leading-relaxed">
               <div className="flex items-start gap-1.5 text-gray-300 font-semibold">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <span>All prices in Pakistani Rupees (PKR)</span>
+                <span>Prices for your selected region</span>
               </div>
+              <CurrencySelector className="w-full rounded-md border border-gray-700 bg-[#101216] px-2 py-1.5 text-gray-200" />
               <p>
-                Calculated amounts are transparent project estimates. Final quotation is confirmed after formal scope review.
+                International base packages are doubled from Pakistan rates and converted using the latest exchange rate; each add-on is 100 units in the selected currency. Final quotation follows scope review.
               </p>
+              <p>This site is written in English. Use your browser&apos;s built-in translate feature to read it in another language.</p>
               <p>
-                Third-party subscriptions, paid domains (.com), payment gateway accounts, and external APIs are separate client costs.
+                We do not provide, purchase, or manage third-party subscriptions, paid domains, payment gateway accounts, or external API accounts. Clients arrange and pay providers directly when needed. Our Vercel deployment work is included in the agreed web app budget; there is no separate deployment fee. Paid Vercel hosting plans are not included.
               </p>
             </div>
           </div>
         </div>
+
+        <section
+          aria-labelledby="visitor-counts-heading"
+          className="mt-10 rounded-2xl border border-[#30343c] bg-[#181B20] p-5 sm:p-6"
+        >
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h3 id="visitor-counts-heading" className="text-base font-bold text-white">
+                Today&apos;s Website Visitors
+              </h3>
+              <p className="mt-1 text-xs text-gray-400">
+                Daily unique visitors; refreshed every 30 seconds. Date follows Pakistan time.
+              </p>
+            </div>
+            {analyticsUnavailable && (
+              <span role="status" className="text-xs text-amber-300">
+                Visitor counts temporarily unavailable
+              </span>
+            )}
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {([
+              { event: "visitor", label: "Unique visitors", icon: Eye },
+              { event: "calculator", label: "Budget calculator users", icon: Calculator },
+              { event: "estimator", label: "URL estimator users", icon: Globe },
+            ] as const).map(({ event, label, icon: Icon }) => (
+              <div key={event} className="flex items-center gap-3 rounded-xl border border-[#30343c] bg-[#101216] p-4">
+                <Icon className="h-5 w-5 shrink-0 text-[#E31E36]" aria-hidden="true" />
+                <div>
+                  <div className="text-xl font-extrabold text-white">
+                    {analyticsUnavailable ? "—" : visitorCounts ? visitorCounts[event].toLocaleString() : "…"}
+                  </div>
+                  <div className="text-xs text-gray-400">{label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Bottom Bar */}
         <div className="mt-12 pt-6 border-t border-[#242830] flex flex-col sm:flex-row items-center justify-between text-xs text-gray-400 gap-4">
@@ -201,10 +281,10 @@ export default function Footer() {
             <span>&copy; {new Date().getFullYear()} {BUSINESS_INFO.name}. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-4 text-gray-400">
-            <span>Pakistani Rupees (PKR)</span>
+            <span>Regional currency estimates</span>
             <span>•</span>
             <span className="flex items-center gap-1">
-              <Code2 className="w-3.5 h-3.5 text-[#E31E36]" /> Built with Google Antigravity
+              <Code2 className="w-3.5 h-3.5 text-[#E31E36]" /> Built with Google Antigravity &amp; Visual Studio Code
             </span>
           </div>
         </div>

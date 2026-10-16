@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Utensils,
   Layers,
@@ -25,197 +26,210 @@ export default function ServicesPage() {
     {
       id: "restaurant-web-apps",
       title: "Restaurant Web Applications",
+      image: "/Screenshot 2026-10-15 154914.png",
       icon: Utensils,
-      tagline: "Engage diners with digital menus, table bookings, and food stories.",
+      tagline: "Restaurant, cafe ya food lounge ke liye online showcase.",
       description:
-        "Custom web applications engineered for restaurants, cafes, and food lounges. Includes interactive visual menus, reservation scheduling, branch locators, and dynamic dietary filters.",
+        "Aisi website jahan customer restaurant ki details, menu, khanay ki tasveerain aur prices dekh sake aur table booking ki request bhej sake.",
       highlights: [
-        "Visual categorize-able digital menus",
-        "Table reservation & event booking forms",
-        "Social proof, chef stories, & customer reviews",
-        "Mobile-first ultra fast loading for diner phones",
+        "Burger, pizza aur doosray foods ka menu, prices aur daily specials",
+        "Table reservation aur event booking request",
+        "Address, opening timings aur customer reviews",
+        "Owner menu khud update kar sake, agar admin panel package mein ho",
       ],
-      packageNote: "Admin dashboard available in Package 2 for changing daily specials.",
+      packageNote: "Admin panel aur menu updates ka tareeqa selected package aur approved scope par depend karta hai.",
     },
     {
       id: "restaurant-order-taking",
       title: "Restaurant Order-Taking Applications",
+      image: "/Screenshot 2026-10-15 155009.png",
       icon: Layers,
-      tagline: "Direct ordering to your kitchen with real-time WhatsApp dispatches.",
+      tagline: "Customer ko online food select karke order bhejne ka asaan tareeqa.",
       description:
-        "High-speed ordering portal eliminating third-party aggregator commissions. Customers customize burger toppings, crusts, or meal deals and send orders directly with receipt generation.",
+        "Customer food aur add-ons select karke cart banata hai, delivery ya takeaway chunta hai aur order submit karta hai. Restaurant ko order WhatsApp ya email se mil sakta hai, jab munasib integration configure ki gayi ho.",
       highlights: [
-        "Instant cart with customizable food addons",
-        "Direct WhatsApp & email kitchen order dispatch",
-        "Delivery zone calculation & takeaway pickup timer",
-        "Thermal printer friendly order summaries",
+        "Food items, extra cheese aur doosray add-ons select karna",
+        "Cart, total bill aur order receipt",
+        "Delivery ya takeaway aur delivery charges",
+        "WhatsApp button aur automatic WhatsApp dispatch alag features hain",
       ],
-      packageNote: "Order management pipeline included with client admin panel support.",
+      packageNote: "Automatic WhatsApp dispatch ki development scope mein discuss ho sakti hai. WhatsApp/API account ya paid plan hum provide nahi karte; client zaroorat par provider se khud arrange aur pay karta hai.",
     },
     {
       id: "ecommerce-stores",
       title: "E-Commerce Stores",
+      image: "/Screenshot 2026-10-15 155035.png",
       icon: ShoppingBag,
-      tagline: "High-conversion retail shopping platforms for physical & digital goods.",
+      tagline: "Products online dikhane, cart mein rakhne aur order lene ki website.",
       description:
-        "Full-fledged modern online stores built on Next.js. Fast product discovery, SEO-optimized product pages, flexible shipping calculations, coupon engine, and local checkout.",
+        "Jewellery, cosmetics, kapray, electronics ya grocery ke liye online dukaan. Customer products aur unki details dekh kar cart banata aur order bhejta hai.",
       highlights: [
-        "Product catalog with variants (color, size, weight)",
-        "Shopping cart, persistent guest checkout, & order tracking",
-        "Discount codes, coupon rules, & promotional banners",
-        "Local payment workflow (JazzCash, EasyPaisa, Bank Transfer)",
+        "Products, categories, tasveerain, prices aur sizes/colours",
+        "Shopping cart, coupons aur order tracking",
+        "Client dashboard package mein owner products, prices aur stock manage kar sakta hai",
+        "Payment gateway setup/account package mein shamil nahi; client apna account arrange karta hai",
       ],
-      packageNote: "Starting base PKR 35k (managed) or PKR 45k (client dashboard).",
+      packageNote: "Starting package har feature ko cover nahi karta; product updates aur extra features par additional charges lag sakte hain.",
     },
     {
       id: "jewellery-stores",
       title: "Jewellery Stores",
+      image: "/Screenshot 2026-10-15 155100.png",
       icon: Gem,
-      tagline: "Sophisticated luxury showrooms with metal rate logic & VIP lookbooks.",
+      tagline: "Gold, silver aur doosri jewellery ke liye online showroom.",
       description:
-        "Bespoke digital storefronts for fine jewellers, goldsmiths, and diamond houses. Features high-resolution zoomable galleries, metal weight calculations, and private consultation inquiries.",
+        "Rings, necklaces, bracelets aur doosri jewellery ki tasveerain, details aur prices dikhane wali website. Customer custom design ke liye inquiry bhi bhej sakta hai.",
       highlights: [
-        "High-definition zoom & 360 showcase galleries",
-        "Gold / silver purity & daily price ticker integration",
-        "Custom jewelry quote request & consultation booking",
-        "Private VIP catalog lookbooks with restricted access",
+        "Jewellery ki bari tasveerain aur zoom",
+        "Purity, weight aur product details",
+        "Custom jewellery banwanay ki inquiry",
+        "Live gold rate ke liye reliable data source/API alag se configure karna hota hai",
       ],
-      packageNote: "Real-time rates and live APIs can be attached as add-ons.",
+      packageNote: "Live rates ki integration ke liye external API account client ko provider se khud lena hoga; hum API account/subscription provide nahi karte.",
     },
     {
       id: "cosmetic-beauty",
       title: "Cosmetic & Beauty Stores",
+      image: "/Screenshot 2026-10-15 155126.png",
       icon: Sparkle,
-      tagline: "Vibrant skincare & cosmetic storefronts with quiz matching & shade selectors.",
+      tagline: "Makeup, skincare, perfume aur beauty products ki online dukaan.",
       description:
-        "Beauty-focused e-commerce portals with ingredient transparency, shade match selector, customer photo reviews, and bundle builder discounts for skincare brands.",
+        "Lipstick shades, foundation colours, face wash, serum aur moisturizer jaise products online dikhane aur order lene ka store.",
       highlights: [
-        "Shade and skin-tone visual swatch pickers",
-        "Skin concern matching recommendation logic",
-        "Verified customer before/after review gallery",
-        "Cart upsells, free-gift thresholds, & beauty bundles",
+        "Lipstick aur foundation ke shades",
+        "Product details, tasveerain aur customer reviews",
+        "Bundles aur discounts",
+        "Skin concern ke mutabiq recommendations extra feature ho sakti hain",
       ],
-      packageNote: "Inventory alerts and stock levels managed in Package 2.",
+      packageNote: "Stock management admin panel package aur approved project scope ke mutabiq hoti hai.",
     },
     {
       id: "fashion-stores",
       title: "Fashion Stores",
+      image: "/Screenshot 2026-10-15 155147.png",
       icon: Shirt,
-      tagline: "Editorial apparel boutiques with sizing guides & collection drops.",
+      tagline: "Clothing brands aur fashion boutiques ke liye online store.",
       description:
-        "Designed for apparel designers, clothing brands, and fashion boutiques. Mobile-first shopping experience with lookbook carousels, seasonal collections, and size recommendation tools.",
+        "Customer kapray dekh sakta hai, size aur colour select kar sakta hai, size chart check kar sakta hai aur order bhej sakta hai.",
       highlights: [
-        "Editorial seasonal collection lookbooks",
-        "Interactive sizing charts & measurement guides",
-        "Inventory variant matrix (Size x Color x Cut)",
-        "Instagram feed & social styling integrations",
+        "Shirts, dresses, trousers aur nayi collections",
+        "Size charts aur rangon ke options",
+        "Seasonal sale aur product details",
+        "Owner sizes, colours aur prices manage kare, agar admin panel shamil ho",
       ],
-      packageNote: "Client admin panel gives your staff autonomous inventory control.",
+      packageNote: "Dashboard access selected package par depend karta hai; product updates par extra charges ho sakte hain.",
     },
     {
       id: "grocery-stores",
       title: "Grocery Stores",
+      image: "/Screenshot 2026-10-15 155215.png",
       icon: Apple,
-      tagline: "Fast hyperlocal grocery portals with slot selection & bulk orders.",
+      tagline: "Online kiryana ya supermarket jahan se ghar baithe grocery order ho.",
       description:
-        "Built for supermarkets, organic farms, and grocery marts. Features fast item re-ordering, weight-based pricing, area pin-code availability validation, and scheduled delivery slots.",
+        "Customer doodh, bread, chawal aur sabziyan dekh kar quantity select karta aur ghar delivery ke liye order bhejta hai.",
       highlights: [
-        "Rapid category browsing & instant item search",
-        "Weight-based pricing (per kg, pack, unit)",
-        "Delivery time slot booking (morning/evening)",
-        "Minimum order value validation & delivery fee rules",
+        "Products ko category ke hisaab se dhoondhna",
+        "Quantity, jaise 1 kg ya 2 kg, select karna",
+        "Minimum order aur delivery charges",
+        "Delivery slots, stock alerts aur barcode features scope ke mutabiq ban sakte hain",
       ],
-      packageNote: "Complex delivery and barcode features available as custom add-ons.",
+      packageNote: "Advanced delivery, stock aur barcode features extra development maang sakte hain.",
     },
     {
       id: "saas-applications",
       title: "SaaS Applications",
+      image: "/Screenshot 2026-10-15 155237.png",
       icon: Cpu,
-      tagline: "Cloud software platforms with multi-tenant workspaces & billing.",
+      tagline: "Internet par chalne wala software jo aksar subscription par use hota hai.",
       description:
-        "Custom Software-as-a-Service platforms engineered from the ground up. Features client authentication, tenant isolation, subscription tier gating, and automated task pipelines.",
+        "Misal ke taur par invoicing, appointment management, analytics ya school management software. Mukhtalif businesses ke accounts aur data alag rakhe ja sakte hain.",
       highlights: [
-        "Secure user authentication (Google OAuth / Supabase Auth)",
-        "Multi-tenant architecture & organizational accounts",
-        "Role-based access controls (SuperAdmin, Staff, Member)",
-        "Automated scheduled cron workers on Vercel",
+        "Har business ke liye alag account aur data",
+        "Users ke roles aur permissions",
+        "Google login ya scheduled tasks zaroorat ke mutabiq",
+        "Subscription billing integration alag scope ho sakti hai",
       ],
-      packageNote: "Advanced enterprise SaaS architecture quoted according to feature scope.",
+      packageNote: "SaaS project ki complexity ke mutabiq quotation hoti hai; third-party subscriptions hum provide nahi karte.",
     },
     {
       id: "client-management",
       title: "Client Management Systems (CRM)",
+      image: "/Screenshot 2026-10-15 155300.png",
       icon: Users,
-      tagline: "Centralize clients, deals, communications, and historical records.",
+      tagline: "Customers, inquiries, deals aur follow-ups ka record rakhne wala software.",
       description:
-        "Tailored CRM portals for consulting firms, real estate agencies, and service companies to track leads, manage customer interactions, and monitor sales pipelines.",
+        "Business client ka naam, rabta, project ki zaroorat, quotation, payments aur dobara rabta karne ki tareekh aik jagah par rakh sakta hai.",
       highlights: [
-        "Client database with contact logs & private notes",
-        "Lead pipeline stages (Inquiry to Closed Deal)",
-        "Task assignments & team follow-up reminders",
-        "Customer lifetime value & deal history reports",
+        "Client details aur rabtay ka record",
+        "Inquiry se deal tak ka status",
+        "Follow-up reminders aur baqi payment ka record",
+        "Team ke liye tasks aur reports",
       ],
-      packageNote: "Full client dashboard support included in starting Package 2.",
+      packageNote: "Dashboard, staff accounts aur permissions ka scope quotation mein confirm hota hai.",
     },
     {
       id: "booking-systems",
       title: "Booking & Appointment Systems",
+      image: "/Screenshot 2026-10-15 155328.png",
       icon: Calendar,
-      tagline: "Automate appointment booking for clinics, salons, and consultants.",
+      tagline: "Clinic, salon ya consultant ke saath appointment book karne ka system.",
       description:
-        "Interactive booking workflows that prevent double-booking, allow clients to select available practitioner timeslots, and send automated confirmation messages.",
+        "Customer available din aur waqt chunta hai aur booking request bhejta hai. Business apna schedule manage karta hai.",
       highlights: [
-        "Interactive calendar & practitioner time slot picker",
-        "Service duration & buffer time configuration",
-        "WhatsApp / SMS appointment confirmation alerts",
-        "Cancellation, rescheduling, & advance deposit policies",
+        "Calendar aur available time slots",
+        "Service aur team member select karna",
+        "Cancellation ya rescheduling ke options",
+        "Confirmation messages integration ke zariye bheje ja sakte hain",
       ],
-      packageNote: "WhatsApp API hookups can be configured as project add-ons.",
+      packageNote: "Automatic messages ya advance payment ki integration approved scope par depend karti hai. Related third-party account ya subscription client khud arrange karta hai; hum provide ya manage nahi karte.",
     },
     {
       id: "inventory-systems",
       title: "Inventory & Product Management Systems",
+      image: "/Screenshot 2026-10-15 155354.png",
       icon: Boxes,
-      tagline: "Track multi-warehouse stock levels, reorder alerts, and supplier logs.",
+      tagline: "Business ke stock aur maal ka record rakhne wala internal system.",
       description:
-        "Back-office warehouse and stock management applications. Keep track of incoming purchase orders, batch numbers, low-stock thresholds, and physical inventory audits.",
+        "Business dekh sakta hai ke kitna maal mojood hai, kya sell hua, kaunsa item khatam hone wala hai aur supplier se kitna mangwaya gaya.",
       highlights: [
-        "SKU & barcode tracking with batch numbers",
-        "Automated low-stock alerts & reorder thresholds",
-        "Supplier directory & purchase order logs",
-        "Stock adjustment tracking with audit history",
+        "Mojooda stock aur bikay huay products ka record",
+        "Low-stock alerts aur dobara maal mangwanay ka record",
+        "Supplier aur purchase orders",
+        "Barcode aur multiple warehouse features project scope ke mutabiq",
       ],
-      packageNote: "Requires client admin panel package for operational team use.",
+      packageNote: "Yeh online dukaan se mukhtalif internal tool ho sakta hai; staff access aur barcode features quotation mein tay honge.",
     },
     {
       id: "custom-business-apps",
       title: "Custom Business Applications",
+      image: "/Screenshot 2026-10-15 155419.png",
       icon: Briefcase,
-      tagline: "Unique operational software tailored to your specific workflows.",
+      tagline: "Business ke khaas kaam ke liye zaroorat ke mutabiq software.",
       description:
-        "Have a business workflow that off-the-shelf software cannot solve? We build custom web apps to automate quotation generators, logistics tracking, internal forms, and member portals.",
+        "Jab tayyar software aapke kaam ke liye munasib na ho, toh aapke workflow ke mutabiq quotation, delivery tracking, internal forms ya private portal banaya ja sakta hai.",
       highlights: [
-        "Bespoke database schema tailored to your operations",
-        "Custom calculations, logic rules, & exportable data",
-        "PDF invoice / document auto-generation",
-        "Role-based staff permissions & secure audit logging",
+        "Automatic quotation ya PDF invoice banana",
+        "Delivery aur logistics tracking",
+        "Staff ke internal forms aur company portal",
+        "Khaas calculations aur staff permissions",
       ],
-      packageNote: "Scope evaluated transparently through our interactive budget calculator.",
+      packageNote: "Features aur final price requirements samajhne ke baad calculator aur scope review se confirm hote hain.",
     },
     {
       id: "other-software",
       title: "Other Custom Software Solutions",
+      image: "/Screenshot 2026-10-15 155504.png",
       icon: Code2,
-      tagline: "APIs, external integrations, automation scripts, and legacy migrations.",
+      tagline: "Mukhtalif technical projects aur maujooda software mein tabdeeliyan.",
       description:
-        "Full-stack software engineering services covering REST/GraphQL API development, legacy PHP/WordPress migrations to Next.js, database optimization, and third-party webhooks.",
+        "Misal ke taur par do systems ko connect karna, purani website ko naye framework par lana, database behtar banana ya automatic background task tayar karna.",
       highlights: [
-        "Next.js App Router & TypeScript architectures",
-        "Supabase / PostgreSQL cloud relational databases",
-        "Payment gateway webhook & callback hardening",
-        "Vercel serverless functions & automated cron schedulers",
+        "Existing website ya software migrate karna",
+        "Database ki performance behtar banana",
+        "External API ya webhook ke zariye systems connect karna",
+        "Scheduled automatic tasks aur naye features",
       ],
-      packageNote: "Contact us directly or use the calculator to describe your requirements.",
+      packageNote: "Hum external API accounts ya subscriptions provide, purchase, ya manage nahi karte. Zaroorat par client account/plan seedha provider se arrange karta hai; agreed Vercel deployment kaam web-app budget mein included hai.",
     },
   ];
 
@@ -253,44 +267,55 @@ export default function ServicesPage() {
             {serviceCategories.map((service) => (
               <div
                 key={service.id}
-                className="bg-white rounded-2xl border border-gray-200 hover:border-gray-400 p-8 shadow-sm hover:shadow-card transition flex flex-col justify-between"
+                className="bg-white rounded-2xl border border-gray-200 hover:border-gray-400 overflow-hidden shadow-sm hover:shadow-card transition flex flex-col justify-between"
               >
+                <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
+                  <Image
+                    src={service.image}
+                    alt={`${service.title} example`}
+                    fill
+                    sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-500 hover:scale-105"
+                  />
+                </div>
                 <div>
-                  <div className="w-12 h-12 rounded-xl bg-red-50 text-[#E31E36] flex items-center justify-center mb-5">
-                    <service.icon className="w-6 h-6" />
-                  </div>
+                  <div className="p-6 flex flex-col h-full">
+                    <div className="w-12 h-12 rounded-xl bg-red-50 text-[#E31E36] flex items-center justify-center mb-5">
+                      <service.icon className="w-6 h-6" />
+                    </div>
 
-                  <h2 className="text-xl font-extrabold text-[#101216]">
-                    {service.title}
-                  </h2>
-                  <p className="text-xs font-semibold text-[#E31E36] mt-1">
-                    {service.tagline}
-                  </p>
+                    <h2 className="text-xl font-extrabold text-[#101216]">
+                      {service.title}
+                    </h2>
+                    <p className="text-xs font-semibold text-[#E31E36] mt-1">
+                      {service.tagline}
+                    </p>
 
-                  <p className="text-xs text-gray-600 mt-3 leading-relaxed">
-                    {service.description}
-                  </p>
+                    <p className="text-xs text-gray-600 mt-3 leading-relaxed">
+                      {service.description}
+                    </p>
 
-                  {/* Highlights */}
-                  <div className="mt-5 space-y-2 pt-4 border-t border-gray-100">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 block">
-                      Key Capabilities:
-                    </span>
-                    {service.highlights.map((h, i) => (
-                      <div key={i} className="flex items-start gap-2 text-xs text-gray-700">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                        <span>{h}</span>
-                      </div>
-                    ))}
-                  </div>
+                    {/* Highlights */}
+                    <div className="mt-5 space-y-2 pt-4 border-t border-gray-100">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 block">
+                        Key Capabilities:
+                      </span>
+                      {service.highlights.map((h, i) => (
+                        <div key={i} className="flex items-start gap-2 text-xs text-gray-700">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                          <span>{h}</span>
+                        </div>
+                      ))}
+                    </div>
 
-                  {/* Package Note */}
-                  <div className="mt-4 bg-gray-50 p-2.5 rounded-lg border border-gray-200 text-[11px] text-gray-500 italic">
-                    💡 {service.packageNote}
+                    {/* Package Note */}
+                    <div className="mt-4 bg-gray-50 p-2.5 rounded-lg border border-gray-200 text-[11px] text-gray-500 italic">
+                      💡 {service.packageNote}
+                    </div>
                   </div>
                 </div>
 
-                <div className="mt-8 pt-4 border-t border-gray-100">
+                <div className="px-6 pb-6">
                   <Link
                     href={`/calculator?type=${encodeURIComponent(service.title)}`}
                     className="w-full inline-flex items-center justify-center gap-2 bg-[#101216] hover:bg-[#E31E36] text-white py-2.5 rounded-xl font-bold text-xs transition duration-200"
@@ -305,6 +330,61 @@ export default function ServicesPage() {
         </div>
       </section>
 
+      {/* Technical glossary */}
+      <section className="py-16 bg-white border-t border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <span className="text-[#E31E36] font-bold text-xs uppercase tracking-widest">
+              Seedhi zubaan mein
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-[#101216] mt-2">
+              Technical Lafzon Ka Asaan Matlab
+            </h2>
+          </div>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[
+              ["Admin Panel", "Private dashboard jahan se owner website ya business ka data manage karta hai."],
+              ["Database", "Jahan products, clients, orders aur settings ka data save hota hai."],
+              ["Google Authentication", "Google account se sign in karne ka tareeqa."],
+              ["Supabase", "Online database aur user login jaisi services dene wala platform."],
+              ["API", "Do software systems ke darmiyan data bhejne aur lene ka tareeqa."],
+              ["Webhook", "Ek system mein event hone par doosray system ko automatic khabar dene ka tareeqa."],
+              ["Cron Job", "Muqarrar waqt par khud chalne wala task, jaise payment reminder."],
+              ["Multi-tenant", "Aik software mein kai businesses ke alag accounts aur alag data."],
+              ["Inventory", "Business ke paas mojood stock aur maal ka record."],
+              ["SEO", "Website ko search engines mein behtar dikhane ke liye ki jane wali behtari."],
+              ["Responsive Design", "Website ka mobile, tablet aur computer par sahi nazar aana."],
+              ["Vercel", "Web applications ko internet par deploy aur host karne ka platform."],
+            ].map(([term, meaning]) => (
+              <div key={term} className="rounded-xl border border-gray-200 bg-[#F4F5F7] p-4">
+                <dt className="text-sm font-extrabold text-[#101216]">{term}</dt>
+                <dd className="text-xs text-gray-600 mt-1 leading-relaxed">{meaning}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      {/* Feature and third-party cost clarification */}
+      <section className="py-12 bg-[#F4F5F7] border-t border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 sm:p-8">
+            <h2 className="text-lg font-extrabold text-[#101216]">
+              Har Feature Har Package Mein Shamil Nahi Hota
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-700 mt-3 leading-relaxed">
+              Basic online store mein product listing aur order form ho sakta hai. Live payment gateway, automatic WhatsApp messages, Google login, live gold rates aur advanced inventory jaise features ko alag development aur configuration ki zaroorat ho sakti hai. Inhein included samajhne se pehle requirements aur final scope confirm karein.
+            </p>
+            <p className="text-xs sm:text-sm text-gray-700 mt-3 leading-relaxed">
+              Hum third-party subscriptions, paid domains, payment gateway accounts ya external API accounts provide, purchase, ya manage nahi karte. Zaroorat par client account/plan seedha provider se arrange karke uski fees provider ko ada karta hai. Vercel par app deploy karne ka hamara kaam web-app budget mein included hai; alag deployment fee nahi. Vercel ka paid hosting plan ismein shamil nahi. Launch ke baad product ya content updates package mein shamil nahi aur un par extra charges lag sakte hain.
+            </p>
+            <p className="text-xs sm:text-sm font-semibold text-gray-700 mt-3 leading-relaxed">
+              Budget calculator sirf estimate deta hai; final quotation requirements aur formal scope review ke baad confirm hoti hai.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Transparency Note */}
       <section className="py-12 bg-white border-t border-gray-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-3">
@@ -315,7 +395,7 @@ export default function ServicesPage() {
             Every Business Has Unique Requirements
           </h3>
           <p className="text-xs text-gray-600 leading-relaxed max-w-2xl mx-auto">
-            We do not claim that every feature is automatically included in every starting package. Starting rates (PKR 35,000 without admin and PKR 45,000 with admin) provide standard solid production foundations. Complex integrations, custom algorithms, third-party APIs, and extended modules are configured transparently using our calculator.
+            Har starting package mein tamam features shamil nahi. PKR 35,000 (admin ke baghair) aur PKR 45,000 (admin ke saath) starting rates hain. Complex integrations, custom features aur additional modules ka scope calculator aur formal review ke zariye tay hota hai.
           </p>
         </div>
       </section>

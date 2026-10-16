@@ -323,7 +323,7 @@ export default function AdminPortfolioPage() {
                 <label className="block font-bold text-gray-700 mb-1">Project Title</label>
                 <input
                   type="text"
-                  placeholder="e.g. SpiceCraft - Restaurant Ordering App"
+                  placeholder="e.g. GRILLVI - Restaurant Website"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full bg-[#F4F5F7] px-3.5 py-2.5 rounded-xl border border-gray-300 text-[#101216] font-bold"
