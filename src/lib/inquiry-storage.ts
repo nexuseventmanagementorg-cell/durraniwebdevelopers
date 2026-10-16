@@ -122,7 +122,6 @@ function toStorageRow(inquiry: Inquiry, includeLegacySnapshot = false) {
     disclaimer_accepted: inquiry.disclaimerAccepted,
     status: inquiry.status,
     admin_notes: inquiry.adminNotes,
-    converted_project_id: inquiry.convertedProjectId || null,
     created_at: inquiry.createdAt,
     updated_at: inquiry.updatedAt,
     inquiry_data: inquiry,
@@ -222,7 +221,6 @@ export async function updateInquiry(
       updated_at: updatedInquiry.updatedAt,
       admin_notes: updatedInquiry.adminNotes,
       calculation: row.calculation,
-      converted_project_id: updatedInquiry.convertedProjectId || null,
       inquiry_data: updatedInquiry,
     })
     .eq("id", id.toUpperCase());
@@ -235,7 +233,6 @@ export async function updateInquiry(
         updated_at: updatedInquiry.updatedAt,
         admin_notes: updatedInquiry.adminNotes,
         calculation: legacyRow.calculation,
-        converted_project_id: updatedInquiry.convertedProjectId || null,
       })
       .eq("id", id.toUpperCase());
     error = fallback.error;
