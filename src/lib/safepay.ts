@@ -5,11 +5,11 @@ import type { CurrencyCode } from "@/lib/currency";
 export const SAFEPAY_CURRENCIES = ["PKR", "USD", "EUR", "GBP", "CAD", "AUD"] as const;
 export type SafepayCurrency = (typeof SAFEPAY_CURRENCIES)[number];
 
-export type SafepayEnvironment = "sandbox";
+export type SafepayEnvironment = "sandbox" | "production";
 
 export interface SafepaySetupStatus {
   configured: boolean;
-  environment: SafepayEnvironment | null;
+  environment: "sandbox" | null;
   message: string;
 }
 

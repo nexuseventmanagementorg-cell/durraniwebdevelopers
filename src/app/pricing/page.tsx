@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { DEFAULT_PRICING_CONFIG, buildWhatsAppLink } from "@/lib/constants";
 import RegionalPrice from "@/components/RegionalPrice";
+import PricingPackageImage from "@/components/PricingPackageImage";
 import {
   Check,
   X as CrossIcon,
@@ -20,6 +21,57 @@ import {
 
 export default function PricingPage() {
   const addons = Object.values(DEFAULT_PRICING_CONFIG.addons);
+  const ecommercePackages = [
+    {
+      title: "E-Commerce Business",
+      id: "ecommerce_business",
+      summary: "Professional online store with client admin panel support.",
+      image: "/Professional%20E-Commerce%20Store%20Solutions.png",
+      imageAlt: "E-Commerce Business package with a PKR 150,000 price and included store features",
+      price: 150000,
+      priceLabel: "Package price",
+    },
+    {
+      title: "E-Commerce Advanced",
+      id: "ecommerce_advanced",
+      summary: "Feature-rich online store built for growth and advanced workflows.",
+      image: "/Advanced%20E-Commerce%20Web%20Development%20Package.png",
+      imageAlt: "E-Commerce Advanced package with a PKR 200,000 to 300,000 price range and included features",
+      price: 200000,
+      maxPrice: 300000,
+      priceLabel: "Estimated package range",
+    },
+  ];
+  const saasPackages = [
+    {
+      id: "saas_starter",
+      title: "SaaS Starter",
+      summary: "Multi-vendor marketplace platform for startups and small businesses.",
+      image: "/SaaS%20Starter%20Marketplace%20Package%20(1).png",
+      imageAlt: "SaaS Starter marketplace package, PKR 250,000 with PKR 100,000 advance",
+      price: 250000,
+      advance: 100000,
+    },
+    {
+      id: "saas_business",
+      title: "SaaS Business",
+      summary: "Scalable marketplace with vendor dashboards, commissions, and advanced analytics.",
+      image: "/SaaS%20Business%20Platform%20Marketing%20Poster%20(1).png",
+      imageAlt: "SaaS Business marketplace package, PKR 500,000 with PKR 200,000 advance",
+      price: 500000,
+      advance: 200000,
+    },
+    {
+      id: "saas_enterprise",
+      title: "SaaS Enterprise",
+      summary: "Multi-tenant enterprise platform with advanced architecture and dedicated support.",
+      image: "/SaaS%20Enterprise%20Platform%20Showcase.png",
+      imageAlt: "SaaS Enterprise package starting at PKR 1,000,000 with PKR 400,000 advance",
+      price: 1000000,
+      advance: 400000,
+      startingAt: true,
+    },
+  ];
   const addonDetails: Record<
     string,
     { image: string; explanation: string; example: string; bestFor: string; note?: string }
@@ -296,6 +348,135 @@ export default function PricingPage() {
                 </Link>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* E-Commerce Packages */}
+      <section className="py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
+              Online Store Packages
+            </span>
+            <h2 className="text-3xl font-black text-[#101216] mt-1">
+              E-Commerce Packages &amp; Rates
+            </h2>
+            <p className="text-xs text-gray-600 mt-2">
+              Choose a store package to get started. Final pricing depends on your requirements and confirmed project scope.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {ecommercePackages.map((packageDetails) => (
+              <article
+                key={packageDetails.title}
+                className="bg-[#F4F5F7] rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col"
+              >
+                <div className="p-6 sm:p-8">
+                  <h3 className="text-2xl font-black text-[#101216]">
+                    {packageDetails.title}
+                  </h3>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {packageDetails.summary}
+                  </p>
+                  <div className="mt-5">
+                    <span className="block text-[10px] uppercase tracking-wider font-bold text-gray-500">
+                      {packageDetails.priceLabel}
+                    </span>
+                    <strong className="text-2xl sm:text-3xl font-black text-[#E31E36]">
+                      <RegionalPrice pkrAmount={packageDetails.price} />
+                      {packageDetails.maxPrice && (
+                        <>
+                          {" – "}
+                          <RegionalPrice pkrAmount={packageDetails.maxPrice} />
+                        </>
+                      )}
+                    </strong>
+                  </div>
+                </div>
+
+                <PricingPackageImage
+                  src={packageDetails.image}
+                  alt={packageDetails.imageAlt}
+                  title={packageDetails.title}
+                  width={1312}
+                  height={1199}
+                  sizes="(max-width: 767px) 100vw, 50vw"
+                />
+
+                <div className="p-6 sm:p-8 pt-5">
+                  <Link
+                    href={`/calculator?package=${packageDetails.id}`}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-[#E31E36] hover:bg-[#C8162D] text-white py-3 rounded-xl font-bold text-xs shadow-glow transition"
+                  >
+                    Configure This Package
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SaaS Packages */}
+      <section className="py-20 bg-[#F4F5F7]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
+              Marketplace &amp; Platform Plans
+            </span>
+            <h2 className="text-3xl font-black text-[#101216] mt-1">
+              SaaS Project Packages &amp; Rates
+            </h2>
+            <p className="text-xs text-gray-600 mt-2">
+              Pakistan rates are in PKR. International rates are doubled and converted to your regional currency. Enterprise pricing starts at the listed amount; final scope is confirmed after review.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {saasPackages.map((packageDetails) => (
+              <article
+                key={packageDetails.id}
+                className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col"
+              >
+                <div className="p-6">
+                  <h3 className="text-xl font-black text-[#101216]">{packageDetails.title}</h3>
+                  <p className="text-xs text-gray-600 mt-1 min-h-8">{packageDetails.summary}</p>
+                  <div className="mt-4">
+                    <span className="block text-[10px] uppercase tracking-wider font-bold text-gray-500">
+                      {packageDetails.startingAt ? "Starting price" : "Package price"}
+                    </span>
+                    <strong className="text-2xl font-black text-[#E31E36]">
+                      <RegionalPrice pkrAmount={packageDetails.price} />
+                      {packageDetails.startingAt && "+"}
+                    </strong>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-2">
+                    Advance payment: <strong className="text-[#101216]"><RegionalPrice pkrAmount={packageDetails.advance} /></strong>
+                    {" · "}remaining balance in 11 monthly installments
+                  </p>
+                </div>
+                <PricingPackageImage
+                  src={packageDetails.image}
+                  alt={packageDetails.imageAlt}
+                  title={packageDetails.title}
+                  width={1536}
+                  height={1024}
+                  sizes="(max-width: 1023px) 100vw, 33vw"
+                />
+                <div className="p-6 pt-5 mt-auto">
+                  <Link
+                    href={`/calculator?package=${packageDetails.id}`}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-[#E31E36] hover:bg-[#C8162D] text-white py-3 rounded-xl font-bold text-xs shadow-glow transition"
+                  >
+                    Configure This Package
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </section>

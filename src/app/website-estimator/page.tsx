@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { WebsiteEstimateResult } from "@/lib/website-estimator";
+import { isSaasPackageId } from "@/lib/constants";
 import CurrencySelector from "@/components/CurrencySelector";
 import { useCurrency } from "@/components/CurrencyProvider";
 import { trackVisitorEvent } from "@/lib/visitor-tracking";
@@ -29,9 +30,12 @@ export default function WebsiteEstimatorPage() {
         const params = new URLSearchParams({
           currency: estimate.currency,
           sourceUrl: estimate.url,
-          projectType: "Custom web application",
+          projectType: estimate.pricingPackage
+            ? isSaasPackageId(estimate.pricingPackage) ? "SaaS" : "E-commerce store"
+            : "Custom web application",
           adminPanel: estimate.adminPanel ? "client_admin" : "none",
           addons: estimate.addons.map((addon) => addon.id).join(","),
+          ...(estimate.pricingPackage ? { package: estimate.pricingPackage } : {}),
         });
         return `/calculator?${params.toString()}`;
       })()

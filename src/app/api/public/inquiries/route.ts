@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataStore } from "@/lib/store";
-import { calculateBudget } from "@/lib/constants";
+import {
+  calculateBudget,
+  getChargeableAddonIds,
+  getPricingPackageConfig,
+  isPricingPackageId,
+} from "@/lib/constants";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { Inquiry } from "@/lib/types";
 import { CurrencyCode, isCurrencyCode, getRegionalPricingConfig } from "@/lib/currency";
@@ -54,14 +59,25 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (body.pricingPackage != null && !isPricingPackageId(body.pricingPackage)) {
+      return NextResponse.json(
+        { success: false, error: "Please select a supported pricing package." },
+        { status: 400 }
+      );
+    }
 
     const adminPanelType = body.adminPanelType === "client_admin" ? "client_admin" : "none";
-    const selectedAddons: string[] = Array.isArray(body.selectedAddons) ? body.selectedAddons : [];
+    const pricingPackage = isPricingPackageId(body.pricingPackage) ? body.pricingPackage : undefined;
+    const requestedAddons: string[] = Array.isArray(body.selectedAddons) ? body.selectedAddons : [];
+    const selectedAddons = getChargeableAddonIds(requestedAddons, pricingPackage);
     const currency: CurrencyCode = isCurrencyCode(body.currency) ? body.currency : "PKR";
 
     // Persist the PKR base estimate for existing admin bookkeeping, and keep the
     // visitor-facing regional estimate alongside it when the selected currency differs.
-    const pricingConfig = DataStore.getPricingConfig();
+    const storedPricingConfig = DataStore.getPricingConfig();
+    const pricingConfig = pricingPackage
+      ? getPricingPackageConfig(storedPricingConfig, pricingPackage)
+      : storedPricingConfig;
     const serverCalculation = calculateBudget(adminPanelType, selectedAddons, pricingConfig);
     const exchangeSnapshot = currency === "PKR" ? null : await getExchangeRateSnapshot();
     const regionalConfig = getRegionalPricingConfig(
@@ -112,6 +128,7 @@ export async function POST(request: NextRequest) {
       adminFeatures: Array.isArray(body.adminFeatures) ? body.adminFeatures : [],
       selectedAddons,
       customFeatureNotes: (body.customFeatureNotes || "").trim(),
+      ...(pricingPackage ? { pricingPackage } : {}),
 
       calculation: serverCalculation,
       currency,
@@ -123,7 +140,7 @@ export async function POST(request: NextRequest) {
           }
         : { internationalCalculation: serverCalculation }),
       disclaimerAccepted: true,
-      adminNotes: "Submitted via online interactive budget calculator.",
+      adminNotes: `Submitted via online interactive budget calculator.${pricingPackage ? ` Selected package: ${pricingPackage}.` : ""}`,
     };
 
     const savedInquiry = DataStore.createInquiry(newInquiry);

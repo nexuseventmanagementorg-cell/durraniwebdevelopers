@@ -258,6 +258,47 @@ export class DataStore {
     return client;
   }
 
+  static createClientWithProject(
+    client: Client,
+    project: Project,
+    installments: InstallmentScheduleItem[],
+    initialPayment?: PaymentRecord,
+    actor: string = "Admin"
+  ): { client: Client; project: Project } {
+    const data = this.ensureDataFile();
+    data.clients.unshift(client);
+    data.projects.unshift(project);
+    data.installments = [...installments, ...(data.installments || [])];
+    if (initialPayment) data.payments.unshift(initialPayment);
+
+    this.addAuditLog({
+      action: "CLIENT_CREATED",
+      actor,
+      targetType: "client",
+      targetId: client.id,
+      details: `Client "${client.name}" (${client.businessName}) registered with project "${project.name}" at PKR ${project.approvedPrice}.`,
+    }, data);
+    this.addAuditLog({
+      action: "PROJECT_CREATED",
+      actor,
+      targetType: "project",
+      targetId: project.id,
+      details: `Project "${project.name}" created for client ${client.name}. Total: PKR ${project.approvedPrice}.`,
+    }, data);
+    if (initialPayment) {
+      this.addAuditLog({
+        action: "PAYMENT_RECORDED",
+        actor,
+        targetType: "payment",
+        targetId: initialPayment.id,
+        details: `Initial advance of PKR ${initialPayment.amount} recorded for project "${project.name}".`,
+      }, data);
+    }
+
+    this.writeData(data, true);
+    return { client, project };
+  }
+
   static updateClient(id: string, updates: Partial<Client>, actor: string = "Admin"): Client | null {
     const data = this.ensureDataFile();
     const idx = data.clients.findIndex((c) => c.id === id);

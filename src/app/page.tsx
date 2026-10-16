@@ -229,7 +229,6 @@ export default function HomePage() {
                 <video
                   controls
                   playsInline
-                  muted={false}
                   preload="metadata"
                   aria-label="Durrani Web Developers introduction video"
                   className="aspect-video w-full rounded-xl border border-gray-800 bg-black object-contain"
@@ -263,7 +262,7 @@ export default function HomePage() {
             </Link>
           </div>
           <Image
-            src="/rates-flyer.jpg.png"
+            src="/rates-flyer.jpg"
             alt="Durrani Web Developers rates and web application packages flyer"
             width={1024}
             height={1536}
@@ -515,7 +514,9 @@ export default function HomePage() {
                 </div>
                 <div className="mt-5 pt-3 border-t border-gray-200 group-hover:border-gray-800">
                   <Link
-                    href={`/calculator?type=${encodeURIComponent(ind.name)}`}
+                    href={ind.name === "SaaS Projects"
+                      ? "/calculator?package=saas_starter&type=SaaS%20Projects"
+                      : `/calculator?type=${encodeURIComponent(ind.name)}`}
                     className="text-xs font-bold text-[#E31E36] group-hover:text-rose-400 inline-flex items-center gap-1"
                   >
                     Calculate Budget &rarr;

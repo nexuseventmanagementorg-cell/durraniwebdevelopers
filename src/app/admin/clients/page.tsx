@@ -32,8 +32,18 @@ export default function AdminClientsPage() {
   const [phone, setPhone] = useState("");
   const [cityCountry, setCityCountry] = useState("");
   const [notes, setNotes] = useState("");
+  const [projectName, setProjectName] = useState("");
+  const [projectCategory, setProjectCategory] = useState("Custom web application");
+  const [agreedBudget, setAgreedBudget] = useState("35000");
+  const [advanceRequired, setAdvanceRequired] = useState("10000");
+  const [advanceReceived, setAdvanceReceived] = useState("0");
+  const [installmentsCount, setInstallmentsCount] = useState("11");
+  const [firstInstallmentDueDate, setFirstInstallmentDueDate] = useState("");
+  const [advanceMethod, setAdvanceMethod] = useState("Manual Entry / Cash");
+  const [advanceReference, setAdvanceReference] = useState("");
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+  const [saveError, setSaveError] = useState("");
 
   const fetchClients = async () => {
     try {
@@ -65,6 +75,28 @@ export default function AdminClientsPage() {
     setPhone("");
     setCityCountry("Pakistan");
     setNotes("");
+    setProjectName("");
+    setProjectCategory("Custom web application");
+    setAgreedBudget("35000");
+    setAdvanceRequired("10000");
+    setAdvanceReceived("0");
+    setInstallmentsCount("11");
+    const firstDueDate = new Date();
+    const firstDueDay = firstDueDate.getDate();
+    firstDueDate.setDate(1);
+    firstDueDate.setMonth(firstDueDate.getMonth() + 1);
+    firstDueDate.setDate(
+      Math.min(
+        firstDueDay,
+        new Date(firstDueDate.getFullYear(), firstDueDate.getMonth() + 1, 0).getDate()
+      )
+    );
+    setFirstInstallmentDueDate(
+      `${firstDueDate.getFullYear()}-${String(firstDueDate.getMonth() + 1).padStart(2, "0")}-${String(firstDueDate.getDate()).padStart(2, "0")}`
+    );
+    setAdvanceMethod("Manual Entry / Cash");
+    setAdvanceReference("");
+    setSaveError("");
     setModalOpen(true);
   };
 
@@ -76,15 +108,35 @@ export default function AdminClientsPage() {
     setPhone(c.phone);
     setCityCountry(c.cityCountry || "");
     setNotes(c.notes || "");
+    setSaveError("");
     setModalOpen(true);
   };
 
   const handleSaveClient = async () => {
     if (!name.trim() || !email.trim() || !phone.trim()) {
-      alert("Name, email, and phone are required.");
+      setSaveError("Name, email, and phone are required.");
+      return;
+    }
+    if (
+      !selectedClient &&
+      (!projectName.trim() ||
+        !Number.isFinite(Number(agreedBudget)) ||
+        Number(agreedBudget) <= 0 ||
+        !Number.isFinite(Number(advanceRequired)) ||
+        Number(advanceRequired) < 0 ||
+        Number(advanceRequired) > Number(agreedBudget) ||
+        !Number.isFinite(Number(advanceReceived)) ||
+        Number(advanceReceived) < 0 ||
+        Number(advanceReceived) > Number(agreedBudget) ||
+        !Number.isInteger(Number(installmentsCount)) ||
+        Number(installmentsCount) < 0 ||
+        Number(installmentsCount) > 36)
+    ) {
+      setSaveError("Check the project name, budget, advance, and installment values.");
       return;
     }
     setSaving(true);
+    setSaveError("");
 
     try {
       if (selectedClient) {
@@ -103,11 +155,12 @@ export default function AdminClientsPage() {
           }),
         });
         const data = await res.json();
-        if (data.success) {
-          setSuccessMsg("Client details updated!");
-          fetchClients();
-          setModalOpen(false);
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Could not update the client.");
         }
+        setSuccessMsg("Client details updated!");
+        await fetchClients();
+        setModalOpen(false);
       } else {
         // Create new
         const res = await fetch("/api/admin/clients", {
@@ -120,22 +173,41 @@ export default function AdminClientsPage() {
             phone,
             cityCountry,
             notes,
+            projectName,
+            projectCategory,
+            agreedBudget: Number(agreedBudget),
+            advanceRequired: Number(advanceRequired),
+            advanceReceived: Number(advanceReceived),
+            installmentsCount: Number(installmentsCount),
+            firstInstallmentDueDate,
+            advanceMethod,
+            advanceReference,
           }),
         });
         const data = await res.json();
-        if (data.success) {
-          setSuccessMsg("New client created successfully!");
-          fetchClients();
-          setModalOpen(false);
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Could not create the client and project.");
         }
+        setSuccessMsg("New client and project created successfully!");
+        await fetchClients();
+        setModalOpen(false);
       }
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (e) {
       console.error(e);
+      setSaveError(e instanceof Error ? e.message : "Could not save the client.");
     } finally {
       setSaving(false);
     }
   };
+
+  const installmentBalance = Math.max(
+    0,
+    Number(agreedBudget) - Math.max(Number(advanceRequired), Number(advanceReceived))
+  );
+  const installmentAmount = Number(installmentsCount) > 0
+    ? Number((installmentBalance / Number(installmentsCount)).toFixed(2))
+    : 0;
 
   const handleToggleArchive = async (c: Client) => {
     if (!confirm(`Are you sure you want to archive client ${c.name}?`)) return;
@@ -291,7 +363,7 @@ export default function AdminClientsPage() {
       {/* Client Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl border border-gray-300">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 space-y-5 shadow-2xl border border-gray-300">
             <div className="flex justify-between items-start pb-3 border-b border-gray-200">
               <div>
                 <span className="text-[10px] uppercase font-bold text-gray-400">
@@ -362,6 +434,139 @@ export default function AdminClientsPage() {
                 />
               </div>
 
+              {!selectedClient && (
+                <section className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                  <div>
+                    <h4 className="text-sm font-black text-[#101216]">Agreed Project & Payment Plan</h4>
+                    <p className="mt-1 text-[11px] text-gray-500">
+                      Saving this client also creates a linked project and its installment schedule.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Project / Work Name</label>
+                      <input
+                        type="text"
+                        value={projectName}
+                        onChange={(e) => setProjectName(e.target.value)}
+                        placeholder="e.g. Restaurant ordering website"
+                        className="w-full bg-white px-3.5 py-2 rounded-xl border border-gray-300 text-[#101216]"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Project Category</label>
+                      <input
+                        type="text"
+                        value={projectCategory}
+                        onChange={(e) => setProjectCategory(e.target.value)}
+                        className="w-full bg-white px-3.5 py-2 rounded-xl border border-gray-300 text-[#101216]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Final Agreed Budget (PKR)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={agreedBudget}
+                        onChange={(e) => setAgreedBudget(e.target.value)}
+                        className="w-full bg-white px-3.5 py-2 rounded-xl border border-gray-300 text-[#101216]"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Advance Agreed (PKR)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={advanceRequired}
+                        onChange={(e) => setAdvanceRequired(e.target.value)}
+                        className="w-full bg-white px-3.5 py-2 rounded-xl border border-gray-300 text-[#101216]"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Advance Already Received (PKR)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={advanceReceived}
+                        onChange={(e) => setAdvanceReceived(e.target.value)}
+                        className="w-full bg-white px-3.5 py-2 rounded-xl border border-gray-300 text-[#101216]"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">Number of Monthly Installments</label>
+                      <input
+                        type="number"
+                        min={installmentBalance > 0 ? 1 : 0}
+                        max="36"
+                        step="1"
+                        value={installmentsCount}
+                        onChange={(e) => setInstallmentsCount(e.target.value)}
+                        className="w-full bg-white px-3.5 py-2 rounded-xl border border-gray-300 text-[#101216]"
+                        required
+                      />
+                    </div>
+                    {installmentBalance > 0 && Number(installmentsCount) > 0 && (
+                      <>
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-1">First Monthly Payment Due</label>
+                          <input
+                            type="date"
+                            value={firstInstallmentDueDate}
+                            onChange={(e) => setFirstInstallmentDueDate(e.target.value)}
+                            className="w-full bg-white px-3.5 py-2 rounded-xl border border-gray-300 text-[#101216]"
+                            required
+                          />
+                        </div>
+                        <div className="flex flex-col justify-end rounded-xl border border-gray-200 bg-white px-3.5 py-2">
+                          <span className="font-bold text-gray-700">Estimated Monthly Installment</span>
+                          <strong className="mt-1 text-sm text-[#E31E36]">{formatPKR(installmentAmount)}</strong>
+                          <span className="text-[10px] text-gray-500">Final installment adjusts for rounding.</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {Number(advanceReceived) > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-gray-200 pt-3">
+                      <div>
+                        <label className="block font-bold text-gray-700 mb-1">Advance Received Via</label>
+                        <select
+                          value={advanceMethod}
+                          onChange={(e) => setAdvanceMethod(e.target.value)}
+                          className="w-full bg-white px-3.5 py-2 rounded-xl border border-gray-300 text-[#101216]"
+                        >
+                          <option>Manual Entry / Cash</option>
+                          <option>JazzCash</option>
+                          <option>Easypaisa</option>
+                          <option>Bank Transfer</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block font-bold text-gray-700 mb-1">Payment Reference (Optional)</label>
+                        <input
+                          type="text"
+                          value={advanceReference}
+                          onChange={(e) => setAdvanceReference(e.target.value)}
+                          placeholder="Transaction ID or receipt note"
+                          className="w-full bg-white px-3.5 py-2 rounded-xl border border-gray-300 text-[#101216]"
+                        />
+                      </div>
+                      <p className="sm:col-span-2 text-[10px] text-gray-500">
+                        This received amount will be recorded as a verified payment in the project ledger.
+                      </p>
+                    </div>
+                  )}
+                </section>
+              )}
+
               <div>
                 <label className="block font-bold text-gray-700 mb-1">Private Internal Notes</label>
                 <textarea
@@ -373,6 +578,12 @@ export default function AdminClientsPage() {
                 />
               </div>
             </div>
+
+            {saveError && (
+              <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+                {saveError}
+              </p>
+            )}
 
             <div className="pt-3 border-t border-gray-200 flex justify-end gap-2">
               <button

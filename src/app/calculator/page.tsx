@@ -9,7 +9,17 @@ import {
   calculateBudget,
   BUSINESS_INFO,
   buildWhatsAppLink,
+  ECOMMERCE_PACKAGES,
+  SAAS_PACKAGES,
+  getDefaultPricingPackageForProjectType,
+  getPricingPackageConfig,
+  getChargeableAddonIds,
+  isPricingPackageId,
+  isSaasPackageId,
+  isEcommerceProjectType,
+  isSaasProjectType,
 } from "@/lib/constants";
+import type { PricingPackageId } from "@/lib/constants";
 import { CurrencyCode, formatCurrency, getRegionalPricingConfig, isCurrencyCode } from "@/lib/currency";
 import { useCurrency } from "@/components/CurrencyProvider";
 import CurrencySelector from "@/components/CurrencySelector";
@@ -49,6 +59,10 @@ function CalculatorContent() {
   const initialType = searchParams.get("projectType") || searchParams.get("type");
   const initialCurrency = searchParams.get("currency");
   const initialSourceUrl = searchParams.get("sourceUrl") || "";
+  const initialConfiguredPackage = isPricingPackageId(initialPackage) ? initialPackage : null;
+  const normalizedInitialType = initialType === "E-Commerce Stores"
+    ? "E-commerce store"
+    : initialType === "SaaS Projects" ? "SaaS application" : initialType;
   const seededAddons = (searchParams.get("addons") || "")
     .split(",")
     .concat(searchParams.get("addon") || [])
@@ -77,7 +91,15 @@ function CalculatorContent() {
 
   // Step 2: Project Type
   const [selectedProjectTypes, setSelectedProjectTypes] = useState<string[]>(
-    initialType ? [initialType] : ["Custom web application"]
+    normalizedInitialType
+      ? [normalizedInitialType]
+      : initialConfiguredPackage
+        ? [isSaasPackageId(initialConfiguredPackage) ? "SaaS application" : "E-commerce store"]
+        : ["Custom web application"]
+  );
+  const [selectedPricingPackage, setSelectedPricingPackage] = useState<PricingPackageId | null>(
+    initialConfiguredPackage ||
+      (initialType ? getDefaultPricingPackageForProjectType(initialType) : null)
   );
 
   // Step 3: Project Description
@@ -91,7 +113,21 @@ function CalculatorContent() {
   const [inspirationUrl, setInspirationUrl] = useState(initialSourceUrl);
   const [isNewOrUpgrade, setIsNewOrUpgrade] = useState<"new" | "upgrade">("new");
   const [preferredLaunchDate, setPreferredLaunchDate] = useState("Within 3 to 4 weeks");
-  const [expectedBudgetRange, setExpectedBudgetRange] = useState("admin");
+  const [expectedBudgetRange, setExpectedBudgetRange] = useState(
+    initialConfiguredPackage === "ecommerce_advanced"
+      ? "ecommerce-advanced"
+      : initialConfiguredPackage === "ecommerce_business" ||
+          (initialType ? isEcommerceProjectType(initialType) : false)
+        ? "ecommerce-business"
+        : initialConfiguredPackage === "saas_business"
+          ? "saas-business"
+          : initialConfiguredPackage === "saas_enterprise"
+            ? "saas-enterprise"
+              : initialConfiguredPackage === "saas_starter" ||
+                  (initialType ? getDefaultPricingPackageForProjectType(initialType)?.startsWith("saas_") : false)
+                ? "saas-starter"
+        : "admin"
+  );
 
   // Step 4: Website and Product Management
   const [displayFixedOnly, setDisplayFixedOnly] = useState(false);
@@ -141,9 +177,28 @@ function CalculatorContent() {
       : DEFAULT_PRICING_CONFIG,
     [currency, rates]
   );
+  const getPackagePricingConfig = useCallback(
+    (packageId: PricingPackageId) => {
+      const packageConfig = getPricingPackageConfig(DEFAULT_PRICING_CONFIG, packageId);
+      return currency === "PKR" || rates[currency]
+        ? getRegionalPricingConfig(packageConfig, currency, rates)
+        : packageConfig;
+    },
+    [currency, rates]
+  );
+  const selectedPricingConfig = useMemo(
+    () => selectedPricingPackage
+      ? getPackagePricingConfig(selectedPricingPackage)
+      : pricingConfig,
+    [getPackagePricingConfig, pricingConfig, selectedPricingPackage]
+  );
   const calculation = useMemo(
-    () => calculateBudget(adminPanelType, selectedAddons, pricingConfig),
-    [adminPanelType, selectedAddons, pricingConfig]
+    () => calculateBudget(
+      adminPanelType,
+      getChargeableAddonIds(selectedAddons, selectedPricingPackage),
+      selectedPricingConfig
+    ),
+    [adminPanelType, selectedAddons, selectedPricingPackage, selectedPricingConfig]
   );
   const formatEstimate = useCallback(
     (amount: number) => currency === "PKR" || rates[currency]
@@ -167,6 +222,17 @@ function CalculatorContent() {
       { value: "admin", label: `${formatPrice(45000)} - ${formatPrice(65000)} (Client Admin & Add-ons)` },
       { value: "advanced", label: `${formatPrice(65000)} - ${formatPrice(95000)} (Advanced / Custom)` },
       { value: "enterprise", label: `${formatPrice(100000)}+ (Enterprise systems)` },
+      {
+        value: "ecommerce-business",
+        label: `${formatPrice(150000)}+ (E-Commerce Business starting)`,
+      },
+      {
+        value: "ecommerce-advanced",
+        label: `${formatPrice(200000)} - ${formatPrice(300000)} (E-Commerce Advanced scope)`,
+      },
+      { value: "saas-starter", label: `${formatPrice(250000)} (SaaS Starter)` },
+      { value: "saas-business", label: `${formatPrice(500000)} (SaaS Business)` },
+      { value: "saas-enterprise", label: `${formatPrice(1000000)}+ (SaaS Enterprise)` },
     ],
     [formatPrice]
   );
@@ -205,9 +271,28 @@ function CalculatorContent() {
 
   // Toggle helpers
   const toggleProjectType = (type: string) => {
-    setSelectedProjectTypes((prev) =>
-      prev.includes(type) ? (prev.length > 1 ? prev.filter((t) => t !== type) : prev) : [...prev, type]
-    );
+    const next = selectedProjectTypes.includes(type)
+      ? (selectedProjectTypes.length > 1
+        ? selectedProjectTypes.filter((item) => item !== type)
+        : selectedProjectTypes)
+      : [...selectedProjectTypes, type];
+    setSelectedProjectTypes(next);
+    const projectPackage = next
+      .map(getDefaultPricingPackageForProjectType)
+      .find((packageId) => packageId !== null) || null;
+    if (projectPackage?.startsWith("ecommerce_")) {
+      setSelectedPricingPackage((current) => current?.startsWith("ecommerce_") ? current : projectPackage);
+      setAdminPanelType("client_admin");
+      setExpectedBudgetRange((current) => current === "ecommerce-advanced" ? current : "ecommerce-business");
+    } else if (projectPackage?.startsWith("saas_")) {
+      setSelectedPricingPackage((current) => current?.startsWith("saas_") ? current : projectPackage);
+      setAdminPanelType("client_admin");
+      setExpectedBudgetRange((current) =>
+        current.startsWith("saas-") ? current : "saas-starter"
+      );
+    } else {
+      setSelectedPricingPackage(null);
+    }
   };
 
   const toggleProductFeature = (f: string) => {
@@ -316,6 +401,7 @@ function CalculatorContent() {
         adminPanelType,
         adminFeatures,
         selectedAddons,
+        pricingPackage: selectedPricingPackage,
         customFeatureNotes,
         currency,
         disclaimerAccepted,
@@ -376,6 +462,15 @@ function CalculatorContent() {
   const submittedCurrency: CurrencyCode = isCurrencyCode(submittedInquiry?.currency)
     ? submittedInquiry.currency
     : "PKR";
+  const submittedPricingPackage: PricingPackageId | null = isPricingPackageId(
+    submittedInquiry?.pricingPackage
+  )
+    ? submittedInquiry.pricingPackage
+    : null;
+  const selectedIsEcommerce = selectedPricingPackage?.startsWith("ecommerce_") ?? false;
+  const selectablePricingPackages: PricingPackageId[] = selectedIsEcommerce
+    ? Object.keys(ECOMMERCE_PACKAGES) as PricingPackageId[]
+    : Object.keys(SAAS_PACKAGES) as PricingPackageId[];
 
   return (
     <div className="bg-[#FFFFFF] text-[#101216] min-h-screen">
@@ -508,7 +603,7 @@ function CalculatorContent() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Example Client"
+                  placeholder="e.g. Farhan Durrani"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
@@ -522,7 +617,7 @@ function CalculatorContent() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Example Restaurant Grill & Lounge"
+                  placeholder="e.g. SpiceCraft Grill & Lounge"
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
@@ -928,14 +1023,80 @@ function CalculatorContent() {
                 Step 5 of 8
               </span>
               <h2 className="text-2xl font-black text-[#101216] mt-1">
-                Admin Panel & System Management Access
+                {selectedPricingPackage
+                  ? `Choose Your ${selectedIsEcommerce ? "E-Commerce" : "SaaS"} Package`
+                  : "Admin Panel & System Management Access"}
               </h2>
               <p className="text-xs text-gray-600 mt-1">
-                Choose whether you need a dedicated client dashboard or prefer our team to manage backend updates exclusively.
+                {selectedPricingPackage
+                  ? selectedIsEcommerce
+                    ? "Both store plans include a client admin dashboard, product and order management, and the core features shown on the pricing page. Advanced pricing depends on your final scope."
+                    : "Choose a SaaS marketplace plan. Each plan includes its listed platform, vendor-management, and administration features; Enterprise is a starting price."
+                  : "Choose whether you need a dedicated client dashboard or prefer our team to manage backend updates exclusively."}
               </p>
             </div>
 
-            {/* Comparison Cards */}
+            {selectedPricingPackage ? (
+              <div className={`grid grid-cols-1 ${selectedIsEcommerce ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-3"} gap-4`}>
+                {selectablePricingPackages.map((packageId) => {
+                  const packageDetails = selectedIsEcommerce
+                    ? ECOMMERCE_PACKAGES[packageId as keyof typeof ECOMMERCE_PACKAGES]
+                    : SAAS_PACKAGES[packageId as keyof typeof SAAS_PACKAGES];
+                  const packageConfig = getPackagePricingConfig(packageId);
+                  const packageCalculation = calculateBudget("client_admin", [], packageConfig);
+                  const isSelected = selectedPricingPackage === packageId;
+                  return (
+                    <button
+                      key={packageId}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPricingPackage(packageId);
+                        setAdminPanelType("client_admin");
+                        setExpectedBudgetRange(packageId.replace("_", "-"));
+                      }}
+                      className={`text-left p-5 rounded-2xl border-2 transition flex flex-col justify-between ${
+                        isSelected
+                          ? "bg-white border-[#E31E36] shadow-glow ring-1 ring-[#E31E36]"
+                          : "bg-white/60 hover:bg-white border-gray-200"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex justify-between items-center mb-3 gap-2">
+                          <span className="text-xs font-black uppercase tracking-wider text-[#E31E36] bg-red-100 px-3 py-0.5 rounded-full">
+                            {packageDetails.label}
+                          </span>
+                          <strong className="text-base font-black text-[#E31E36]">
+                            {formatEstimate(packageConfig.baseWithAdmin)}
+                            {packageId === "ecommerce_advanced" && <> – {formatPrice(ECOMMERCE_PACKAGES.ecommerce_advanced.maximumPrice)}</>}
+                            {"startingAt" in packageDetails && packageDetails.startingAt && "+"}
+                          </strong>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+                          {packageId === "ecommerce_business"
+                            ? "Professional online store, shopping cart, secure checkout, client admin dashboard, inventory, and order management. Starting package price."
+                            : packageId === "ecommerce_advanced"
+                              ? "Advanced store workflows, analytics, gateway and courier integrations, and custom features. Starting price; final scope is PKR 200,000–300,000."
+                              : packageId === "saas_starter"
+                                ? "Multi-vendor marketplace, vendor registration and dashboard, main admin panel, authentication, basic analytics, and responsive design."
+                                : packageId === "saas_business"
+                                  ? "Everything in Starter, plus vendor permissions, commission and order management, sales analytics, payment integration, and advanced administration."
+                                  : "Enterprise multi-tenant SaaS with advanced vendor/customer management, subscriptions, billing, complex orders, security, integrations, and dedicated support."}
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                        <span className="text-gray-500">
+                          Advance {formatEstimate(packageConfig.advanceDefault)}; then 11 installments from:
+                        </span>
+                        <strong className="text-[#E31E36] font-bold">
+                          {formatEstimate(packageCalculation.regularInstallment)} / mo
+                        </strong>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+            /* Comparison Cards */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Option A: No Admin Panel */}
               <div
@@ -995,9 +1156,10 @@ function CalculatorContent() {
                 </div>
               </div>
             </div>
+            )}
 
             {/* Dashboard Feature Picker if Client Admin chosen */}
-            {adminPanelType === "client_admin" && (
+            {!selectedPricingPackage && adminPanelType === "client_admin" && (
               <div className="bg-white p-5 rounded-xl border border-gray-200 space-y-3">
                 <span className="text-xs font-bold text-[#101216] block">
                   Select Dashboard Modules Required:
@@ -1042,15 +1204,18 @@ function CalculatorContent() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {addonOptions.map((addon) => {
+                const isIncluded = getChargeableAddonIds([addon.id], selectedPricingPackage).length === 0;
                 const isSelected = selectedAddons.includes(addon.id);
                 return (
                   <div
                     key={addon.id}
-                    onClick={() => toggleAddon(addon.id)}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition flex flex-col justify-between ${
-                      isSelected
+                    onClick={() => { if (!isIncluded) toggleAddon(addon.id); }}
+                    className={`p-4 rounded-xl border-2 transition flex flex-col justify-between ${
+                      isIncluded
+                        ? "bg-emerald-50 border-emerald-200"
+                        : isSelected
                         ? "bg-white border-[#E31E36] shadow-sm ring-1 ring-[#E31E36]"
-                        : "bg-white/70 hover:bg-white border-gray-200"
+                        : "bg-white/70 hover:bg-white border-gray-200 cursor-pointer"
                     }`}
                   >
                     <div>
@@ -1058,8 +1223,8 @@ function CalculatorContent() {
                         <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                           {addon.category}
                         </span>
-                        <strong className="text-xs font-black text-[#E31E36]">
-                          +{formatEstimate(addon.price)}
+                        <strong className={`text-xs font-black ${isIncluded ? "text-emerald-700" : "text-[#E31E36]"}`}>
+                          {isIncluded ? "Included" : `+${formatEstimate(addon.price)}`}
                         </strong>
                       </div>
                       <h4 className="font-extrabold text-xs text-[#101216] mb-1">
@@ -1071,12 +1236,13 @@ function CalculatorContent() {
                     </div>
 
                     <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px]">
-                      <span className={isSelected ? "text-[#E31E36] font-bold" : "text-gray-400"}>
-                        {isSelected ? "✓ Added to Estimate" : "+ Click to Add"}
+                      <span className={isIncluded ? "text-emerald-700 font-bold" : isSelected ? "text-[#E31E36] font-bold" : "text-gray-400"}>
+                        {isIncluded ? "✓ Included in Package" : isSelected ? "✓ Added to Estimate" : "+ Click to Add"}
                       </span>
                       <input
                         type="checkbox"
-                        checked={isSelected}
+                        checked={isIncluded || isSelected}
+                        disabled={isIncluded}
                         onChange={() => {}} // handled by parent div
                         className="accent-[#E31E36]"
                       />
@@ -1287,7 +1453,11 @@ function CalculatorContent() {
               <div className="flex justify-between">
                 <span className="text-gray-500">Selected Package:</span>
                 <strong className="text-[#E31E36] font-bold">
-                  {submittedInquiry.adminPanelType === "client_admin" ? "With Client Admin" : "Without Admin"}
+                  {submittedPricingPackage
+                    ? submittedPricingPackage.startsWith("ecommerce_")
+                      ? ECOMMERCE_PACKAGES[submittedPricingPackage as keyof typeof ECOMMERCE_PACKAGES].label
+                      : SAAS_PACKAGES[submittedPricingPackage as keyof typeof SAAS_PACKAGES].label
+                    : submittedInquiry.adminPanelType === "client_admin" ? "With Client Admin" : "Without Admin"}
                 </strong>
               </div>
             </div>

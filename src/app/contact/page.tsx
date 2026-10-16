@@ -202,7 +202,7 @@ export default function ContactPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Example Client"
+                    placeholder="e.g. Farhan Durrani"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"

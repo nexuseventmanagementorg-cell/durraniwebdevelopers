@@ -76,15 +76,17 @@ Copy `.env.example` to `.env.local`:
 cp .env.example .env.local
 ```
 
-There are no default admin credentials. Set `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `SESSION_SECRET` in the ignored `.env.local` file before signing in. Production authentication stays disabled until explicit credentials and a session secret are configured.
+There are no source-code default admin credentials. Set `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `SESSION_SECRET` in the ignored `.env.local` file before signing in. For Vercel, configure these as server-side environment variables; use the requested dashboard username and enter the initial password privately in the Vercel dashboard. Production authentication stays disabled until explicit credentials and a session secret are configured.
+
+The Settings dashboard includes an admin password-change form. To persist password changes across Vercel deployments, first run [`supabase/admin-credentials.sql`](./supabase/admin-credentials.sql) in the dedicated DWD Supabase project and configure `NEXT_PUBLIC_SUPABASE_URL` plus the server-only `SUPABASE_SERVICE_ROLE_KEY`. Passwords are stored as salted scrypt hashes; the initial `ADMIN_PASSWORD` is used only until the first successful password change is saved. Do not put the password in source files or `NEXT_PUBLIC_*` variables.
 
 ### Automatic admin notifications
 
-New calculator inquiries, contact messages, payment orders/receipts, and confirmed Safepay payments trigger independent email and WhatsApp alerts. Provider failures are logged and do not discard a successfully saved submission.
+New calculator inquiries, contact messages, payment orders/receipts, and confirmed Safepay payments trigger independent email and WhatsApp alerts. A provider failure is logged and does not discard a successfully saved submission.
 
-- **Email:** Configure `RESEND_API_KEY` and a sender verified by Resend in `RESEND_FROM_EMAIL`. Set `ADMIN_NOTIFICATION_EMAIL` to override the default DWD business email.
-- **WhatsApp:** Configure `WHATSAPP_API_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and `WHATSAPP_ADMIN_PHONE` in international digits. Create and get Meta approval for the template set in `WHATSAPP_ADMIN_TEMPLATE_NAME`, then set its language. The template body must have four placeholders in order: alert type, reference, customer name/phone, and details.
-- Store provider secrets only in server-side `.env.local` and deployment environment variables.
+- **Email:** Configure `RESEND_API_KEY` and `RESEND_FROM_EMAIL` with a sender verified in Resend. Set `ADMIN_NOTIFICATION_EMAIL` to override the default DWD business email.
+- **WhatsApp:** Configure `WHATSAPP_API_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and `WHATSAPP_ADMIN_PHONE` in international digits. Create and get Meta approval for the WhatsApp message template named by `WHATSAPP_ADMIN_TEMPLATE_NAME`, then set its language. The template body must contain four placeholders, in order: alert type, reference, customer name/phone, and details.
+- Keep all provider secrets server-side in `.env.local`/Vercel environment variables. Without the corresponding provider settings, that channel is logged as not configured and cannot deliver alerts.
 
 ### 4. Running the Development Server
 ```bash
@@ -124,11 +126,11 @@ To deploy to Supabase:
 
 ### Daily visitor counts
 
-The public footer reports unique daily visitors, visitors who opened the budget calculator, and visitors who completed a successful URL estimate. Counts use Pakistan's calendar day and refresh every 30 seconds. A random per-day browser identifier is hashed before it reaches the server; hashes older than two days are removed as new events arrive.
+The public footer reports unique daily visitors, visitors who opened the budget calculator, and visitors who completed a successful URL estimate. Counts use Pakistan's calendar day and refresh every 30 seconds. The browser keeps a random, per-day identifier; only its SHA-256 hash is sent to the server, and per-visitor hashes older than two days are cleaned up when new events are recorded. Aggregated daily totals remain available.
 
 1. Run [`supabase/visitor-analytics.sql`](./supabase/visitor-analytics.sql) in the dedicated DWD Supabase SQL Editor.
-2. Configure `NEXT_PUBLIC_SUPABASE_URL` and the server-only `SUPABASE_SERVICE_ROLE_KEY` in local `.env.local` and deployment variables.
-3. Restart/redeploy. If Supabase or the migration is unavailable, the footer explicitly reports unavailable counts rather than showing a false zero.
+2. Configure `NEXT_PUBLIC_SUPABASE_URL` and the server-only `SUPABASE_SERVICE_ROLE_KEY` in local `.env.local` and Vercel.
+3. Restart/redeploy and load any public page. If Supabase or the migration is unavailable, the footer explicitly shows that visitor counts are unavailable rather than showing a false zero.
 
 ### Private payment receipt setup
 
@@ -161,14 +163,13 @@ Card checkout remains unavailable if required configuration or the database migr
 2. Go to [vercel.com](https://vercel.com) and click **Add New Project** → Select your repository.
 3. In **Environment Variables**, add:
    - `ADMIN_USERNAME`: Your production admin username
-   - `ADMIN_PASSWORD`: Enter the initial password privately in Vercel; do not store it in source control.
+   - `ADMIN_PASSWORD`: Strong production admin password
    - `SESSION_SECRET`: A secure random 64-character string
    - `CRON_SECRET`: Random secret string for Vercel Cron jobs
-   - `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`: Server-side DWD Supabase credentials.
-   - For Sandbox card testing only, also configure `SAFEPAY_PUBLIC_KEY`, `SAFEPAY_SECRET_KEY`, `SAFEPAY_WEBHOOK_SECRET`, `SAFEPAY_ENVIRONMENT=sandbox`, and `NEXT_PUBLIC_SITE_URL` using the public HTTPS deployment origin. Register `https://<your-public-host>/api/webhooks/safepay` in Safepay's Sandbox dashboard.
-4. In the dedicated DWD Supabase project, run [`supabase/admin-credentials.sql`](./supabase/admin-credentials.sql) before using password changes. It creates a restricted store for the salted password hash.
-5. Click **Deploy**.
-6. Your web application is now live on Vercel!
+   - `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`: Required to persist a changed admin password
+   - For Sandbox card testing only, also configure `SAFEPAY_PUBLIC_KEY`, `SAFEPAY_SECRET_KEY`, `SAFEPAY_WEBHOOK_SECRET`, `SAFEPAY_ENVIRONMENT=sandbox`, and `NEXT_PUBLIC_SITE_URL` using values/origin for the public HTTPS deployment. Register `https://<your-public-host>/api/webhooks/safepay` in Safepay's Sandbox dashboard.
+4. Click **Deploy**.
+5. Your web application is now live on Vercel!
 
 **Preview/persistence note:** Do not use the Vercel preview to accept customer inquiries, orders, or business payment updates yet. Core `DataStore` records still use `data/db.json`, which is not durable on Vercel's serverless filesystem. Migrate those workflows to persistent storage before accepting real customer submissions. The local `data/db.json` is intentionally excluded from Git because it can contain private customer and payment information.
 

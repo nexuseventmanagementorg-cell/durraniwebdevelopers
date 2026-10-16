@@ -3,7 +3,17 @@ import { LookupAddress, LookupOptions } from "node:dns";
 import { lookup as dnsLookup } from "node:dns/promises";
 import http from "node:http";
 import https from "node:https";
-import { calculateBudget, DEFAULT_PRICING_CONFIG } from "./constants";
+import {
+  calculateBudget,
+  DEFAULT_PRICING_CONFIG,
+  ECOMMERCE_PACKAGES,
+  getChargeableAddonIds,
+  getPricingPackageConfig,
+  isEcommercePackageId,
+  isSaasPackageId,
+  PricingPackageId,
+  SAAS_PACKAGES,
+} from "./constants";
 import { CurrencyCode, ExchangeRates, getRegionalPricingConfig } from "./currency";
 
 const MAX_URL_LENGTH = 2048;
@@ -50,6 +60,7 @@ export interface WebsiteEstimateResult {
   currency: CurrencyCode;
   internationalPricing: boolean;
   adminPanel: boolean;
+  pricingPackage?: PricingPackageId;
   exchangeRate?: number;
   exchangeRateDate?: string;
   historicalProjectReference?: {
@@ -346,6 +357,7 @@ function getCandidateLinks(html: string, baseUrl: string): string[] {
 export function detectWebsiteFeatures(text: string): {
   features: WebsiteEstimateFeature[];
   adminPanel: boolean;
+  pricingPackage: PricingPackageId | null;
   addonIds: string[];
   assumptions: string[];
 } {
@@ -357,6 +369,18 @@ export function detectWebsiteFeatures(text: string): {
 
   const productCatalog = has(/\b(products?|catalog|shop|store|menu|items for sale)\b/);
   const ordering = has(/\b(add to cart|shopping cart|cart|checkout|place (an )?order|order online|online ordering|whatsapp order)\b/);
+  const ecommerceCatalog = has(/\b(products?|catalog|shop|store|items for sale)\b/);
+  const ecommerceStore = ecommerceCatalog && (
+    ordering || has(/\b(e[ -]?commerce|online store|online shop|shop online)\b/)
+  );
+  const explicitSaas = has(/\b(saas|software as a service|subscription software|cloud[ -]based software)\b/i);
+  const saasPlatform = has(
+    /\b(?:software|crm|erp|project management|team collaboration|invoicing|accounting|hr management)\s+(?:as a )?(?:platform|system|software|tool)\b|\b(?:cloud|online|web)[ -]based platform\b/i
+  );
+  const saasCommercialSignals = has(
+    /\b(subscription|free trial|pricing plans|monthly plan|annual plan|per user|workspace|dashboard|customer portal|sign[ -]?in|log[ -]?in)\b/i
+  );
+  const saasApplication = explicitSaas || (saasPlatform && saasCommercialSignals);
   const booking = has(/\b(book(ing)?|reservation|appointment|reserve a table|schedule a visit)\b/);
   const accounts = has(/\b(sign[ -]?in|log[ -]?in|create account|register|my account|customer portal)\b/);
   const payment = has(/\b(stripe|paypal|razorpay|paystack|authorize\.net|credit card|debit card|pay online|online payment gateway|payment gateway|online payment integration)\b/);
@@ -365,6 +389,24 @@ export function detectWebsiteFeatures(text: string): {
     /\b(?:chat|talk|message)\s+(?:to|with)\s+(?:our\s+)?(?:ai(?:\s+(?:chatbot|assistant))?|chatbot|virtual assistant)\b|\b(?:ask|try|open|start)\s+(?:our\s+)?(?:ai(?:\s+(?:chatbot|assistant))?|chatbot|virtual assistant)\b/i
   );
   const customIntegration = has(/\b(webhook integration|api integration|automated system sync|connect to (our )?(erp|crm|accounting software))\b/);
+  const advancedEcommerce = ecommerceStore && (
+    analytics ||
+    customIntegration ||
+    has(/\b(advanced inventory|multi[ -]?vendor|enterprise store|custom checkout)\b/)
+  );
+  const enterpriseSaas = saasApplication && has(
+    /\b(enterprise|multi[ -]?tenant|white[ -]?label|single sign[ -]?on|sso|audit logs?|custom roles|advanced compliance)\b/i
+  );
+  const businessSaas = saasApplication && (
+    analytics ||
+    customIntegration ||
+    has(/\b(team collaboration|workspaces?|crm|erp|billing|subscription management|multiple users|role[ -]?based access)\b/i)
+  );
+  const pricingPackage: PricingPackageId | null = ecommerceStore
+    ? advancedEcommerce ? "ecommerce_advanced" : "ecommerce_business"
+    : saasApplication
+      ? enterpriseSaas ? "saas_enterprise" : businessSaas ? "saas_business" : "saas_starter"
+      : null;
 
   if (productCatalog) {
     features.push({
@@ -378,6 +420,23 @@ export function detectWebsiteFeatures(text: string): {
       title: "Online order aur cart",
       explanation: "Website par cart, checkout, online order, ya WhatsApp order ka ishara mila.",
       evidence: "Page text mein cart/checkout/order action ka zikr mila.",
+    });
+  }
+  if (ecommerceStore) {
+    features.push({
+      title: "E-commerce store package",
+      explanation: `Store signals match the ${advancedEcommerce ? ECOMMERCE_PACKAGES.ecommerce_advanced.label : ECOMMERCE_PACKAGES.ecommerce_business.label} starting package; final scope still needs review.`,
+      evidence: "Product catalog and online shopping/cart signals were found on the public pages.",
+    });
+  }
+  if (saasApplication && !ecommerceStore) {
+    const packageLabel = pricingPackage && isSaasPackageId(pricingPackage)
+      ? SAAS_PACKAGES[pricingPackage].label
+      : "SaaS Starter";
+    features.push({
+      title: "SaaS application package",
+      explanation: `Software platform signals match the ${packageLabel} starting package; final scope still needs review.`,
+      evidence: "Public page par SaaS/software platform, subscription, trial, workspace, ya account signals mile.",
     });
   }
   if (booking) {
@@ -430,16 +489,32 @@ export function detectWebsiteFeatures(text: string): {
   }
 
   const needsPersistentData = productCatalog || ordering || booking || accounts;
-  if (needsPersistentData) {
+  if (needsPersistentData && !ecommerceStore) {
     addonIds.push("supabase_db");
     assumptions.push("Listings, orders, bookings, ya accounts ke liye persistent database add-on farz kiya gaya hai; asal backend public page se verify nahi ho sakta.");
   }
-  if (adminPanel) {
+  if (ecommerceStore) {
+    assumptions.push(
+      advancedEcommerce
+        ? `Advanced e-commerce package use hua: ${ECOMMERCE_PACKAGES.ecommerce_advanced.label} ki starting price PKR 200,000 hai; final scope PKR 200,000–300,000 range mein confirm hota hai.`
+        : `E-commerce business package use hua: ${ECOMMERCE_PACKAGES.ecommerce_business.label} ki starting price PKR 150,000 hai.`
+    );
+    assumptions.push("E-commerce package mein client admin, product/order management, inventory, aur standard checkout shamil hain; inhein generic add-ons ke taur par dobara charge nahi kiya gaya.");
+  } else if (saasApplication && pricingPackage && isSaasPackageId(pricingPackage)) {
+    const saasPackage = SAAS_PACKAGES[pricingPackage];
+    const priceText = saasPackage.startingAt
+      ? `PKR ${saasPackage.basePrice.toLocaleString("en-PK")}+`
+      : `PKR ${saasPackage.basePrice.toLocaleString("en-PK")}`;
+    assumptions.push(
+      `${saasPackage.label} package use hua; is package ki listed base price ${priceText} hai.`
+    );
+    assumptions.push("SaaS package mein persistent database aur package ke mutabiq authentication, payment, aur analytics shamil hain; included features dobara charge nahi kiye gaye.");
+  } else if (adminPanel) {
     assumptions.push("Public page par admin/staff area ka link mila, is liye Package 2 estimate kiya gaya hai; link se dashboard ka exact scope confirm nahi hota.");
   } else {
     assumptions.push("Client admin panel public page se confirm nahi hua, is liye Package 1 (Durrani-managed) use kiya gaya hai.");
   }
-  if (payment) {
+  if (payment && addonIds.includes("payment_gateway")) {
     assumptions.push("Payment add-on sirf visible gateway/card-payment signals par lagaya gaya hai; gateway account, third-party fees, aur exact integration scope shamil nahi.");
   }
   if (features.length === 0) {
@@ -456,8 +531,9 @@ export function detectWebsiteFeatures(text: string): {
 
   return {
     features,
-    adminPanel,
-    addonIds: Array.from(new Set(addonIds)),
+    adminPanel: ecommerceStore || saasApplication || adminPanel,
+    pricingPackage,
+    addonIds: Array.from(new Set(getChargeableAddonIds(addonIds, pricingPackage))),
     assumptions,
   };
 }
@@ -492,7 +568,10 @@ export async function estimateWebsite(
     .join(" ");
   const text = stripHtml(combinedHtml);
   const detected = detectWebsiteFeatures(text);
-  const pricingConfig = getRegionalPricingConfig(DEFAULT_PRICING_CONFIG, currency, rates);
+  const basePricingConfig = detected.pricingPackage
+    ? getPricingPackageConfig(DEFAULT_PRICING_CONFIG, detected.pricingPackage)
+    : DEFAULT_PRICING_CONFIG;
+  const pricingConfig = getRegionalPricingConfig(basePricingConfig, currency, rates);
   if (currency !== "PKR") {
     detected.assumptions.unshift(
       "International base packages use 2x Pakistan rates converted with the latest available exchange rate; each detected add-on is a flat 100 units in the selected currency."
@@ -513,12 +592,17 @@ export async function estimateWebsite(
     currency,
     internationalPricing: currency !== "PKR",
     adminPanel: detected.adminPanel,
+    ...(detected.pricingPackage ? { pricingPackage: detected.pricingPackage } : {}),
     ...(currency !== "PKR" ? { exchangeRate: rates[currency], exchangeRateDate } : {}),
     siteTitle,
     siteDescription,
     pagesScanned: pages.length,
     features: detected.features,
-    basePackage: detected.adminPanel ? "Package 2: Client Admin Panel" : "Package 1: Durrani-Managed",
+    basePackage: detected.pricingPackage
+      ? isEcommercePackageId(detected.pricingPackage)
+        ? ECOMMERCE_PACKAGES[detected.pricingPackage].label
+        : SAAS_PACKAGES[detected.pricingPackage].label
+      : detected.adminPanel ? "Package 2: Client Admin Panel" : "Package 1: Durrani-Managed",
     basePrice: calculation.basePrice,
     addons: calculation.selectedAddonDetails.map((addon) => ({
       id: addon.id,

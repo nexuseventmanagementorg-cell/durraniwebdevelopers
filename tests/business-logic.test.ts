@@ -1,16 +1,32 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHmac } from "crypto";
-import { calculateBudget, DEFAULT_PRICING_CONFIG, BUSINESS_INFO, buildWhatsAppLink } from "../src/lib/constants";
+import {
+  calculateBudget,
+  DEFAULT_PRICING_CONFIG,
+  BUSINESS_INFO,
+  buildWhatsAppLink,
+  ECOMMERCE_PACKAGES,
+  SAAS_PACKAGES,
+  getEcommercePricingConfig,
+  getSaasPricingConfig,
+  getChargeableAddonIds,
+  isEcommerceProjectType,
+  getDefaultPricingPackageForProjectType,
+} from "../src/lib/constants";
 import { signToken, verifyToken } from "../src/lib/auth";
 import {
   hashAdminPassword,
   verifyAdminPasswordHash,
 } from "../src/lib/admin-credentials";
 import { checkRateLimit } from "../src/lib/rateLimit";
-import { getPakistanDateKey } from "../src/lib/dates";
-import { hashVisitorId, isVisitorAnalyticsEvent } from "../src/lib/visitor-analytics";
 import { DataStore } from "../src/lib/store";
+import { buildInstallmentSchedule } from "../src/lib/client-finances";
+import { getPakistanDateKey } from "../src/lib/dates";
+import {
+  hashVisitorId,
+  isVisitorAnalyticsEvent,
+} from "../src/lib/visitor-analytics";
 import { detectWebsiteFeatures, estimateWebsite } from "../src/lib/website-estimator";
 import { currencyForCountry, getRegionalPricingConfig } from "../src/lib/currency";
 import {
@@ -144,6 +160,28 @@ test("DataStore Ledger Calculations & Isolation", () => {
   assert.equal(pricingConfig.baseWithAdmin, 45000);
 });
 
+test("Client project installment schedule preserves the agreed total and clamps month ends", () => {
+  const installments = buildInstallmentSchedule("proj-test", 100, 3, "2026-01-31");
+
+  assert.deepEqual(
+    installments.map(({ installmentNumber, amount, dueDate }) => ({
+      installmentNumber,
+      amount,
+      dueDate,
+    })),
+    [
+      { installmentNumber: 1, amount: 33.33, dueDate: "2026-01-31" },
+      { installmentNumber: 2, amount: 33.33, dueDate: "2026-02-28" },
+      { installmentNumber: 3, amount: 33.34, dueDate: "2026-03-31" },
+    ]
+  );
+  assert.equal(installments.reduce((sum, installment) => sum + installment.amount, 0), 100);
+  assert.throws(
+    () => buildInstallmentSchedule("proj-test", 100, 3, "2026-02-30"),
+    /valid first installment due date/
+  );
+});
+
 test("Daily analytics use Pakistan dates and hash per-day visitor identifiers", () => {
   assert.equal(getPakistanDateKey(new Date("2026-10-15T19:30:00.000Z")), "2026-10-16");
   assert.match(hashVisitorId("daily-browser-id"), /^[0-9a-f]{64}$/);
@@ -166,6 +204,144 @@ test("Website estimator maps visible store and admin signals to calculator prici
     "Accepted payments: Easypaisa, JazzCash, Cash on Delivery"
   );
   assert.equal(manualPaymentSignals.addonIds.includes("payment_gateway"), false);
+});
+
+test("E-commerce packages use their published starting prices and advances", () => {
+  assert.equal(isEcommerceProjectType("E-Commerce Stores"), true);
+  assert.equal(isEcommerceProjectType("E-commerce store"), true);
+  assert.equal(isEcommerceProjectType("Jewellery Stores"), true);
+  assert.equal(isEcommerceProjectType("Cosmetics & Beauty"), true);
+  assert.equal(isEcommerceProjectType("Fashion Stores"), true);
+  assert.equal(isEcommerceProjectType("Grocery Stores"), true);
+  assert.equal(isEcommerceProjectType("Custom web application"), false);
+  assert.equal(getDefaultPricingPackageForProjectType("E-Commerce Stores"), "ecommerce_business");
+  assert.equal(getDefaultPricingPackageForProjectType("SaaS Projects"), "saas_starter");
+
+  const business = calculateBudget(
+    "client_admin",
+    [],
+    getEcommercePricingConfig(DEFAULT_PRICING_CONFIG, "ecommerce_business")
+  );
+  assert.equal(business.basePrice, ECOMMERCE_PACKAGES.ecommerce_business.basePrice);
+  assert.equal(business.advanceAmount, 60000);
+  assert.equal(business.regularInstallment, 8181.82);
+
+  const advanced = calculateBudget(
+    "client_admin",
+    [],
+    getEcommercePricingConfig(DEFAULT_PRICING_CONFIG, "ecommerce_advanced")
+  );
+  assert.equal(advanced.basePrice, ECOMMERCE_PACKAGES.ecommerce_advanced.basePrice);
+  assert.equal(advanced.advanceAmount, 80000);
+  assert.equal(advanced.regularInstallment, 10909.09);
+  assert.equal(advanced.finalInstallment, 10909.1);
+  assert.deepEqual(
+    getChargeableAddonIds(
+      ["supabase_db", "payment_gateway", "advanced_dashboard", "ai_chatbot"],
+      "ecommerce_business"
+    ),
+    ["advanced_dashboard", "ai_chatbot"]
+  );
+  assert.deepEqual(
+    getChargeableAddonIds(
+      ["supabase_db", "payment_gateway", "advanced_dashboard", "ai_chatbot"],
+      "ecommerce_advanced"
+    ),
+    ["ai_chatbot"]
+  );
+});
+
+test("SaaS budget plans use published prices, advances, and included features", () => {
+  const starter = calculateBudget(
+    "client_admin",
+    [],
+    getSaasPricingConfig(DEFAULT_PRICING_CONFIG, "saas_starter")
+  );
+  assert.equal(starter.basePrice, SAAS_PACKAGES.saas_starter.basePrice);
+  assert.equal(starter.advanceAmount, 100000);
+  assert.equal(starter.regularInstallment, 13636.36);
+
+  const business = calculateBudget(
+    "client_admin",
+    [],
+    getSaasPricingConfig(DEFAULT_PRICING_CONFIG, "saas_business")
+  );
+  assert.equal(business.basePrice, SAAS_PACKAGES.saas_business.basePrice);
+  assert.equal(business.advanceAmount, 200000);
+  assert.equal(business.regularInstallment, 27272.73);
+
+  const enterprise = calculateBudget(
+    "client_admin",
+    [],
+    getSaasPricingConfig(DEFAULT_PRICING_CONFIG, "saas_enterprise")
+  );
+  assert.equal(enterprise.basePrice, SAAS_PACKAGES.saas_enterprise.basePrice);
+  assert.equal(enterprise.advanceAmount, 400000);
+  assert.equal(enterprise.regularInstallment, 54545.45);
+  assert.deepEqual(
+    getChargeableAddonIds(
+      ["supabase_db", "google_auth", "payment_gateway", "advanced_dashboard", "ai_chatbot"],
+      "saas_starter"
+    ),
+    ["payment_gateway", "advanced_dashboard", "ai_chatbot"]
+  );
+  assert.deepEqual(
+    getChargeableAddonIds(
+      ["supabase_db", "google_auth", "payment_gateway", "advanced_dashboard", "ai_chatbot"],
+      "saas_business"
+    ),
+    ["ai_chatbot"]
+  );
+});
+
+test("Website estimator routes ecommerce stores to matching packages without duplicate core add-ons", () => {
+  const businessStore = detectWebsiteFeatures(
+    "Online shop with product catalog, shopping cart, and checkout."
+  );
+  assert.equal(businessStore.pricingPackage, "ecommerce_business");
+  assert.equal(businessStore.adminPanel, true);
+  assert.equal(businessStore.addonIds.includes("supabase_db"), false);
+  assert.equal(businessStore.addonIds.includes("payment_gateway"), false);
+
+  const advancedStore = detectWebsiteFeatures(
+    "Online store with products, add to cart, sales reports, and advanced inventory."
+  );
+  assert.equal(advancedStore.pricingPackage, "ecommerce_advanced");
+  assert.equal(advancedStore.addonIds.includes("advanced_dashboard"), false);
+});
+
+test("Website estimator routes SaaS platforms to SaaS pricing tiers instead of generic web-app rates", () => {
+  const starter = detectWebsiteFeatures(
+    "SaaS cloud software platform with subscriptions and a customer dashboard."
+  );
+  assert.equal(starter.pricingPackage, "saas_starter");
+  assert.equal(starter.adminPanel, true);
+  assert.equal(starter.addonIds.includes("supabase_db"), false);
+  assert.equal(starter.addonIds.includes("google_auth"), false);
+  assert.equal(
+    calculateBudget(
+      "client_admin",
+      starter.addonIds,
+      getSaasPricingConfig(DEFAULT_PRICING_CONFIG, "saas_starter")
+    ).basePrice,
+    SAAS_PACKAGES.saas_starter.basePrice
+  );
+
+  const business = detectWebsiteFeatures(
+    "SaaS project management platform with team workspaces, billing, analytics dashboard, and API integration."
+  );
+  assert.equal(business.pricingPackage, "saas_business");
+  assert.equal(business.addonIds.includes("advanced_dashboard"), false);
+
+  const enterprise = detectWebsiteFeatures(
+    "Enterprise SaaS with multi-tenant workspaces, SSO, white-label controls, audit logs, and custom roles."
+  );
+  assert.equal(enterprise.pricingPackage, "saas_enterprise");
+
+  const ecommerce = detectWebsiteFeatures(
+    "SaaS-enabled e-commerce store with product catalog, shopping cart, and checkout."
+  );
+  assert.equal(ecommerce.pricingPackage, "ecommerce_business");
 });
 
 test("Website estimator ignores chatbot mentions unless the page invites users to open or use one", () => {
@@ -215,6 +391,14 @@ test("International pricing doubles PKR rates before converting to the selected 
     regionalConfig
   );
   assert.equal(calculatorTotal.estimatedTotal, 310);
+
+  const internationalEcommerce = getRegionalPricingConfig(
+    getEcommercePricingConfig(DEFAULT_PRICING_CONFIG, "ecommerce_business"),
+    "EUR",
+    { PKR: 1, EUR: 0.003 }
+  );
+  assert.equal(internationalEcommerce.baseWithAdmin, 900);
+  assert.equal(internationalEcommerce.advanceDefault, 360);
 });
 
 test("Regional currency maps Germany, UK, Canada, US, Australia, and other European regions", () => {
