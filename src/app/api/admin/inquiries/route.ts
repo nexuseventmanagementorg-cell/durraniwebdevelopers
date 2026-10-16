@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/auth";
 import { DataStore } from "@/lib/store";
+import { getInquiries, getInquiryById, updateInquiry } from "@/lib/inquiry-storage";
 import { Client, Project, OrderStatus } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -8,8 +9,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const inquiries = DataStore.getInquiries();
-  return NextResponse.json({ success: true, inquiries });
+  try {
+    const inquiries = await getInquiries();
+    return NextResponse.json({ success: true, inquiries });
+  } catch (error) {
+    console.error("Admin inquiry list failed", error);
+    return NextResponse.json({ success: false, error: "Inquiries could not be loaded." }, { status: 503 });
+  }
 }
 
 export async function PATCH(request: NextRequest) {
@@ -30,7 +36,7 @@ export async function PATCH(request: NextRequest) {
     if (adminNotes !== undefined) updates.adminNotes = adminNotes;
 
     if (revisedApprovedPrice !== undefined) {
-      const current = DataStore.getInquiryById(id);
+      const current = await getInquiryById(id);
       if (current) {
         updates.calculation = {
           ...current.calculation,
@@ -40,7 +46,7 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    const updated = DataStore.updateInquiry(id, updates);
+    const updated = await updateInquiry(id, updates);
     if (!updated) {
       return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
     }
@@ -62,7 +68,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { inquiryId, deliveryTimeline, initialAdvanceReceived } = body;
 
-    const inquiry = DataStore.getInquiryById(inquiryId);
+    const inquiry = await getInquiryById(inquiryId);
     if (!inquiry) {
       return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
     }
@@ -155,7 +161,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Update inquiry with converted project ID and status
-    DataStore.updateInquiry(inquiry.id, {
+    await updateInquiry(inquiry.id, {
       status: advanceReceived >= advanceRequired ? "Approved" : "Awaiting Advance",
       convertedProjectId: newProjectId,
       adminNotes: `Converted into project #${newProjectId} on ${new Date().toLocaleDateString()}.`,

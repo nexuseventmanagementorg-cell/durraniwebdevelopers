@@ -115,6 +115,7 @@ function CalculatorContent() {
   const [phone, setPhone] = useState("");
   const [cityCountry, setCityCountry] = useState("");
   const [preferredContact, setPreferredContact] = useState<"whatsapp" | "email" | "phone">("whatsapp");
+  const [whatsappConfirmationConsent, setWhatsappConfirmationConsent] = useState(false);
   const [customerIntro, setCustomerIntro] = useState("");
 
   // Step 2: Project Type
@@ -419,6 +420,7 @@ function CalculatorContent() {
         phone,
         cityCountry,
         preferredContact,
+        whatsappConfirmationConsent,
         customerIntro,
         projectTypes: selectedProjectTypes,
         problemToSolve,
@@ -455,7 +457,7 @@ function CalculatorContent() {
         throw new Error(data.error || "Failed to submit project inquiry.");
       }
 
-      setSubmittedInquiry(data.inquiry);
+      setSubmittedInquiry({ ...data.inquiry, whatsappConfirmation: data.whatsappConfirmation });
       setCurrentStep(8);
 
       // Trigger celebration confetti
@@ -722,6 +724,16 @@ function CalculatorContent() {
                 </select>
               </div>
             </div>
+
+            <label className="flex items-start gap-2 text-[11px] text-gray-600">
+              <input
+                type="checkbox"
+                checked={whatsappConfirmationConsent}
+                onChange={(event) => setWhatsappConfirmationConsent(event.target.checked)}
+                className="mt-0.5 accent-[#E31E36]"
+              />
+              <span>I agree to receive one WhatsApp message with my inquiry reference and submission confirmation.</span>
+            </label>
 
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
@@ -1476,7 +1488,14 @@ function CalculatorContent() {
                 Thank You, {submittedInquiry.customerName}!
               </h2>
               <p className="text-xs sm:text-sm text-gray-600 max-w-lg mx-auto mt-1">
-                Your web application requirements and estimated budget breakdown have been safely recorded in our system.
+                Your web application requirements and estimate have been saved. Keep this reference for follow-up.
+              </p>
+              <p role="status" className="text-xs text-gray-600 mt-2">
+                {submittedInquiry.whatsappConfirmation === "sent"
+                  ? "WhatsApp confirmation sent to your number."
+                  : submittedInquiry.whatsappConfirmationConsent
+                    ? "Your reference is saved below. WhatsApp could not be delivered automatically; you can send it to our team using the button."
+                    : "Your reference is saved below. You can send it to our team on WhatsApp using the button."}
               </p>
             </div>
 
@@ -1553,14 +1572,14 @@ function CalculatorContent() {
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
               <a
                 href={buildWhatsAppLink(
-                  `Assalam-o-Alaikum Durrani Web Developers! I just submitted project inquiry ${submittedInquiry.id} for "${submittedInquiry.businessName || submittedInquiry.customerName}" (Estimated ${formatCurrency(submittedCalculation.estimatedTotal, submittedCurrency, locale)}). Please review my requirements.`
+                  `Assalam-o-Alaikum Durrani Web Developers! My project inquiry was submitted successfully. Reference: ${submittedInquiry.id}. Project: "${submittedInquiry.businessName || submittedInquiry.customerName}". Estimated ${formatCurrency(submittedCalculation.estimatedTotal, submittedCurrency, locale)}. Please confirm receipt.`
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-7 py-3.5 rounded-xl font-bold text-xs shadow-lg transition"
               >
                 <MessageSquare className="w-4 h-4" />
-                Open In WhatsApp Directly ({BUSINESS_INFO.phoneDisplay})
+                Send Reference to DWD on WhatsApp ({BUSINESS_INFO.phoneDisplay})
               </a>
 
               <Link

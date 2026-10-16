@@ -207,8 +207,8 @@ CREATE INDEX IF NOT EXISTS idx_portfolio_public ON portfolio_projects(is_public)
 
 -- ========================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
--- Strict isolation: Public visitors can only view approved public portfolio
--- and submit new inquiries. Everything else requires authenticated admin.
+-- Public visitors can only view approved public portfolio entries. Inquiries
+-- are read and written by server-side routes using the service-role key.
 -- ========================================================================
 
 ALTER TABLE portfolio_projects ENABLE ROW LEVEL SECURITY;
@@ -227,15 +227,8 @@ CREATE POLICY "Public can view public portfolio items"
 ON portfolio_projects FOR SELECT
 USING (is_public = TRUE);
 
--- 2. Public can insert new inquiries (Budget Calculator submissions)
-CREATE POLICY "Public can submit inquiries"
-ON inquiries FOR INSERT
-WITH CHECK (TRUE);
+REVOKE ALL ON TABLE inquiries FROM anon, authenticated;
+GRANT ALL ON TABLE inquiries TO service_role;
 
--- 3. Public can view their inquiry status safely if reference ID is matched
-CREATE POLICY "Public can track own inquiry by ID"
-ON inquiries FOR SELECT
-USING (TRUE);
-
--- 4. Service Role / Authenticated Admins have full access across all tables
+-- Service Role / Authenticated Admins have full access across all tables
 -- (Supabase handles service_role key automatically with bypass RLS on server side)
