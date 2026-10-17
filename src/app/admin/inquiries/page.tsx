@@ -6,6 +6,7 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import { Inquiry, OrderStatus, PaymentMethod } from "@/lib/types";
 import { formatPKR, buildWhatsAppLinkTo } from "@/lib/constants";
 import { formatCurrency, isCurrencyCode } from "@/lib/currency";
+import { reviewInquiryScope } from "@/lib/inquiry-review";
 import {
   Inbox,
   Search,
@@ -40,6 +41,9 @@ export default function AdminInquiriesPage() {
   const [briefCopied, setBriefCopied] = useState(false);
   const [briefSaving, setBriefSaving] = useState(false);
   const projectBrief = selectedInquiry?.projectBuildBrief?.content || "";
+  const selectedScopeReview = selectedInquiry
+    ? selectedInquiry.scopeReview || reviewInquiryScope(selectedInquiry)
+    : null;
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
@@ -495,6 +499,30 @@ export default function AdminInquiriesPage() {
                         : "Customer opted in; not sent"
                   : "No automatic confirmation consent"}
               </div>
+
+              {selectedScopeReview && (
+                <section className={`rounded-xl border p-4 ${selectedScopeReview.missingDetails.length ? "border-amber-200 bg-amber-50/70" : "border-emerald-200 bg-emerald-50/70"}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-bold text-gray-900">Automatic scope check</h3>
+                    <span className="text-[10px] font-bold uppercase text-gray-600">
+                      {selectedScopeReview.status.replaceAll("_", " ")}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[11px] leading-relaxed text-gray-700">
+                    {selectedScopeReview.recommendedNextAction}
+                  </p>
+                  {selectedScopeReview.missingDetails.length > 0 && (
+                    <ul className="mt-2 list-disc space-y-1 pl-4 text-[11px] text-amber-950">
+                      {selectedScopeReview.missingDetails.map((detail) => <li key={detail}>{detail}</li>)}
+                    </ul>
+                  )}
+                  {selectedScopeReview.riskFlags.length > 0 && (
+                    <ul className="mt-2 space-y-1 border-t border-gray-200/70 pt-2 text-[11px] text-gray-700">
+                      {selectedScopeReview.riskFlags.map((flag) => <li key={flag}>{flag}</li>)}
+                    </ul>
+                  )}
+                </section>
+              )}
 
               {selectedInquiry.scanFeatures && selectedInquiry.scanFeatures.length > 0 && (
                 <section className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">

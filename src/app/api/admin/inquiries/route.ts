@@ -4,6 +4,8 @@ import { DataStore } from "@/lib/store";
 import { getInquiries, getInquiryById, updateInquiry } from "@/lib/inquiry-storage";
 import { canStartProjectAfterVerifiedAdvance, getVerifiedInquiryAdvanceAmount } from "@/lib/inquiry-advance";
 import { buildInquiryProjectBrief, buildProjectBuildBriefRecord, buildProjectReadinessChecklist } from "@/lib/project-brief";
+import { createProjectAutomationWorkflow } from "@/lib/project-workflow";
+import { getProjectRecordByInquiry, ProjectWorkspaceStorageError, saveProjectRecord } from "@/lib/project-storage";
 import { Client, Project, OrderStatus, PaymentMethod } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -225,6 +227,16 @@ export async function POST(request: NextRequest) {
     }
     const remainingBalance = Math.max(0, approvedPrice - advanceReceived);
 
+    const existingProject = await getProjectRecordByInquiry(inquiry.id);
+    if (existingProject) {
+      await updateInquiry(inquiry.id, {
+        status: "Approved",
+        convertedProjectId: existingProject.id,
+        adminNotes: `Reconciled with existing project #${existingProject.id}.`,
+      });
+      return NextResponse.json({ success: true, project: existingProject, client: null, reconciled: true });
+    }
+
     if (!client) {
       const newClientId = `cli-${Date.now().toString().slice(-6)}`;
       client = {
@@ -271,6 +283,7 @@ export async function POST(request: NextRequest) {
       status: advanceReceived >= advanceRequired ? "In Development" : "Awaiting Advance",
       deliveryTimeline: deliveryTimeline || "3 to 4 Weeks",
       projectBuildBrief: buildProjectBuildBriefRecord(inquiry),
+      automationWorkflow: createProjectAutomationWorkflow(inquiry.id),
       selectedFeatures: [
         ...inquiry.projectTypes,
         inquiry.adminPanelType === "client_admin" ? "Client Admin Panel" : "Internal Managed",
@@ -281,7 +294,7 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     };
 
-    DataStore.createProject(newProject);
+    await saveProjectRecord(newProject);
 
     // 3. If initial advance was recorded, log payment record
     if (advanceReceived > 0) {
@@ -319,6 +332,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Conversion error", error);
-    return NextResponse.json({ success: false, error: "Failed to convert inquiry" }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof ProjectWorkspaceStorageError ? error.message : "Failed to convert inquiry",
+      },
+      { status: error instanceof ProjectWorkspaceStorageError ? 503 : 500 }
+    );
   }
 }

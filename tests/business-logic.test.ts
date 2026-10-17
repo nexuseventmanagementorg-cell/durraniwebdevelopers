@@ -36,6 +36,8 @@ import {
   buildInquiryProjectBrief,
   buildProjectReadinessChecklist,
 } from "../src/lib/project-brief";
+import { createProjectAutomationWorkflow, updateProjectWorkflowTask } from "../src/lib/project-workflow";
+import { reviewInquiryScope } from "../src/lib/inquiry-review";
 import type { Inquiry } from "../src/lib/types";
 import {
   canStartProjectAfterVerifiedAdvance,
@@ -396,6 +398,50 @@ test("Project handoff creates a brief and preserves completed readiness items", 
   assert.match(record.content, /Sell products online/);
   assert.equal(record.checklist.find((item) => item.id === "scope-approved")?.completed, true);
   assert.equal(record.checklist.find((item) => item.id === "brand-assets")?.completed, false);
+});
+
+test("Project workflow creates assigned roles and gates implementation and release", () => {
+  let workflow = createProjectAutomationWorkflow("DW-123456", "2026-10-17T00:00:00.000Z");
+  assert.equal(workflow.mode, "admin_assisted");
+  assert.equal(workflow.tasks[0].status, "ready");
+  assert.equal(workflow.tasks.find((item) => item.id === "implementation")?.status, "blocked");
+  assert.equal(updateProjectWorkflowTask(workflow, "implementation", "in_progress"), null);
+
+  workflow = updateProjectWorkflowTask(workflow, "scope-review", "completed")!;
+  assert.equal(workflow.tasks.find((item) => item.id === "client-assets")?.status, "ready");
+  workflow = updateProjectWorkflowTask(workflow, "client-assets", "completed")!;
+  assert.equal(workflow.tasks.find((item) => item.id === "build-plan")?.status, "ready");
+  assert.ok(workflow.tasks.some((item) => item.role === "Web Developer"));
+  assert.equal(workflow.tasks.find((item) => item.id === "production-release")?.adminApprovalRequired, true);
+  assert.equal(updateProjectWorkflowTask(workflow, "production-release", "completed"), null);
+
+  for (const taskId of ["build-plan", "implementation", "quality-assurance", "client-preview"]) {
+    workflow = updateProjectWorkflowTask(workflow, taskId, "completed")!;
+  }
+  assert.equal(workflow.status, "awaiting_admin");
+  assert.equal(workflow.tasks.find((item) => item.id === "production-release")?.status, "awaiting_admin");
+  workflow = updateProjectWorkflowTask(workflow, "production-release", "completed")!;
+  assert.equal(workflow.status, "completed");
+});
+
+test("Every inquiry receives a scope review with missing details and safety flags", () => {
+  const review = reviewInquiryScope({
+    businessName: "",
+    problemToSolve: "",
+    targetAudience: "",
+    productsServices: "",
+    preferredLaunchDate: "",
+    inspirationUrl: "https://example.com",
+    scanFeatures: [],
+    selectedAddons: ["payment_gateway"],
+    customFeatureNotes: "Custom checkout flow",
+  }, "2026-10-17T00:00:00.000Z");
+
+  assert.equal(review.status, "needs_follow_up");
+  assert.equal(review.reviewedAt, "2026-10-17T00:00:00.000Z");
+  assert.ok(review.missingDetails.includes("Business or brand name"));
+  assert.equal(review.riskFlags.length, 3);
+  assert.match(review.recommendedNextAction, /before sending a final quotation/);
 });
 
 test("Website estimator maps visible store and admin signals to calculator pricing", () => {

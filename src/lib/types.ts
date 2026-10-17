@@ -88,6 +88,14 @@ export interface InquiryScanFeature {
   evidence: string;
 }
 
+export interface InquiryScopeReview {
+  reviewedAt: string;
+  status: "needs_follow_up" | "ready_for_admin_review";
+  missingDetails: string[];
+  riskFlags: string[];
+  recommendedNextAction: string;
+}
+
 export interface ProjectReadinessChecklistItem {
   id: string;
   label: string;
@@ -98,6 +106,25 @@ export interface ProjectBuildBriefRecord {
   generatedAt: string;
   content: string;
   checklist: ProjectReadinessChecklistItem[];
+}
+
+export type ProjectWorkflowTaskStatus = "blocked" | "ready" | "in_progress" | "completed" | "awaiting_admin";
+
+export interface ProjectWorkflowTask {
+  id: string;
+  role: string;
+  title: string;
+  status: ProjectWorkflowTaskStatus;
+  dependsOn: string[];
+  adminApprovalRequired?: boolean;
+}
+
+export interface ProjectAutomationWorkflow {
+  createdAt: string;
+  sourceInquiryId: string;
+  mode: "admin_assisted";
+  status: "ready" | "in_progress" | "awaiting_admin" | "completed";
+  tasks: ProjectWorkflowTask[];
 }
 
 export interface Inquiry {
@@ -144,6 +171,7 @@ export interface Inquiry {
   // Step 6: Advanced Features
   selectedAddons: string[];
   scanFeatures?: InquiryScanFeature[];
+  scopeReview?: InquiryScopeReview;
   customFeatureNotes?: string;
   pricingPackage?: "ecommerce_business" | "ecommerce_advanced" | "saas_starter" | "saas_business" | "saas_enterprise";
   manualAdvanceVerification?: {
@@ -190,6 +218,7 @@ export interface Project {
   id: string;
   inquiryId?: string;
   projectBuildBrief?: ProjectBuildBriefRecord;
+  automationWorkflow?: ProjectAutomationWorkflow;
   clientId: string;
   clientName: string;
   clientEmail: string;

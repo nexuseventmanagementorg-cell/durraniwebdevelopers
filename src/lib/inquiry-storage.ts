@@ -1,6 +1,7 @@
 import type { Inquiry } from "@/lib/types";
 import { DataStore } from "@/lib/store";
 import { getPaymentSupabase, hasPaymentSupabaseConfiguration } from "@/lib/payment-server";
+import { reviewInquiryScope } from "@/lib/inquiry-review";
 
 const TABLE_NAME = "inquiries";
 
@@ -140,16 +141,20 @@ function requireSupabaseInProduction(): void {
 }
 
 export async function saveInquiry(inquiry: Inquiry): Promise<Inquiry> {
+  const reviewedInquiry: Inquiry = {
+    ...inquiry,
+    scopeReview: reviewInquiryScope(inquiry),
+  };
   if (!hasPaymentSupabaseConfiguration()) {
     requireSupabaseInProduction();
-    return DataStore.createInquiry(inquiry);
+    return DataStore.createInquiry(reviewedInquiry);
   }
 
   const supabase = getPaymentSupabase();
-  const row = toStorageRow(inquiry);
+  const row = toStorageRow(reviewedInquiry);
   let { error } = await supabase.from(TABLE_NAME).insert(row);
   if (error && isMissingSnapshotColumn(error)) {
-    const { inquiry_data: _unusedSnapshot, ...legacyRow } = toStorageRow(inquiry, true);
+    const { inquiry_data: _unusedSnapshot, ...legacyRow } = toStorageRow(reviewedInquiry, true);
     const fallback = await supabase.from(TABLE_NAME).insert(legacyRow);
     error = fallback.error;
   }
@@ -157,7 +162,7 @@ export async function saveInquiry(inquiry: Inquiry): Promise<Inquiry> {
     console.error("Supabase inquiry insert failed", error);
     throw new InquiryStorageError();
   }
-  return inquiry;
+  return reviewedInquiry;
 }
 
 export async function getInquiries(): Promise<Inquiry[]> {

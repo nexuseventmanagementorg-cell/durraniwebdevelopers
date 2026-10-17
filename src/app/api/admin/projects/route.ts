@@ -2,13 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/auth";
 import { DataStore } from "@/lib/store";
 import { Project, OrderStatus } from "@/lib/types";
+import { getProjectRecord, getProjectRecords, saveProjectRecord, updateProjectRecord } from "@/lib/project-storage";
+import { updateProjectWorkflowTask } from "@/lib/project-workflow";
+import { ProjectWorkspaceStorageError } from "@/lib/project-storage";
 
 export async function GET(request: NextRequest) {
   if (!verifyAdminRequest(request)) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
-  const projects = DataStore.getProjects();
-  return NextResponse.json({ success: true, projects });
+  try {
+    const projects = await getProjectRecords();
+    return NextResponse.json({ success: true, projects });
+  } catch (error) {
+    console.error("Project workspace load failed", error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "Project workspaces could not be loaded." },
+      { status: 503 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -49,11 +60,17 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     };
 
-    DataStore.createProject(newProject);
+    await saveProjectRecord(newProject);
     return NextResponse.json({ success: true, project: newProject });
   } catch (error) {
     console.error("Create project error", error);
-    return NextResponse.json({ success: false, error: "Failed to create project" }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof ProjectWorkspaceStorageError ? error.message : "Failed to create project",
+      },
+      { status: error instanceof ProjectWorkspaceStorageError ? 503 : 500 }
+    );
   }
 }
 
@@ -64,10 +81,15 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { id, status, deploymentUrl, adminNotes, deliveryTimeline, approvedPrice } = body;
+    const { id, status, deploymentUrl, adminNotes, deliveryTimeline, approvedPrice, automationTask } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: "Project ID is required" }, { status: 400 });
+    }
+
+    const current = await getProjectRecord(id);
+    if (!current) {
+      return NextResponse.json({ success: false, error: "Project not found" }, { status: 404 });
     }
 
     const updates: Partial<Project> = {};
@@ -75,11 +97,25 @@ export async function PATCH(request: NextRequest) {
     if (deploymentUrl !== undefined) updates.deploymentUrl = deploymentUrl;
     if (adminNotes !== undefined) updates.adminNotes = adminNotes;
     if (deliveryTimeline !== undefined) updates.deliveryTimeline = deliveryTimeline;
-    if (body.projectBuildBrief && typeof body.projectBuildBrief === "object") {
-      const current = DataStore.getProjectById(id);
-      if (!current) {
-        return NextResponse.json({ success: false, error: "Project not found" }, { status: 404 });
+    if (automationTask !== undefined) {
+      if (!automationTask || typeof automationTask.taskId !== "string" ||
+          !["in_progress", "completed"].includes(automationTask.status)) {
+        return NextResponse.json({ success: false, error: "A valid workflow task update is required." }, { status: 400 });
       }
+      if (!current.automationWorkflow) {
+        return NextResponse.json({ success: false, error: "This project has no automation workflow." }, { status: 409 });
+      }
+      const workflow = updateProjectWorkflowTask(
+        current.automationWorkflow,
+        automationTask.taskId,
+        automationTask.status
+      );
+      if (!workflow) {
+        return NextResponse.json({ success: false, error: "Complete the prerequisite tasks before advancing this workflow." }, { status: 409 });
+      }
+      updates.automationWorkflow = workflow;
+    }
+    if (body.projectBuildBrief && typeof body.projectBuildBrief === "object") {
       if (!current.projectBuildBrief) {
         return NextResponse.json({ success: false, error: "This project has no build checklist." }, { status: 409 });
       }
@@ -104,13 +140,10 @@ export async function PATCH(request: NextRequest) {
     }
     if (approvedPrice !== undefined) {
       updates.approvedPrice = Number(approvedPrice);
-      const current = DataStore.getProjectById(id);
-      if (current) {
-        updates.remainingBalance = Math.max(0, Number(approvedPrice) - (current.advanceReceived || 0));
-      }
+      updates.remainingBalance = Math.max(0, Number(approvedPrice) - (current.advanceReceived || 0));
     }
 
-    const updated = DataStore.updateProject(id, updates);
+    const updated = await updateProjectRecord(id, updates);
     if (!updated) {
       return NextResponse.json({ success: false, error: "Project not found" }, { status: 404 });
     }
@@ -118,6 +151,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true, project: updated });
   } catch (error) {
     console.error("Update project error", error);
-    return NextResponse.json({ success: false, error: "Failed to update project" }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof ProjectWorkspaceStorageError ? error.message : "Failed to update project",
+      },
+      { status: error instanceof ProjectWorkspaceStorageError ? 503 : 500 }
+    );
   }
 }

@@ -111,7 +111,7 @@ Runs the automated unit test suite verifying:
 
 ## 🗄 Database & Supabase Deployment
 
-The application uses Supabase PostgreSQL for calculator/contact inquiry submissions and payment workflows. Other legacy client, project, invoice, and financial-ledger records still use `DataStore` and `data/db.json`.
+The application uses Supabase PostgreSQL for calculator/contact inquiry submissions, payment workflows, and active project workspaces when configured. Legacy client directories, invoices, and financial-ledger records still use `DataStore` and `data/db.json`.
 
 To deploy to Supabase:
 1. Create a new project at [supabase.com](https://supabase.com).
@@ -139,6 +139,12 @@ Calculator and contact inquiries are saved in the private Supabase `inquiries` t
 2. Confirm `NEXT_PUBLIC_SUPABASE_URL` and the server-only `SUPABASE_SERVICE_ROLE_KEY` are configured in Vercel.
 3. A customer can optionally consent to an automatic WhatsApp reference confirmation. Create and approve a WhatsApp message template whose body includes `Hello {{1}}, your inquiry was received. Your reference is {{2}}. We will follow up shortly.` Then set `WHATSAPP_CUSTOMER_TEMPLATE_NAME` and optionally `WHATSAPP_CUSTOMER_TEMPLATE_LANGUAGE` in Vercel. The existing `WHATSAPP_API_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and `WHATSAPP_GRAPH_API_VERSION` are reused. Without an approved template, the saved reference still appears and the customer can send it to DWD using the WhatsApp button.
 4. Redeploy after applying the migration and environment variables. Verify a test submission appears in `/admin/inquiries` and its reference works on `/track-order`.
+
+### Durable project workspaces
+
+Project conversion and the role-assigned delivery workflow use Supabase-backed project snapshots in production. Apply [`supabase/project-workspaces.sql`](./supabase/project-workspaces.sql) after the inquiry migration and configure `NEXT_PUBLIC_SUPABASE_URL` plus the server-only `SUPABASE_SERVICE_ROLE_KEY`. The migration uses text project IDs to match the app's existing `proj-*` identifiers without altering the legacy UUID-based `projects` table.
+
+Each advance-verified inquiry creates a gated work queue for requirements, client assets, planning, implementation, QA, preview, and release. The current queue is admin-assisted; code-writing and deployment agents are not connected yet. Production release remains behind explicit admin confirmation.
 
 ### Free quotation-to-project gate
 
