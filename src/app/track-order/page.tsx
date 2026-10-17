@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatPKR, buildWhatsAppLink, BUSINESS_INFO } from "@/lib/constants";
 import type { PublicProjectProgress, PublicProjectMilestoneStatus } from "@/lib/types";
+import WorkforceOffice from "@/components/projects/WorkforceOffice";
 import {
   Search,
   CheckCircle2,
@@ -102,6 +103,10 @@ function TrackOrderContent() {
       </section>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="mb-10">
+          <WorkforceOffice progress={projectProgress} />
+        </div>
+
         {/* Lookup Form */}
         <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 mb-10 shadow-sm">
           <form onSubmit={handleTrack} className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
