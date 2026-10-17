@@ -11,7 +11,7 @@ Developed with **Google Antigravity** and **Visual Studio Code**, built on **Nex
 - **Tagline:** Ideas | Code | Real Solutions
 - **Headline:** *We Turn Your Ideas Into Powerful Web Applications*
 - **Official Email:** `durraniwebdevelopers@gmail.com`
-- **Phone / WhatsApp:** `03140073794` (International: `+92 314 0073794`)
+- **Phone / WhatsApp:** `03296260778` (International: `+92 329 6260778`)
 - **Default Currency:** Pakistani Rupees (PKR)
 - **Deployment Platform:** Vercel
 
