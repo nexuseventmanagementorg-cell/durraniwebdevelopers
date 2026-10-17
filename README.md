@@ -82,7 +82,7 @@ The Settings dashboard includes an admin password-change form. To persist passwo
 
 ### Automatic admin notifications
 
-New calculator inquiries, contact messages, payment orders/receipts, and confirmed Safepay payments trigger independent email and WhatsApp alerts. A provider failure is logged and does not discard a successfully saved submission.
+New calculator inquiries, consented incomplete calculator leads, contact messages, payment orders/receipts, and confirmed Safepay payments trigger independent email and WhatsApp alerts to the administrator. Incomplete-lead alerts notify the business only; they do not send an automatic follow-up to the visitor. A provider failure is logged and does not discard a successfully saved submission.
 
 - **Email:** Configure `RESEND_API_KEY` and `RESEND_FROM_EMAIL` with a sender verified in Resend. Set `ADMIN_NOTIFICATION_EMAIL` to override the default DWD business email.
 - **WhatsApp:** Configure `WHATSAPP_API_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and `WHATSAPP_ADMIN_PHONE` in international digits. Create and get Meta approval for the WhatsApp message template named by `WHATSAPP_ADMIN_TEMPLATE_NAME`, then set its language. The template body must contain four placeholders, in order: alert type, reference, customer name/phone, and details.

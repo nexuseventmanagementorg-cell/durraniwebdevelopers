@@ -7,6 +7,7 @@ import type { CurrencyCode } from "@/lib/currency";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { createCalculatorLeadToken, validateCalculatorLeadContact } from "@/lib/calculator-lead-security";
 import { CalculatorLeadStorageError, createCalculatorLead } from "@/lib/calculator-lead-storage";
+import { notifyAdminOfSubmission } from "@/lib/admin-notifications";
 import type { CalculatorLead } from "@/lib/types";
 
 function shortText(value: unknown, maxLength: number): string {
@@ -82,6 +83,20 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
     };
     await createCalculatorLead(lead);
+    await notifyAdminOfSubmission({
+      type: "Incomplete calculator lead",
+      reference: lead.id,
+      customerName: lead.name || "Not provided",
+      customerEmail: lead.email,
+      customerPhone: lead.phone,
+      details: [
+        `Goal: ${lead.goal}`,
+        `Budget: ${lead.budgetBand}`,
+        `Starting estimate: ${lead.recommendation.calculation.estimatedTotal} ${lead.currency}`,
+        `Language: ${lead.language}`,
+        "The visitor saved a calculator plan and may not submit a final inquiry.",
+      ].join("\n"),
+    });
 
     return NextResponse.json({
       success: true,
