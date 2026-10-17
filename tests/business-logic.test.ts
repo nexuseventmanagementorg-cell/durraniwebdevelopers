@@ -181,17 +181,37 @@ test("Admin WhatsApp links target the customer's normalized phone number", () =>
 });
 
 test("Admin Token Signing and Tamper Prevention", () => {
+  const previousSecret = process.env.SESSION_SECRET;
+  process.env.SESSION_SECRET = "test-session-secret-with-at-least-32-bytes";
   const email = "admin@durraniwebdevelopers.com";
-  const token = signToken({ email, timestamp: Date.now() });
+  try {
+    const token = signToken({ email, timestamp: Date.now() });
 
-  const verified = verifyToken(token);
-  assert.ok(verified, "Valid token must be verified");
-  assert.equal(verified?.email, email);
+    const verified = verifyToken(token);
+    assert.ok(verified, "Valid token must be verified");
+    assert.equal(verified?.email, email);
 
-  // Tampered signature
-  const parts = token.split(".");
-  const tamperedToken = `${parts[0]}.0000000000000000000000000000000000000000000000000000000000000000`;
-  assert.equal(verifyToken(tamperedToken), null, "Tampered token must be rejected");
+    const parts = token.split(".");
+    const tamperedToken = `${parts[0]}.0000000000000000000000000000000000000000000000000000000000000000`;
+    assert.equal(verifyToken(tamperedToken), null, "Tampered token must be rejected");
+  } finally {
+    if (previousSecret === undefined) delete process.env.SESSION_SECRET;
+    else process.env.SESSION_SECRET = previousSecret;
+  }
+});
+
+test("Admin sessions fail closed without a shared secret", () => {
+  const previousSecret = process.env.SESSION_SECRET;
+  delete process.env.SESSION_SECRET;
+  try {
+    assert.throws(
+      () => signToken({ email: "admin@example.com", timestamp: Date.now() }),
+      /SESSION_SECRET/
+    );
+    assert.equal(verifyToken("invalid.token"), null);
+  } finally {
+    if (previousSecret !== undefined) process.env.SESSION_SECRET = previousSecret;
+  }
 });
 
 test("Admin password hashes are salted and verified without storing plaintext", async () => {

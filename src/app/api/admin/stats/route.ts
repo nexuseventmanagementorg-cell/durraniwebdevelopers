@@ -2,14 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/auth";
 import { DataStore } from "@/lib/store";
 import { getInquiries } from "@/lib/inquiry-storage";
+import { getProjectRecords, ProjectWorkspaceStorageError } from "@/lib/project-storage";
 
 export async function GET(request: NextRequest) {
   if (!verifyAdminRequest(request)) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  let projects;
+  try {
+    projects = await getProjectRecords();
+  } catch (error) {
+    const message = error instanceof ProjectWorkspaceStorageError
+      ? error.message
+      : "Project data could not be loaded.";
+    return NextResponse.json({ success: false, error: message }, { status: 503 });
+  }
+
   const clients = DataStore.getClients();
-  const projects = DataStore.getProjects();
   const inquiries = await getInquiries();
   const payments = DataStore.getPayments();
   const reminders = DataStore.getReminders();

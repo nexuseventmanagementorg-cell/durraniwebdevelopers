@@ -3,18 +3,23 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 const SESSION_COOKIE_NAME = "dwd_admin_session";
-const SESSION_SECRET =
-  process.env.SESSION_SECRET ||
-  (process.env.NODE_ENV === "production"
-    ? null
-    : crypto.randomBytes(32).toString("hex"));
+
+export class AdminSessionConfigurationError extends Error {
+  constructor() {
+    super("SESSION_SECRET must be configured as a shared server-side environment variable.");
+    this.name = "AdminSessionConfigurationError";
+  }
+}
+
+function getSessionSecret(): string | null {
+  return process.env.SESSION_SECRET?.trim() || null;
+}
 
 export function signToken(payload: { email: string; timestamp: number }): string {
-  if (!SESSION_SECRET) {
-    throw new Error("SESSION_SECRET must be configured in production.");
-  }
+  const sessionSecret = getSessionSecret();
+  if (!sessionSecret) throw new AdminSessionConfigurationError();
   const json = JSON.stringify(payload);
-  const hmac = crypto.createHmac("sha256", SESSION_SECRET);
+  const hmac = crypto.createHmac("sha256", sessionSecret);
   hmac.update(json);
   const signature = hmac.digest("hex");
   const encodedPayload = Buffer.from(json).toString("base64url");
@@ -22,7 +27,8 @@ export function signToken(payload: { email: string; timestamp: number }): string
 }
 
 export function verifyToken(token: string): { email: string; timestamp: number } | null {
-  if (!SESSION_SECRET) return null;
+  const sessionSecret = getSessionSecret();
+  if (!sessionSecret) return null;
 
   try {
     const parts = token.split(".");
@@ -30,7 +36,7 @@ export function verifyToken(token: string): { email: string; timestamp: number }
     const [encodedPayload, signature] = parts;
     const json = Buffer.from(encodedPayload, "base64url").toString("utf-8");
 
-    const hmac = crypto.createHmac("sha256", SESSION_SECRET);
+    const hmac = crypto.createHmac("sha256", sessionSecret);
     hmac.update(json);
     const expectedSignature = hmac.digest("hex");
 

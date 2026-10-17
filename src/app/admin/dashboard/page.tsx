@@ -23,6 +23,7 @@ import {
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     async function loadStats() {
@@ -33,11 +34,10 @@ export default function AdminDashboardPage() {
           return;
         }
         const data = await res.json();
-        if (data.success) {
-          setStats(data.stats);
-        }
+        if (!res.ok || !data.success) throw new Error(data.error || "Dashboard data could not be loaded.");
+        setStats(data.stats);
       } catch (err) {
-        console.error("Failed to load admin stats", err);
+        setLoadError(err instanceof Error ? err.message : "Failed to load dashboard data.");
       } finally {
         setLoading(false);
       }
@@ -71,7 +71,7 @@ export default function AdminDashboardPage() {
               <p className="text-xs text-gray-500 font-bold">Aggregating live business ledger...</p>
             </div>
           ) : !stats ? (
-            <div className="p-8 text-center text-xs text-gray-500">Failed to load dashboard data.</div>
+            <div role="alert" className="m-6 border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">{loadError || "Failed to load dashboard data."}</div>
           ) : (
             <>
               {/* Row 1: Key Metrics */}
@@ -147,14 +147,14 @@ export default function AdminDashboardPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-[#101216] text-white p-6 rounded-2xl border border-gray-800 shadow-card-dark">
                   <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
-                    <span className="uppercase tracking-wider font-bold">Verified Revenue Received</span>
+                    <span className="uppercase tracking-wider font-bold">Admin-Marked Payments</span>
                     <TrendingUp className="w-4 h-4 text-emerald-400" />
                   </div>
                   <div className="text-3xl font-black text-white">
                     {formatPKR(stats.revenueReceived)}
                   </div>
                   <p className="text-[11px] text-gray-400 mt-2">
-                    Verified through JazzCash, EasyPaisa & Bank Transfer.
+                    Manually marked by admin; confirm against the bank or provider record.
                   </p>
                 </div>
 

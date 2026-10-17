@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { setAdminSessionCookie } from "@/lib/auth";
+import { AdminSessionConfigurationError, setAdminSessionCookie } from "@/lib/auth";
 import {
   AdminCredentialStoreError,
   verifyAdminCredentials,
@@ -47,6 +47,12 @@ export async function POST(request: NextRequest) {
     setAdminSessionCookie(response, username);
     return response;
   } catch (error) {
+    if (error instanceof AdminSessionConfigurationError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 503 }
+      );
+    }
     if (error instanceof AdminCredentialStoreError) {
       return NextResponse.json(
         { success: false, error: error.message },
