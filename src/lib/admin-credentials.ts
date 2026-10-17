@@ -96,10 +96,12 @@ export async function verifyAdminCredentials(
   password: string
 ): Promise<boolean> {
   const configuredUsername = process.env.ADMIN_USERNAME;
-  if (
-    !configuredUsername ||
-    username.trim().toLowerCase() !== configuredUsername.trim().toLowerCase()
-  ) {
+  if (!configuredUsername) {
+    throw new AdminCredentialStoreError(
+      "Admin login is not configured. Set ADMIN_USERNAME in .env.local and restart the server."
+    );
+  }
+  if (username.trim().toLowerCase() !== configuredUsername.trim().toLowerCase()) {
     return false;
   }
 
@@ -107,7 +109,12 @@ export async function verifyAdminCredentials(
   if (storedHash) return verifyAdminPasswordHash(password, storedHash);
 
   const bootstrapPassword = process.env.ADMIN_PASSWORD;
-  return Boolean(bootstrapPassword && password === bootstrapPassword);
+  if (!bootstrapPassword) {
+    throw new AdminCredentialStoreError(
+      "Admin password is not configured. Set ADMIN_PASSWORD in .env.local or save a password in Supabase."
+    );
+  }
+  return password === bootstrapPassword;
 }
 
 export async function saveAdminPassword(password: string): Promise<void> {

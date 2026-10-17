@@ -6,6 +6,10 @@ import {
 } from "./constants";
 import type { PricingPackageId } from "./constants";
 import type { CalculationBreakdown } from "./types";
+import { getRegionalPricingConfig } from "./currency";
+import type { CurrencyCode, ExchangeRates } from "./currency";
+
+export type CalculatorGuideLanguage = "roman-ur" | "en";
 
 export type BeginnerProjectGoal =
   | "business-site"
@@ -23,6 +27,16 @@ export type BeginnerBudgetBand =
   | "300k-plus"
   | "not-sure";
 
+export function isBeginnerProjectGoal(value: unknown): value is BeginnerProjectGoal {
+  return ["business-site", "restaurant", "online-store", "bookings", "business-tools", "online-platform", "not-sure"]
+    .includes(value as string);
+}
+
+export function isBeginnerBudgetBand(value: unknown): value is BeginnerBudgetBand {
+  return ["under-50k", "50-150k", "150-300k", "300k-plus", "not-sure"]
+    .includes(value as string);
+}
+
 export interface BeginnerBudgetPlan {
   title: string;
   projectType: string;
@@ -38,7 +52,10 @@ export interface BeginnerBudgetPlan {
 
 export function getBeginnerBudgetPlan(
   goal: BeginnerProjectGoal,
-  budget: BeginnerBudgetBand
+  budget: BeginnerBudgetBand,
+  currency: CurrencyCode = "PKR",
+  rates: ExchangeRates = { PKR: 1 },
+  language: CalculatorGuideLanguage = "en"
 ): BeginnerBudgetPlan {
   const hasAdminBudget = budget !== "under-50k" && budget !== "not-sure";
   const isHigherBudget = budget === "150-300k" || budget === "300k-plus";
@@ -184,11 +201,127 @@ export function getBeginnerBudgetPlan(
     }
   }
 
-  const pricingConfig = pricingPackage
+  const packagePricingConfig = pricingPackage
     ? getPricingPackageConfig(DEFAULT_PRICING_CONFIG, pricingPackage)
     : DEFAULT_PRICING_CONFIG;
+  const pricingCurrency = currency === "PKR" || rates[currency] ? currency : "PKR";
+  const pricingConfig = getRegionalPricingConfig(packagePricingConfig, pricingCurrency, rates);
   const chargeableAddons = getChargeableAddonIds(selectedAddons, pricingPackage, adminPanelType);
   const calculation = calculateBudget(adminPanelType, chargeableAddons, pricingConfig);
+
+  if (language === "roman-ur") {
+    if (goal === "restaurant") {
+      title = pricingPackage ? "Restaurant menu aur online ordering" : "Restaurant menu aur WhatsApp orders";
+      problemToSolve = "Main chahta/chahti hoon ke customers mera menu, location aur timings dekhein aur order ke liye rabta karein.";
+      included = pricingPackage
+        ? [
+            "Restaurant menu aur products ki online list.",
+            "Online cart, orders aur dashboard jahan se team orders manage kare.",
+            "Payment provider ka setup; provider ki fees alag hongi.",
+          ]
+        : [
+            "Mobile par asani se khulne wala restaurant menu aur business details.",
+            "Order ke liye seedha WhatsApp aur contact option.",
+            "Baad mein full online ordering add karne ka option.",
+          ];
+      notIncluded = pricingPackage
+        ? [
+            "Delivery areas, menu ki quantity aur payment provider final quote se pehle confirm honge.",
+            "Domain, hosting aur third-party services ki fees jahan laagu hon alag hongi.",
+          ]
+        : [
+            "Online cart, card checkout aur automatic delivery management is starter estimate mein shamil nahi.",
+            "Domain, hosting aur third-party services ki fees jahan laagu hon alag hongi.",
+          ];
+    } else if (goal === "online-store") {
+      title = pricingPackage
+        ? pricingPackage === "ecommerce_advanced" ? "Advanced online store" : "Mukammal online store"
+        : "Product catalog aur WhatsApp orders se shuru karein";
+      problemToSolve = "Main chahta/chahti hoon ke customers mere products dekhein aur order ke liye mujh se rabta karein.";
+      included = pricingPackage
+        ? [
+            "Products ki catalog aur stock manage karne ka system.",
+            "Shopping cart, online orders aur admin dashboard.",
+            "Payment provider ka setup; provider ki fees alag hongi.",
+            ...(pricingPackage === "ecommerce_advanced" ? ["Advanced reports aur dashboard."] : []),
+          ]
+        : [
+            "Business aur products ki maloomat ke saath pehla version.",
+            "Mobile-friendly product catalog aur customers ke liye contact option.",
+            "Baad mein full checkout store banane ka option.",
+          ];
+      notIncluded = pricingPackage
+        ? [
+            "Product quantity, delivery rules aur payment provider final quote se pehle confirm honge.",
+            "Domain, hosting aur third-party services ki fees jahan laagu hon alag hongi.",
+          ]
+        : [
+            "Automatic stock management, shopping cart aur online checkout is starter estimate mein shamil nahi.",
+            "Domain, hosting aur third-party services ki fees jahan laagu hon alag hongi.",
+          ];
+    } else if (goal === "bookings") {
+      title = "Appointments booking ka starter plan";
+      problemToSolve = "Main chahta/chahti hoon ke customers meri services aur available booking times dekh kar appointment request karein.";
+      included = [
+        "Booking calendar aur appointment request ka process.",
+        "Aapki services aur business contact details.",
+        ...(adminPanelType === "client_admin" ? ["Bookings manage karne ke liye admin dashboard."] : []),
+      ];
+      notIncluded = [
+        "Calendar provider, video call, SMS ya payment subscriptions ki fees alag hongi.",
+        "Domain, hosting aur third-party services ki fees jahan laagu hon alag hongi.",
+      ];
+    } else if (goal === "business-tools") {
+      title = "Business manage karne ka simple dashboard";
+      problemToSolve = "Main customer records ya roz ke kaam jaisa aik zaroori business process private dashboard mein manage karna chahta/chahti hoon.";
+      included = [
+        "Aik tay-shuda business process ke liye private admin dashboard.",
+        "Us process ke zaroori records aur actions.",
+        "Admin team ke liye mobile-friendly interface.",
+      ];
+      notIncluded = [
+        "Mazeed staff roles, accounting integrations aur complex automation alag scope mein dekhe jayenge.",
+        "Domain, hosting aur third-party services ki fees jahan laagu hon alag hongi.",
+      ];
+    } else if (goal === "online-platform") {
+      title = pricingPackage ? "Online platform ka pehla version" : "Aapke idea ka chhota pehla version";
+      problemToSolve = pricingPackage
+        ? "Main chahta/chahti hoon ke customers sign in karke apne online product ka bunyadi feature use karein."
+        : "Mere paas online product ka idea hai; mujhe pehle useful feature ko samajhne mein madad chahiye.";
+      included = pricingPackage
+        ? [
+            "Customer sign-in aur connected database ke saath SaaS starter.",
+            "Pehle release ke liye aik tay-shuda core feature.",
+            "Service manage karne ke liye platform admin foundation.",
+          ]
+        : [
+            "Aapke idea par asaan alfaaz mein scope conversation.",
+            "Aik bunyadi website ya application feature ka starter estimate.",
+            "Baad ke phase ke liye alag rakhe jane wale features ki list.",
+          ];
+      notIncluded = pricingPackage
+        ? [
+            "Subscription billing, multiple business workspaces aur usage-based plans is starter mein shamil nahi.",
+            "Domain, hosting aur third-party services ki fees jahan laagu hon alag hongi.",
+          ]
+        : [
+            "Starter price mein mukammal multi-user subscription platform shamil nahi.",
+            "Domain, hosting aur third-party services ki fees jahan laagu hon alag hongi.",
+          ];
+    } else {
+      title = goal === "not-sure" ? "Pehle aik seedhe business website plan se shuru karein" : "Business ki basic website";
+      problemToSolve = "Main apne business ki maloomat aur services online dikhana chahta/chahti hoon taake customers asani se rabta kar saken.";
+      included = [
+        "Aapke business aur services ki maloomat ke pages.",
+        "Mobile aur computer dono par kaam karne wala layout.",
+        "Customers ke liye wazeh contact option.",
+      ];
+      notIncluded = [
+        "Online checkout, customer accounts aur custom integrations final scope mein shamil kiye baghair included nahi.",
+        "Domain, hosting aur third-party services ki fees jahan laagu hon alag hongi.",
+      ];
+    }
+  }
 
   return {
     title,

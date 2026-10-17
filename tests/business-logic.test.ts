@@ -20,6 +20,7 @@ import {
 import { signToken, verifyToken } from "../src/lib/auth";
 import {
   hashAdminPassword,
+  verifyAdminCredentials,
   verifyAdminPasswordHash,
 } from "../src/lib/admin-credentials";
 import { checkRateLimit } from "../src/lib/rateLimit";
@@ -39,7 +40,10 @@ import {
 import { createProjectAutomationWorkflow, updateProjectWorkflowTask } from "../src/lib/project-workflow";
 import { reviewInquiryScope } from "../src/lib/inquiry-review";
 import { getBeginnerBudgetPlan } from "../src/lib/calculator-guide";
-import type { Inquiry } from "../src/lib/types";
+import { createCalculatorLeadToken, validateCalculatorLeadContact, verifyCalculatorLeadToken } from "../src/lib/calculator-lead-security";
+import { isIncompleteCalculatorLead } from "../src/lib/calculator-lead-storage";
+import { buildCalculatorLeadFollowups } from "../src/lib/calculator-lead-followups";
+import type { CalculatorLead, Inquiry } from "../src/lib/types";
 import {
   canStartProjectAfterVerifiedAdvance,
   sumVerifiedInquiryAdvances,
@@ -199,6 +203,21 @@ test("Admin password hashes are salted and verified without storing plaintext", 
   assert.equal(await verifyAdminPasswordHash(password, firstHash), true);
   assert.equal(await verifyAdminPasswordHash("incorrect-password", firstHash), false);
   assert.equal(firstHash.includes(password), false);
+});
+
+test("Admin login reports missing username configuration", async () => {
+  const previousUsername = process.env.ADMIN_USERNAME;
+  delete process.env.ADMIN_USERNAME;
+
+  try {
+    await assert.rejects(
+      verifyAdminCredentials("admin", "password"),
+      /ADMIN_USERNAME/
+    );
+  } finally {
+    if (previousUsername === undefined) delete process.env.ADMIN_USERNAME;
+    else process.env.ADMIN_USERNAME = previousUsername;
+  }
 });
 
 test("Rate limiter threshold enforcement", () => {
@@ -474,6 +493,87 @@ test("Beginner calculator plans fit the selected budget without forced extras", 
 
   const saasStarter = getBeginnerBudgetPlan("online-platform", "150-300k");
   assert.equal(saasStarter.calculation.estimatedTotal, 250000);
+
+  const internationalRomanUrdu = getBeginnerBudgetPlan(
+    "online-store",
+    "150-300k",
+    "EUR",
+    { PKR: 1, EUR: 0.0003 },
+    "roman-ur"
+  );
+  assert.equal(internationalRomanUrdu.calculation.estimatedTotal, 90);
+  assert.equal(internationalRomanUrdu.title, "Mukammal online store");
+});
+
+test("Calculator leads require consent and a reachable contact", () => {
+  assert.equal(isIncompleteCalculatorLead({ status: "New" }), true);
+  assert.equal(isIncompleteCalculatorLead({ convertedInquiryId: "DW-123456", status: "New" }), false);
+  assert.equal(isIncompleteCalculatorLead({ status: "Converted" }), false);
+
+  assert.match(
+    validateCalculatorLeadContact({ email: "", phone: "", contactConsent: true }) || "",
+    /email address or WhatsApp/
+  );
+  assert.match(
+    validateCalculatorLeadContact({ email: "client@example.com", phone: "", contactConsent: false }) || "",
+    /Consent is required/
+  );
+  assert.equal(
+    validateCalculatorLeadContact({ email: "client@example.com", phone: "", contactConsent: true }),
+    null
+  );
+  assert.equal(
+    validateCalculatorLeadContact({ email: "", phone: "+1 416 555 0100", contactConsent: true }),
+    null
+  );
+  assert.match(
+    validateCalculatorLeadContact({ email: "", phone: "------------", contactConsent: true }) || "",
+    /valid WhatsApp number/
+  );
+
+  const token = createCalculatorLeadToken("calc-lead-test");
+  assert.equal(verifyCalculatorLeadToken("calc-lead-test", token), true);
+  assert.equal(verifyCalculatorLeadToken("another-lead", token), false);
+  assert.equal(verifyToken(token), null);
+});
+
+test("Calculator lead follow-ups are localized, budget-aware, and do not invent pressure", () => {
+  const romanLead = {
+    id: "LD-123",
+    name: "Ayesha",
+    email: "ayesha@example.com",
+    phone: "03001234567",
+    language: "roman-ur",
+    locale: "en-PK",
+    currency: "PKR",
+    goal: "online-store",
+    budgetBand: "under-50k",
+    userDescription: "",
+    progressStep: 2,
+    recommendation: {
+      title: "Product catalog and WhatsApp orders",
+      projectType: "E-commerce store",
+      calculation: calculateBudget("none", []),
+      included: ["Product catalog", "WhatsApp ordering"],
+      notIncluded: ["Online checkout is deferred until a later phase."],
+    },
+    questionnaire: {},
+    contactConsentAt: "2026-10-17T00:00:00.000Z",
+    status: "New",
+    adminNotes: "",
+    createdAt: "2026-10-17T00:00:00.000Z",
+    updatedAt: "2026-10-17T00:00:00.000Z",
+  } as CalculatorLead;
+  const romanTemplates = buildCalculatorLeadFollowups(romanLead);
+  assert.equal(romanTemplates.length, 3);
+  assert.match(romanTemplates[0].message, /Ayesha/);
+  assert.match(romanTemplates[0].message, /Koi pressure nahi/);
+  assert.match(romanTemplates[2].message, /35,000/);
+  assert.doesNotMatch(romanTemplates[0].message, /sirf aaj|last chance|guaranteed/i);
+
+  const englishTemplates = buildCalculatorLeadFollowups({ ...romanLead, language: "en", currency: "USD" });
+  assert.match(englishTemplates[0].message, /If the full scope does not fit your budget/);
+  assert.match(englishTemplates[2].message, /US\$/);
 });
 
 test("Website estimator maps visible store and admin signals to calculator pricing", () => {

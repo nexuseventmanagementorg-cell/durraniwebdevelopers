@@ -146,6 +146,12 @@ Project conversion and the role-assigned delivery workflow use Supabase-backed p
 
 Each advance-verified inquiry creates a gated work queue for requirements, client assets, planning, implementation, QA, preview, and release. The current queue is admin-assisted; code-writing and deployment agents are not connected yet. Production release remains behind explicit admin confirmation.
 
+### Consented calculator leads
+
+The beginner calculator guide defaults to Roman Urdu for Pakistan visitors and English for other regions; visitors can switch languages. Calculator prices use the selected regional currency and exchange-rate snapshot. After a visitor provides an email or WhatsApp number and explicitly agrees to follow-up, the lead is created when they start the calculator and updated as they answer each step, even if no final inquiry is submitted. The record stores the selected goal, budget, recommendation, language, currency, and last saved step. Incomplete leads remain available for admin follow-up at `/admin/leads`; admins can update status and private notes and open prefilled email/WhatsApp follow-up links. Once a final inquiry is successfully submitted, its lead is linked to that inquiry and disappears from `/admin/leads`; the completed submission is handled by the existing `/admin/inquiries` inbox.
+
+Before production lead capture is enabled, run [`supabase/calculator-leads.sql`](./supabase/calculator-leads.sql) in the dedicated DWD Supabase SQL Editor and keep `NEXT_PUBLIC_SUPABASE_URL` plus `SUPABASE_SERVICE_ROLE_KEY` configured server-side. The table is private under RLS; only server-side service-role APIs can list or change leads. If the migration is missing, saving a lead returns an error but visitors can still continue the calculator without saving.
+
 ### Free quotation-to-project gate
 
 The project-start gate does not require an AI subscription or payment API. Move an inquiry to **Quotation Sent**, then **Awaiting Advance** only after the client accepts the final quote. Verify a submitted receipt in **Receipt Reviews**; when verified receipts meet the required advance, the inquiry becomes **Advance Received** and project creation unlocks.

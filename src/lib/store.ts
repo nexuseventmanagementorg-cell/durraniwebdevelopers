@@ -12,11 +12,13 @@ import {
   PricingRuleConfig,
   AuditLog,
   SystemSettings,
+  CalculatorLead,
 } from "./types";
 import { DEFAULT_PRICING_CONFIG, calculateBudget, mergePricingConfigWithDefaults } from "./constants";
 
 interface DatabaseSchema {
   inquiries: Inquiry[];
+  calculatorLeads?: CalculatorLead[];
   projects: Project[];
   clients: Client[];
   payments: PaymentRecord[];
@@ -82,6 +84,7 @@ function getInitialData(): DatabaseSchema {
 
   return {
     inquiries: initialInquiries,
+    calculatorLeads: [],
     projects: initialProjects,
     clients: initialClients,
     payments: initialPayments,
@@ -176,6 +179,59 @@ export class DataStore {
 
     this.writeData(data);
     return data.inquiries[idx];
+  }
+
+  static getCalculatorLeads(): CalculatorLead[] {
+    const data = this.ensureDataFile();
+    return [...(data.calculatorLeads || [])].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  }
+
+  static getCalculatorLeadById(id: string): CalculatorLead | undefined {
+    const data = this.ensureDataFile();
+    return (data.calculatorLeads || []).find((lead) => lead.id === id);
+  }
+
+  static createCalculatorLead(lead: CalculatorLead): CalculatorLead {
+    const data = this.ensureDataFile();
+    data.calculatorLeads = data.calculatorLeads || [];
+    data.calculatorLeads.unshift(lead);
+    this.addAuditLog({
+      action: "CALCULATOR_LEAD_CREATED",
+      actor: "Prospective client",
+      targetType: "calculator-lead",
+      targetId: lead.id,
+      details: `Consented calculator lead saved. Goal: ${lead.goal}; estimate: ${lead.recommendation.calculation.estimatedTotal} ${lead.currency}.`,
+    }, data);
+    this.writeData(data, true);
+    return lead;
+  }
+
+  static updateCalculatorLead(
+    id: string,
+    updates: Partial<CalculatorLead>,
+    actor = "Admin"
+  ): CalculatorLead | null {
+    const data = this.ensureDataFile();
+    data.calculatorLeads = data.calculatorLeads || [];
+    const index = data.calculatorLeads.findIndex((lead) => lead.id === id);
+    if (index < 0) return null;
+
+    data.calculatorLeads[index] = {
+      ...data.calculatorLeads[index],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    this.addAuditLog({
+      action: "CALCULATOR_LEAD_UPDATED",
+      actor,
+      targetType: "calculator-lead",
+      targetId: id,
+      details: `Calculator lead updated. Status: ${data.calculatorLeads[index].status}.`,
+    }, data);
+    this.writeData(data, true);
+    return data.calculatorLeads[index];
   }
 
   // Projects

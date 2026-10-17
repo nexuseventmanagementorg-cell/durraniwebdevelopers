@@ -96,6 +96,36 @@ export interface InquiryScopeReview {
   recommendedNextAction: string;
 }
 
+export type CalculatorLeadStatus = "New" | "Contacted" | "Qualified" | "Converted" | "Closed";
+
+export interface CalculatorLead {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  language: "roman-ur" | "en";
+  locale: string;
+  currency: string;
+  goal: string;
+  budgetBand: string;
+  userDescription: string;
+  progressStep: number;
+  recommendation: {
+    title: string;
+    projectType: string;
+    calculation: CalculationBreakdown;
+    included: string[];
+    notIncluded: string[];
+  };
+  questionnaire: Record<string, unknown>;
+  convertedInquiryId?: string;
+  contactConsentAt: string;
+  status: CalculatorLeadStatus;
+  adminNotes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProjectReadinessChecklistItem {
   id: string;
   label: string;
@@ -140,6 +170,7 @@ export interface Inquiry {
   phone: string;
   cityCountry: string;
   preferredContact: "whatsapp" | "email" | "phone";
+  language?: "roman-ur" | "en";
   whatsappConfirmationConsent?: boolean;
   whatsappConfirmationStatus?: "sent" | "failed" | "not_configured" | "not_requested";
   customerIntro: string;
@@ -343,7 +374,7 @@ export interface AuditLog {
   id: string;
   action: string;
   actor: string;
-  targetType: "inquiry" | "project" | "client" | "payment" | "invoice" | "pricing" | "reminder" | "auth";
+  targetType: "inquiry" | "project" | "client" | "payment" | "invoice" | "pricing" | "reminder" | "calculator-lead" | "auth";
   targetId: string;
   details: string;
   timestamp: string;

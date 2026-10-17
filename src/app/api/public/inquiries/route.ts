@@ -15,6 +15,8 @@ import {
   notifyAdminOfSubmission,
   sendInquiryWhatsappConfirmation,
 } from "@/lib/admin-notifications";
+import { verifyCalculatorLeadToken } from "@/lib/calculator-lead-security";
+import { updateCalculatorLead } from "@/lib/calculator-lead-storage";
 
 function sanitizeScanFeatures(value: unknown): InquiryScanFeature[] {
   if (!Array.isArray(value)) return [];
@@ -128,6 +130,7 @@ export async function POST(request: NextRequest) {
       phone: body.phone.trim(),
       cityCountry: (body.cityCountry || "").trim(),
       preferredContact: body.preferredContact || "whatsapp",
+      language: body.language === "roman-ur" ? "roman-ur" : "en",
       customerIntro: (body.customerIntro || "").trim(),
       whatsappConfirmationConsent: body.whatsappConfirmationConsent === true,
 
@@ -171,6 +174,19 @@ export async function POST(request: NextRequest) {
     };
 
     const savedInquiry = await saveInquiry(newInquiry);
+    const calculatorLead = body.calculatorLead;
+    if (
+      typeof calculatorLead === "object" && calculatorLead !== null &&
+      "id" in calculatorLead && typeof calculatorLead.id === "string" &&
+      "token" in calculatorLead && typeof calculatorLead.token === "string" &&
+      verifyCalculatorLeadToken(calculatorLead.id, calculatorLead.token)
+    ) {
+      try {
+        await updateCalculatorLead(calculatorLead.id, { convertedInquiryId: savedInquiry.id, progressStep: 8 });
+      } catch (error) {
+        console.error("Calculator lead could not be linked to inquiry", error);
+      }
+    }
     const whatsappConfirmation = await sendInquiryWhatsappConfirmation({
       customerName: savedInquiry.customerName,
       customerPhone: savedInquiry.phone,
