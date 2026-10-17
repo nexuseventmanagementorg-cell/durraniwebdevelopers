@@ -31,7 +31,7 @@ import {
   isVisitorAnalyticsEvent,
 } from "../src/lib/visitor-analytics";
 import { detectWebsiteFeatures, estimateWebsite } from "../src/lib/website-estimator";
-import { sendInquiryWhatsappConfirmation } from "../src/lib/admin-notifications";
+import { notifyAdminOfSubmission, sendInquiryWhatsappConfirmation } from "../src/lib/admin-notifications";
 import {
   buildProjectBuildBriefRecord,
   buildInquiryProjectBrief,
@@ -321,6 +321,71 @@ test("WhatsApp inquiry confirmation requires opt-in and an approved template", a
       "not_configured"
     );
   } finally {
+    for (const key of envKeys) {
+      const value = previousValues[key];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
+test("Admin WhatsApp alert uses the configured template and normalized recipient", async () => {
+  const envKeys = [
+    "RESEND_API_KEY",
+    "RESEND_FROM_EMAIL",
+    "WHATSAPP_API_TOKEN",
+    "WHATSAPP_PHONE_NUMBER_ID",
+    "WHATSAPP_ADMIN_PHONE",
+    "WHATSAPP_ADMIN_TEMPLATE_NAME",
+    "WHATSAPP_ADMIN_TEMPLATE_LANGUAGE",
+    "WHATSAPP_GRAPH_API_VERSION",
+  ] as const;
+  const previousValues = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
+  const previousFetch = globalThis.fetch;
+  const previousWarn = console.warn;
+  let requestUrl = "";
+  let requestInit: RequestInit | undefined;
+  for (const key of envKeys) delete process.env[key];
+  process.env.WHATSAPP_API_TOKEN = "test-token";
+  process.env.WHATSAPP_PHONE_NUMBER_ID = "1234567890";
+  process.env.WHATSAPP_ADMIN_PHONE = "923296260778";
+  process.env.WHATSAPP_ADMIN_TEMPLATE_NAME = "dwd_admin_alert";
+  process.env.WHATSAPP_ADMIN_TEMPLATE_LANGUAGE = "en";
+  process.env.WHATSAPP_GRAPH_API_VERSION = "v23.0";
+  globalThis.fetch = async (input, init) => {
+    requestUrl = String(input);
+    requestInit = init;
+    return new Response(null, { status: 200 });
+  };
+  console.warn = () => undefined;
+
+  try {
+    await notifyAdminOfSubmission({
+      type: "Incomplete calculator lead",
+      reference: "LD-test-reference",
+      customerName: "Test Customer",
+      customerEmail: "test@example.com",
+      customerPhone: "03001234567",
+      details: "Goal: ecommerce",
+    });
+
+    assert.match(requestUrl, /\/v23\.0\/1234567890\/messages$/);
+    assert.equal(new Headers(requestInit?.headers).get("Authorization"), "Bearer test-token");
+    const payload = JSON.parse(String(requestInit?.body));
+    assert.equal(payload.to, "923296260778");
+    assert.equal(payload.template.name, "dwd_admin_alert");
+    assert.deepEqual(
+      payload.template.components[0].parameters.map((parameter: { text: string }) => parameter.text),
+      [
+        "Incomplete calculator lead",
+        "LD-test-reference",
+        "Test Customer (03001234567)",
+        "Goal: ecommerce",
+      ]
+    );
+  } finally {
+    globalThis.fetch = previousFetch;
+    console.warn = previousWarn;
     for (const key of envKeys) {
       const value = previousValues[key];
       if (value === undefined) delete process.env[key];
