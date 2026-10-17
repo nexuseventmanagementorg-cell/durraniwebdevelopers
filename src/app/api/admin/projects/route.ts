@@ -75,6 +75,33 @@ export async function PATCH(request: NextRequest) {
     if (deploymentUrl !== undefined) updates.deploymentUrl = deploymentUrl;
     if (adminNotes !== undefined) updates.adminNotes = adminNotes;
     if (deliveryTimeline !== undefined) updates.deliveryTimeline = deliveryTimeline;
+    if (body.projectBuildBrief && typeof body.projectBuildBrief === "object") {
+      const current = DataStore.getProjectById(id);
+      if (!current) {
+        return NextResponse.json({ success: false, error: "Project not found" }, { status: 404 });
+      }
+      if (!current.projectBuildBrief) {
+        return NextResponse.json({ success: false, error: "This project has no build checklist." }, { status: 409 });
+      }
+
+      const requestedCompletion = new Map<string, boolean>();
+      const incomingChecklist = (body.projectBuildBrief as Record<string, unknown>).checklist;
+      if (Array.isArray(incomingChecklist)) {
+        for (const value of incomingChecklist.slice(0, 30)) {
+          if (typeof value === "object" && value !== null && "id" in value && "completed" in value &&
+              typeof value.id === "string" && typeof value.completed === "boolean") {
+            requestedCompletion.set(value.id, value.completed);
+          }
+        }
+      }
+      updates.projectBuildBrief = {
+        ...current.projectBuildBrief,
+        checklist: current.projectBuildBrief.checklist.map((item) => ({
+          ...item,
+          completed: requestedCompletion.get(item.id) ?? item.completed,
+        })),
+      };
+    }
     if (approvedPrice !== undefined) {
       updates.approvedPrice = Number(approvedPrice);
       const current = DataStore.getProjectById(id);

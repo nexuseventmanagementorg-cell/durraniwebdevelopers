@@ -31,7 +31,11 @@ import {
 } from "../src/lib/visitor-analytics";
 import { detectWebsiteFeatures, estimateWebsite } from "../src/lib/website-estimator";
 import { sendInquiryWhatsappConfirmation } from "../src/lib/admin-notifications";
-import { buildInquiryProjectBrief } from "../src/lib/project-brief";
+import {
+  buildProjectBuildBriefRecord,
+  buildInquiryProjectBrief,
+  buildProjectReadinessChecklist,
+} from "../src/lib/project-brief";
 import type { Inquiry } from "../src/lib/types";
 import {
   canStartProjectAfterVerifiedAdvance,
@@ -340,6 +344,58 @@ test("Free project brief captures scope, client assets, scan findings, and appro
   assert.match(brief, /Inventory Management: Stock controls were visible/);
   assert.match(brief, /advance: not confirmed; do not start development/);
   assert.match(brief, /Kaleem Durrani's approval/);
+
+  const checklist = buildProjectReadinessChecklist(inquiry);
+  assert.ok(checklist.some((item) => item.id === "catalog-ready"));
+  assert.ok(checklist.some((item) => item.id === "order-flow"));
+  assert.ok(checklist.some((item) => item.id === "admin-approval"));
+  assert.ok(!checklist.some((item) => item.id === "payment-provider"));
+});
+
+test("Project handoff creates a brief and preserves completed readiness items", () => {
+  const inquiry = {
+    id: "DW-123456",
+    createdAt: "2026-10-17T00:00:00.000Z",
+    updatedAt: "2026-10-17T00:00:00.000Z",
+    status: "Advance Received",
+    customerName: "Test Client",
+    businessName: "Test Store",
+    email: "test@example.com",
+    phone: "03001234567",
+    cityCountry: "Lahore, Pakistan",
+    preferredContact: "whatsapp",
+    customerIntro: "",
+    projectTypes: ["E-commerce store"],
+    problemToSolve: "Sell products online.",
+    targetAudience: "Local customers",
+    productsServices: "Clothing",
+    inspirationUrl: "",
+    isNewOrUpgrade: "new",
+    preferredLaunchDate: "Within 4 weeks",
+    expectedBudgetRange: "PKR 150,000",
+    displayFixedOnly: false,
+    needsProductCatalog: true,
+    productFeatures: ["variants", "stock"],
+    acceptOrdersOnline: true,
+    orderFeatures: ["cart", "checkout"],
+    needsReviewsOrAccounts: false,
+    adminPanelType: "client_admin",
+    adminFeatures: ["products", "stock"],
+    selectedAddons: ["inventory_management"],
+    calculation: calculateBudget("client_admin", ["inventory_management"]),
+    disclaimerAccepted: true,
+    projectBuildBrief: {
+      generatedAt: "2026-10-17T00:10:00.000Z",
+      content: "Earlier scope snapshot",
+      checklist: [{ id: "scope-approved", label: "Old label", completed: true }],
+    },
+  } as Inquiry;
+
+  const record = buildProjectBuildBriefRecord(inquiry);
+  assert.equal(record.generatedAt, "2026-10-17T00:10:00.000Z");
+  assert.match(record.content, /Sell products online/);
+  assert.equal(record.checklist.find((item) => item.id === "scope-approved")?.completed, true);
+  assert.equal(record.checklist.find((item) => item.id === "brand-assets")?.completed, false);
 });
 
 test("Website estimator maps visible store and admin signals to calculator pricing", () => {

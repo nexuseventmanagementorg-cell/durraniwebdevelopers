@@ -88,6 +88,18 @@ export interface InquiryScanFeature {
   evidence: string;
 }
 
+export interface ProjectReadinessChecklistItem {
+  id: string;
+  label: string;
+  completed: boolean;
+}
+
+export interface ProjectBuildBriefRecord {
+  generatedAt: string;
+  content: string;
+  checklist: ProjectReadinessChecklistItem[];
+}
+
 export interface Inquiry {
   id: string; // e.g. "DW-849201"
   createdAt: string;
@@ -142,6 +154,7 @@ export interface Inquiry {
     verifiedAt: string;
     verifiedBy: string;
   };
+  projectBuildBrief?: ProjectBuildBriefRecord;
 
   // Step 7 & 8: Pricing breakdown snapshot
   calculation: CalculationBreakdown;
@@ -176,6 +189,7 @@ export interface Client {
 export interface Project {
   id: string;
   inquiryId?: string;
+  projectBuildBrief?: ProjectBuildBriefRecord;
   clientId: string;
   clientName: string;
   clientEmail: string;

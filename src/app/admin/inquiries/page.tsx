@@ -21,7 +21,6 @@ import {
   Copy,
   CheckCheck,
 } from "lucide-react";
-import { buildInquiryProjectBrief } from "@/lib/project-brief";
 
 function formatInquiryEstimate(inquiry: Inquiry): string {
   if (
@@ -38,8 +37,9 @@ export default function AdminInquiriesPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
-  const [projectBrief, setProjectBrief] = useState("");
   const [briefCopied, setBriefCopied] = useState(false);
+  const [briefSaving, setBriefSaving] = useState(false);
+  const projectBrief = selectedInquiry?.projectBuildBrief?.content || "";
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
@@ -108,13 +108,61 @@ export default function AdminInquiriesPage() {
         );
         if (selectedInquiry?.id === inquiryId) {
           setSelectedInquiry((prev: any) => ({ ...prev, status: newStatus }));
-          setProjectBrief("");
         }
         setActionSuccess(`Status updated to ${newStatus}`);
         setTimeout(() => setActionSuccess(""), 3000);
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleGenerateProjectBrief = async () => {
+    if (!selectedInquiry) return;
+    setBriefSaving(true);
+    try {
+      const response = await fetch("/api/admin/inquiries", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedInquiry.id,
+          projectBuildBrief: { checklist: selectedInquiry.projectBuildBrief?.checklist || [] },
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not save the project brief.");
+      setSelectedInquiry(result.inquiry);
+      setInquiries((previous) => previous.map((inquiry) => inquiry.id === result.inquiry.id ? result.inquiry : inquiry));
+      setBriefCopied(false);
+      setActionSuccess("Project brief saved to this inquiry.");
+      setTimeout(() => setActionSuccess(""), 3000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Could not save the project brief.");
+    } finally {
+      setBriefSaving(false);
+    }
+  };
+
+  const handleProjectChecklistChange = async (itemId: string, completed: boolean) => {
+    if (!selectedInquiry?.projectBuildBrief) return;
+    const checklist = selectedInquiry.projectBuildBrief.checklist.map((item) =>
+      item.id === itemId ? { ...item, completed } : item
+    );
+    setBriefSaving(true);
+    try {
+      const response = await fetch("/api/admin/inquiries", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedInquiry.id, projectBuildBrief: { checklist } }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not save checklist progress.");
+      setSelectedInquiry(result.inquiry);
+      setInquiries((previous) => previous.map((inquiry) => inquiry.id === result.inquiry.id ? result.inquiry : inquiry));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Could not save checklist progress.");
+    } finally {
+      setBriefSaving(false);
     }
   };
 
@@ -174,7 +222,7 @@ export default function AdminInquiriesPage() {
       if (!res.ok || !data.success) throw new Error(data.error || "Manual verification failed.");
       setInquiries((previous) => previous.map((inquiry) => inquiry.id === data.inquiry.id ? data.inquiry : inquiry));
       setSelectedInquiry(data.inquiry);
-      setProjectBrief("");
+      setBriefCopied(false);
       setManualAdvanceModalOpen(false);
       setManualAdvanceConfirmed(false);
       setManualAdvanceReference("");
@@ -331,7 +379,6 @@ export default function AdminInquiriesPage() {
                           <button
                             onClick={() => {
                               setSelectedInquiry(inq);
-                              setProjectBrief("");
                               setBriefCopied(false);
                             }}
                             className="bg-gray-100 hover:bg-gray-200 text-[#101216] px-2.5 py-1.5 rounded-lg font-bold text-[11px] transition"
@@ -482,17 +529,18 @@ export default function AdminInquiriesPage() {
                   <button
                     type="button"
                     disabled={selectedInquiry.status !== "Advance Received" && !selectedInquiry.convertedProjectId}
-                    onClick={() => {
-                      setProjectBrief(buildInquiryProjectBrief(selectedInquiry));
-                      setBriefCopied(false);
-                    }}
+                    onClick={handleGenerateProjectBrief}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-[#101216] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#E31E36] disabled:cursor-not-allowed disabled:bg-gray-300"
                   >
-                    <FileCheck className="h-3.5 w-3.5" /> Generate Brief
+                    <FileCheck className="h-3.5 w-3.5" />
+                    {briefSaving ? "Saving..." : selectedInquiry.projectBuildBrief ? "Refresh Brief" : "Generate Brief"}
                   </button>
                 </div>
                 {projectBrief && (
                   <div className="mt-4 space-y-2">
+                    <p className="text-[10px] text-gray-500">
+                      Saved {new Date(selectedInquiry.projectBuildBrief!.generatedAt).toLocaleString()}. Checklist progress saves automatically.
+                    </p>
                     <textarea
                       readOnly
                       rows={14}
@@ -500,6 +548,20 @@ export default function AdminInquiriesPage() {
                       aria-label="Generated project build brief"
                       className="w-full resize-y rounded-lg border border-gray-300 bg-gray-50 p-3 font-mono text-[10px] leading-relaxed text-gray-800"
                     />
+                    <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
+                      {selectedInquiry.projectBuildBrief?.checklist.map((item) => (
+                        <label key={item.id} className="flex items-start gap-2.5 px-3 py-2.5 text-[11px] leading-relaxed text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={item.completed}
+                            disabled={briefSaving}
+                            onChange={(event) => void handleProjectChecklistChange(item.id, event.target.checked)}
+                            className="mt-0.5 accent-[#E31E36]"
+                          />
+                          <span className={item.completed ? "text-gray-400 line-through" : ""}>{item.label}</span>
+                        </label>
+                      ))}
+                    </div>
                     <div className="flex justify-end">
                       <button
                         type="button"

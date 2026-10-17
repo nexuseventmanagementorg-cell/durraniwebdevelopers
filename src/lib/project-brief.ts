@@ -1,4 +1,5 @@
-import type { Inquiry } from "@/lib/types";
+import type { Inquiry, ProjectBuildBriefRecord } from "@/lib/types";
+import type { ProjectReadinessChecklistItem } from "@/lib/types";
 
 function listOrFallback(items: string[], fallback: string): string[] {
   return items.length > 0 ? items : [fallback];
@@ -73,4 +74,40 @@ export function buildInquiryProjectBrief(inquiry: Inquiry): string {
     "- Never place secrets, payment credentials, or private customer data in source code or prompts.",
     "- Do not purchase services, deploy to production, or promise a delivery date without admin approval.",
   ].join("\n");
+}
+
+export function buildProjectReadinessChecklist(inquiry: Inquiry): ProjectReadinessChecklistItem[] {
+  return [
+    { id: "scope-approved", label: "Client-approved scope and quotation", completed: false },
+    { id: "brand-assets", label: "Logo, brand colors, and approved imagery collected", completed: false },
+    { id: "content-approved", label: "Page copy and business facts approved by client", completed: false },
+    ...(inquiry.needsProductCatalog
+      ? [{ id: "catalog-ready", label: "Product/service catalog, prices, variants, and stock confirmed", completed: false }]
+      : []),
+    ...(inquiry.acceptOrdersOnline
+      ? [{ id: "order-flow", label: "Order flow, delivery areas, and fees confirmed", completed: false }]
+      : []),
+    ...(inquiry.selectedAddons.includes("payment_gateway")
+      ? [{ id: "payment-provider", label: "Client-owned payment provider account and requirements confirmed", completed: false }]
+      : []),
+    { id: "implementation", label: "Build completed against the approved brief", completed: false },
+    { id: "functional-qa", label: "Forms, roles, selected add-ons, and error states tested", completed: false },
+    { id: "responsive-qa", label: "Mobile and desktop preview reviewed", completed: false },
+    { id: "admin-approval", label: "Kaleem Durrani approved production deployment", completed: false },
+  ];
+}
+
+export function buildProjectBuildBriefRecord(inquiry: Inquiry): ProjectBuildBriefRecord {
+  const previousCompletion = new Map(
+    inquiry.projectBuildBrief?.checklist.map((item) => [item.id, item.completed]) || []
+  );
+
+  return {
+    generatedAt: inquiry.projectBuildBrief?.generatedAt || new Date().toISOString(),
+    content: buildInquiryProjectBrief(inquiry),
+    checklist: buildProjectReadinessChecklist(inquiry).map((item) => ({
+      ...item,
+      completed: previousCompletion.get(item.id) ?? false,
+    })),
+  };
 }

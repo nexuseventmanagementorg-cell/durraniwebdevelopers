@@ -26,6 +26,7 @@ export default function AdminProjectsPage() {
   const [editUrl, setEditUrl] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingChecklist, setSavingChecklist] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
   const statusList: OrderStatus[] = [
@@ -96,6 +97,30 @@ export default function AdminProjectsPage() {
       console.error(e);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleProjectChecklistChange = async (itemId: string, completed: boolean) => {
+    if (!selectedProject?.projectBuildBrief) return;
+    const checklist = selectedProject.projectBuildBrief.checklist.map((item) =>
+      item.id === itemId ? { ...item, completed } : item
+    );
+    setSavingChecklist(true);
+
+    try {
+      const response = await fetch("/api/admin/projects", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedProject.id, projectBuildBrief: { checklist } }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not save checklist progress.");
+      setSelectedProject(result.project);
+      setProjects((previous) => previous.map((project) => project.id === result.project.id ? result.project : project));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Could not save checklist progress.");
+    } finally {
+      setSavingChecklist(false);
     }
   };
 
@@ -296,6 +321,35 @@ export default function AdminProjectsPage() {
                   className="w-full bg-[#F4F5F7] px-3.5 py-2.5 rounded-xl border border-gray-300 text-[#101216]"
                 />
               </div>
+
+              {selectedProject.projectBuildBrief && (
+                <section className="border-t border-gray-200 pt-4">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <h4 className="font-bold text-gray-700">Build readiness</h4>
+                    <span className="text-[10px] text-gray-500">
+                      {selectedProject.projectBuildBrief.checklist.filter((item) => item.completed).length} / {selectedProject.projectBuildBrief.checklist.length} complete
+                    </span>
+                  </div>
+                  <div className="max-h-48 divide-y divide-gray-100 overflow-y-auto rounded-lg border border-gray-200">
+                    {selectedProject.projectBuildBrief.checklist.map((item) => (
+                      <label key={item.id} className="flex items-start gap-2.5 px-3 py-2 text-[11px] leading-relaxed text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={item.completed}
+                          disabled={savingChecklist}
+                          onChange={(event) => void handleProjectChecklistChange(item.id, event.target.checked)}
+                          className="mt-0.5 accent-[#E31E36]"
+                        />
+                        <span className={item.completed ? "text-gray-400 line-through" : ""}>{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <details className="mt-2 text-[11px] text-gray-600">
+                    <summary className="cursor-pointer font-semibold">View saved project brief</summary>
+                    <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-3 font-mono text-[10px] leading-relaxed">{selectedProject.projectBuildBrief.content}</pre>
+                  </details>
+                </section>
+              )}
             </div>
 
             <div className="pt-3 border-t border-gray-200 flex justify-end gap-2">

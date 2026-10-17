@@ -3,6 +3,7 @@ import { verifyAdminRequest } from "@/lib/auth";
 import { DataStore } from "@/lib/store";
 import { getInquiries, getInquiryById, updateInquiry } from "@/lib/inquiry-storage";
 import { canStartProjectAfterVerifiedAdvance, getVerifiedInquiryAdvanceAmount } from "@/lib/inquiry-advance";
+import { buildInquiryProjectBrief, buildProjectBuildBriefRecord, buildProjectReadinessChecklist } from "@/lib/project-brief";
 import { Client, Project, OrderStatus, PaymentMethod } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -30,6 +31,41 @@ export async function PATCH(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ success: false, error: "Inquiry ID is required" }, { status: 400 });
+    }
+    if (body.projectBuildBrief && typeof body.projectBuildBrief === "object") {
+      const current = await getInquiryById(id);
+      if (!current) {
+        return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
+      }
+      if (current.status !== "Advance Received" && !current.convertedProjectId) {
+        return NextResponse.json({ success: false, error: "Generate the project brief after the advance is verified." }, { status: 409 });
+      }
+
+      const checklistTemplate = buildProjectReadinessChecklist(current);
+      const previousCompletion = new Map(
+        current.projectBuildBrief?.checklist.map((item) => [item.id, item.completed]) || []
+      );
+      const requestedCompletion = new Map<string, boolean>();
+      const incomingChecklist = (body.projectBuildBrief as Record<string, unknown>).checklist;
+      if (Array.isArray(incomingChecklist)) {
+        for (const value of incomingChecklist.slice(0, 30)) {
+          if (typeof value === "object" && value !== null && "id" in value && "completed" in value &&
+              typeof value.id === "string" && typeof value.completed === "boolean") {
+            requestedCompletion.set(value.id, value.completed);
+          }
+        }
+      }
+      const projectBuildBrief = {
+        generatedAt: current.projectBuildBrief?.generatedAt || new Date().toISOString(),
+        content: buildInquiryProjectBrief(current),
+        checklist: checklistTemplate.map((item) => ({
+          ...item,
+          completed: requestedCompletion.get(item.id) ?? previousCompletion.get(item.id) ?? false,
+        })),
+      };
+      const updated = await updateInquiry(id, { projectBuildBrief });
+      if (!updated) return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
+      return NextResponse.json({ success: true, inquiry: updated });
     }
     if (body.manualAdvanceVerification && typeof body.manualAdvanceVerification === "object") {
       const current = await getInquiryById(id);
@@ -234,6 +270,7 @@ export async function POST(request: NextRequest) {
       remainingBalance,
       status: advanceReceived >= advanceRequired ? "In Development" : "Awaiting Advance",
       deliveryTimeline: deliveryTimeline || "3 to 4 Weeks",
+      projectBuildBrief: buildProjectBuildBriefRecord(inquiry),
       selectedFeatures: [
         ...inquiry.projectTypes,
         inquiry.adminPanelType === "client_admin" ? "Client Admin Panel" : "Internal Managed",
