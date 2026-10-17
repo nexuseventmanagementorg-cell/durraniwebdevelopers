@@ -354,7 +354,13 @@ export class DataStore {
     return payment;
   }
 
-  static verifyPayment(id: string, verified: boolean, status: PaymentRecord["status"], actor: string = "Admin"): PaymentRecord | null {
+  static verifyPayment(
+    id: string,
+    verified: boolean,
+    status: PaymentRecord["status"],
+    actor: string = "Admin",
+    verificationNote = ""
+  ): PaymentRecord | null {
     const data = this.ensureDataFile();
     const idx = data.payments.findIndex((p) => p.id === id);
     if (idx === -1) return null;
@@ -362,6 +368,9 @@ export class DataStore {
     const previousStatus = data.payments[idx].status;
     data.payments[idx].verifiedByAdmin = verified;
     data.payments[idx].status = status;
+    if (verified && verificationNote.trim()) {
+      data.payments[idx].adminNotes = `${data.payments[idx].adminNotes || ""}\nAdmin verification note: ${verificationNote.trim()}`.trim();
+    }
 
     // Recalculate financial balances if transitioning to Paid
     if (status === "Paid" && previousStatus !== "Paid") {
@@ -383,7 +392,7 @@ export class DataStore {
       actor,
       targetType: "payment",
       targetId: id,
-      details: `Payment #${id} status changed to ${status} (Verified: ${verified}).`,
+      details: `Payment #${id} status changed to ${status} (Admin marked paid: ${verified}; verification note recorded: ${Boolean(verificationNote.trim())}).`,
     }, data);
 
     this.writeData(data);

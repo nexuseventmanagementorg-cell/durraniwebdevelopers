@@ -31,7 +31,7 @@ export default function AdminPaymentsPage() {
   const [method, setMethod] = useState<PaymentMethod>("JazzCash");
   const [transactionRef, setTransactionRef] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
-  const [verifiedNow, setVerifiedNow] = useState(true);
+  const [verifiedNow, setVerifiedNow] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const fetchPayments = async () => {
@@ -68,18 +68,23 @@ export default function AdminPaymentsPage() {
   }, []);
 
   const handleVerify = async (paymentId: string) => {
+    const verificationNote = window.prompt(
+      "Enter where you checked the received funds (bank statement or provider record):"
+    )?.trim();
+    if (!verificationNote) return;
+
     try {
       const res = await fetch("/api/admin/payments", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: paymentId, verified: true, status: "Paid" }),
+        body: JSON.stringify({ id: paymentId, verified: true, status: "Paid", verificationNote }),
       });
       const data = await res.json();
       if (data.success) {
-        setSuccessMsg("Payment verified and recorded as Paid!");
+        setSuccessMsg("Payment marked paid by admin; verification note recorded.");
         fetchPayments();
         setTimeout(() => setSuccessMsg(""), 3000);
-      }
+      } else window.alert(data.error || "Payment could not be verified.");
     } catch (e) {
       console.error(e);
     }
@@ -89,6 +94,10 @@ export default function AdminPaymentsPage() {
     e.preventDefault();
     if (!projectId || !amount || Number(amount) <= 0) {
       alert("Please select a valid project and positive amount.");
+      return;
+    }
+    if (verifiedNow && !adminNotes.trim()) {
+      alert("Add a note identifying the bank or provider record you checked before marking payment paid.");
       return;
     }
     setSaving(true);
@@ -110,14 +119,14 @@ export default function AdminPaymentsPage() {
 
       const data = await res.json();
       if (data.success) {
-        setSuccessMsg("Payment successfully recorded in ledger!");
+        setSuccessMsg(verifiedNow ? "Payment recorded as admin-marked paid." : "Payment recorded as awaiting verification.");
         setModalOpen(false);
         setAmount("");
         setTransactionRef("");
         setAdminNotes("");
         fetchPayments();
         setTimeout(() => setSuccessMsg(""), 3000);
-      }
+      } else window.alert(data.error || "Payment could not be recorded.");
     } catch (e) {
       console.error(e);
     } finally {
@@ -174,7 +183,7 @@ export default function AdminPaymentsPage() {
             <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
               <div>
                 <span className="text-[11px] uppercase font-bold text-gray-400 tracking-wider">
-                  Verified Total Received
+                  Admin-Marked Received
                 </span>
                 <strong className="text-2xl font-black text-emerald-600 mt-1 block">
                   {formatPKR(totalVerifiedPaid)}
@@ -214,6 +223,10 @@ export default function AdminPaymentsPage() {
               </div>
             </div>
           </div>
+
+          <p className="border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900">
+            “Admin marked paid” means a staff member recorded a manual check. It is not automatic bank or gateway confirmation; match each transaction reference against the provider or bank record.
+          </p>
 
           {/* Search bar */}
           <div className="bg-white p-4 rounded-2xl border border-gray-200 flex justify-between items-center shadow-sm">
@@ -284,7 +297,7 @@ export default function AdminPaymentsPage() {
                         <td className="py-3.5 px-4">
                           {p.verifiedByAdmin && p.status === "Paid" ? (
                             <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
-                              <Check className="w-3 h-3" /> Verified Paid
+                              <Check className="w-3 h-3" /> Admin marked paid
                             </span>
                           ) : (
                             <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
@@ -389,7 +402,7 @@ export default function AdminPaymentsPage() {
                 <label className="block font-bold text-gray-700 mb-1">Admin Notes</label>
                 <textarea
                   rows={2}
-                  placeholder="e.g. Verified via bank SMS notification..."
+                  placeholder="Where did you verify this? e.g. bank statement date or provider transaction record"
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
                   className="w-full bg-[#F4F5F7] px-3.5 py-2 rounded-xl border border-gray-300 text-[#101216]"
@@ -404,8 +417,11 @@ export default function AdminPaymentsPage() {
                     onChange={(e) => setVerifiedNow(e.target.checked)}
                     className="accent-[#E31E36] w-4 h-4"
                   />
-                  <span>Verify and immediately apply to project balance</span>
+                  <span>I checked the bank/provider record; mark this as paid</span>
                 </label>
+                <p className="mt-2 pl-6 text-[10px] leading-relaxed text-gray-500">
+                  Leave unchecked until the funds and transaction reference are confirmed. The note above is required when marking paid.
+                </p>
               </div>
 
               <div className="pt-3 border-t border-gray-200 flex justify-end gap-2">

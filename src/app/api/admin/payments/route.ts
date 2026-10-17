@@ -18,15 +18,23 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { projectId, amount, method, transactionRef, status, adminNotes, verifiedByAdmin } = body;
+    const { projectId, amount, method, transactionRef, adminNotes, verifiedByAdmin } = body;
 
     const project = DataStore.getProjectById(projectId);
     if (!project) {
       return NextResponse.json({ success: false, error: "Project not found" }, { status: 404 });
     }
 
-    const isVerified = Boolean(verifiedByAdmin);
-    const paymentStatus: PaymentStatus = isVerified ? (status || "Paid") : "Awaiting Verification";
+    const isVerified = verifiedByAdmin === true;
+    const verificationNotes = typeof adminNotes === "string" ? adminNotes.trim().slice(0, 500) : "";
+    const transactionReference = typeof transactionRef === "string" ? transactionRef.trim().slice(0, 100) : "";
+    if (isVerified && (!verificationNotes || !transactionReference)) {
+      return NextResponse.json(
+        { success: false, error: "A transaction reference and a note identifying the checked bank/provider record are required before marking paid." },
+        { status: 400 }
+      );
+    }
+    const paymentStatus: PaymentStatus = isVerified ? "Paid" : "Awaiting Verification";
 
     const newPayment: PaymentRecord = {
       id: `pay-${Date.now().toString().slice(-6)}`,
@@ -36,11 +44,11 @@ export async function POST(request: NextRequest) {
       clientName: project.clientName,
       amount: Number(amount),
       method: (method as PaymentMethod) || "Bank Transfer",
-      transactionRef: transactionRef || `REF-${Date.now().toString().slice(-6)}`,
+      transactionRef: transactionReference || `REF-${Date.now().toString().slice(-6)}`,
       paymentDate: new Date().toISOString(),
       status: paymentStatus,
       verifiedByAdmin: isVerified,
-      adminNotes: adminNotes || "Recorded by Admin in ledger",
+      adminNotes: verificationNotes || "Recorded by Admin; awaiting independent payment verification.",
       createdAt: new Date().toISOString(),
     };
 
@@ -60,16 +68,23 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
     const { id, verified, status } = body;
+    const verificationNote = typeof body.verificationNote === "string"
+      ? body.verificationNote.trim().slice(0, 500)
+      : "";
 
-    if (!id) {
-      return NextResponse.json({ success: false, error: "Payment ID is required" }, { status: 400 });
+    if (!id || verified !== true || status !== "Paid" || !verificationNote) {
+      return NextResponse.json(
+        { success: false, error: "Confirm the payment as received and include the bank/provider record checked." },
+        { status: 400 }
+      );
     }
 
     const updated = DataStore.verifyPayment(
       id,
-      Boolean(verified),
-      (status as PaymentStatus) || "Paid",
-      "Admin"
+      true,
+      status as PaymentStatus,
+      "Admin",
+      verificationNote
     );
 
     if (!updated) {
