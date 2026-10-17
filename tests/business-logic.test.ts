@@ -38,6 +38,7 @@ import {
 } from "../src/lib/project-brief";
 import { createProjectAutomationWorkflow, updateProjectWorkflowTask } from "../src/lib/project-workflow";
 import { reviewInquiryScope } from "../src/lib/inquiry-review";
+import { getBeginnerBudgetPlan } from "../src/lib/calculator-guide";
 import type { Inquiry } from "../src/lib/types";
 import {
   canStartProjectAfterVerifiedAdvance,
@@ -442,6 +443,37 @@ test("Every inquiry receives a scope review with missing details and safety flag
   assert.ok(review.missingDetails.includes("Business or brand name"));
   assert.equal(review.riskFlags.length, 3);
   assert.match(review.recommendedNextAction, /before sending a final quotation/);
+});
+
+test("Beginner calculator plans fit the selected budget without forced extras", () => {
+  const businessStarter = getBeginnerBudgetPlan("business-site", "under-50k");
+  assert.equal(businessStarter.calculation.estimatedTotal, 35000);
+  assert.equal(businessStarter.selectedAddons.length, 0);
+
+  const bookingStarter = getBeginnerBudgetPlan("bookings", "under-50k");
+  assert.equal(bookingStarter.calculation.estimatedTotal, 50000);
+  assert.ok(bookingStarter.selectedAddons.includes("booking_calendar"));
+
+  const storeStarter = getBeginnerBudgetPlan("online-store", "50-150k");
+  assert.equal(storeStarter.calculation.estimatedTotal, 45000);
+  assert.ok(storeStarter.notIncluded.some((item) => item.includes("online checkout")));
+
+  const restaurantStarter = getBeginnerBudgetPlan("restaurant", "under-50k");
+  assert.equal(restaurantStarter.projectType, "Restaurant website or ordering app");
+  assert.equal(restaurantStarter.calculation.estimatedTotal, 35000);
+  assert.ok(restaurantStarter.included.some((item) => item.includes("WhatsApp")));
+
+  const fullStore = getBeginnerBudgetPlan("online-store", "150-300k");
+  assert.equal(fullStore.calculation.estimatedTotal, 150000);
+  assert.equal(fullStore.pricingPackage, "ecommerce_business");
+  assert.ok(fullStore.included.some((item) => item.includes("Shopping cart")));
+
+  const saasPrototype = getBeginnerBudgetPlan("online-platform", "50-150k");
+  assert.equal(saasPrototype.calculation.estimatedTotal, 45000);
+  assert.ok(saasPrototype.notIncluded.some((item) => item.includes("subscription platform")));
+
+  const saasStarter = getBeginnerBudgetPlan("online-platform", "150-300k");
+  assert.equal(saasStarter.calculation.estimatedTotal, 250000);
 });
 
 test("Website estimator maps visible store and admin signals to calculator pricing", () => {

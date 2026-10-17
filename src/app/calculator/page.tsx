@@ -22,6 +22,8 @@ import {
 } from "@/lib/constants";
 import type { PricingPackageId } from "@/lib/constants";
 import type { AddonOption, InquiryScanFeature } from "@/lib/types";
+import { getBeginnerBudgetPlan } from "@/lib/calculator-guide";
+import type { BeginnerBudgetBand, BeginnerProjectGoal } from "@/lib/calculator-guide";
 import { CurrencyCode, formatCurrency, getRegionalPricingConfig, isCurrencyCode } from "@/lib/currency";
 import { useCurrency } from "@/components/CurrencyProvider";
 import CurrencySelector from "@/components/CurrencySelector";
@@ -96,13 +98,46 @@ function CalculatorContent() {
     .concat(searchParams.get("addon") || [])
     .filter((addonId) => addonId in DEFAULT_PRICING_CONFIG.addons);
   const { currency, setCurrency, rates, rateError, rateDate, locale, formatPrice } = useCurrency();
+  const initialGuideGoal: BeginnerProjectGoal = initialConfiguredPackage?.startsWith("ecommerce_") ||
+    (normalizedInitialType ? isEcommerceProjectType(normalizedInitialType) : false)
+    ? "online-store"
+    : initialConfiguredPackage?.startsWith("saas_") ||
+        (normalizedInitialType ? isSaasProjectType(normalizedInitialType) : false)
+      ? "online-platform"
+      : normalizedInitialType?.toLowerCase().includes("restaurant")
+        ? "restaurant"
+        : normalizedInitialType?.toLowerCase().includes("booking")
+          ? "bookings"
+          : normalizedInitialType?.toLowerCase().includes("management") ||
+              normalizedInitialType?.toLowerCase().includes("inventory")
+            ? "business-tools"
+            : initialType ? "not-sure" : "business-site";
+  const initialGuideBudget: BeginnerBudgetBand =
+    initialConfiguredPackage === "ecommerce_business" || initialConfiguredPackage === "saas_starter"
+      ? "150-300k"
+      : initialConfiguredPackage === "ecommerce_advanced" ||
+          initialConfiguredPackage === "saas_business" ||
+          initialConfiguredPackage === "saas_enterprise"
+        ? "300k-plus"
+        : initialPackage === "without_admin"
+          ? "under-50k"
+          : initialPackage === "with_admin"
+            ? "50-150k"
+            : initialGuideGoal === "online-store" || initialGuideGoal === "online-platform"
+              ? "150-300k"
+              : "not-sure";
+  const [guideGoal, setGuideGoal] = useState<BeginnerProjectGoal>(initialGuideGoal);
+  const [guideBudget, setGuideBudget] = useState<BeginnerBudgetBand>(initialGuideBudget);
+  const [plainLanguageNeed, setPlainLanguageNeed] = useState(
+    initialSourceUrl ? `I like this kind of website: ${initialSourceUrl}` : ""
+  );
 
   useEffect(() => {
     if (isCurrencyCode(initialCurrency)) setCurrency(initialCurrency);
   }, [initialCurrency, setCurrency]);
 
   // Step state: 1 to 8 (8 is confirmation/submit)
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedInquiry, setSubmittedInquiry] = useState<any | null>(null);
   const [copiedRef, setCopiedRef] = useState(false);
@@ -229,6 +264,25 @@ function CalculatorContent() {
       selectedPricingConfig
     ),
     [adminPanelType, selectedAddons, selectedPricingPackage, selectedPricingConfig]
+  );
+  const guidePlan = useMemo(
+    () => getBeginnerBudgetPlan(guideGoal, guideBudget),
+    [guideGoal, guideBudget]
+  );
+  const guidePricingConfig = guidePlan.pricingPackage
+    ? getPackagePricingConfig(guidePlan.pricingPackage)
+    : pricingConfig;
+  const guideCalculation = useMemo(
+    () => calculateBudget(
+      guidePlan.adminPanelType,
+      getChargeableAddonIds(
+        guidePlan.selectedAddons,
+        guidePlan.pricingPackage,
+        guidePlan.adminPanelType
+      ),
+      guidePricingConfig
+    ),
+    [guidePlan, guidePricingConfig]
   );
   const formatEstimate = useCallback(
     (amount: number) => currency === "PKR" || rates[currency]
@@ -401,8 +455,31 @@ function CalculatorContent() {
 
   const handleBack = () => {
     setErrorMessage("");
-    setCurrentStep((prev) => Math.max(1, prev - 1));
+    setCurrentStep((prev) => Math.max(0, prev - 1));
     window.scrollTo({ top: 150, behavior: "smooth" });
+  };
+
+  const handleStartWithGuidePlan = () => {
+    const isStore = guideGoal === "online-store" || guideGoal === "restaurant";
+    const isFullStore = isStore && Boolean(guidePlan.pricingPackage?.startsWith("ecommerce_"));
+    setSelectedProjectTypes([guidePlan.projectType]);
+    setSelectedPricingPackage(guidePlan.pricingPackage);
+    setAdminPanelType(guidePlan.adminPanelType);
+    setSelectedAddons(guidePlan.selectedAddons);
+    setExpectedBudgetRange(guidePlan.expectedBudgetRange);
+    setProblemToSolve(plainLanguageNeed.trim() || guidePlan.problemToSolve);
+    setNeedsProductCatalog(isStore);
+    setProductFeatures(isStore
+      ? isFullStore ? ["categories", "variants", "stock", "images", "pricing"] : ["categories", "images", "pricing"]
+      : []);
+    setAcceptOrdersOnline(isFullStore);
+    setOrderFeatures(isFullStore ? ["cart", "checkout", "delivery_fees"] : []);
+    setNeedsReviewsOrAccounts(isFullStore);
+    setAdminFeatures(guidePlan.adminPanelType === "client_admin"
+      ? isFullStore ? ["products", "orders", "stock", "customers"] : guideGoal === "business-tools" ? ["customers"] : ["content"]
+      : []);
+    setCurrentStep(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Final submission to server
@@ -496,6 +573,22 @@ function CalculatorContent() {
     "Estimated Budget",
     "Confirmation",
   ];
+  const guideGoalOptions = [
+    { id: "business-site" as const, title: "Show my business and get enquiries", detail: "Tell people what you do and let them contact you.", icon: Briefcase },
+    { id: "restaurant" as const, title: "Show my menu and get food orders", detail: "Start with menu and WhatsApp orders, or choose full online ordering.", icon: Utensils },
+    { id: "online-store" as const, title: "Show products or take orders", detail: "Start with a catalog, or choose a full online store.", icon: ShoppingBag },
+    { id: "bookings" as const, title: "Let people request appointments", detail: "Share services and collect booking requests.", icon: Calendar },
+    { id: "business-tools" as const, title: "Manage customers or daily work", detail: "Keep one important business process in a dashboard.", icon: Users },
+    { id: "online-platform" as const, title: "Build an online tool customers sign into", detail: "Start a software product or customer portal.", icon: Cpu },
+    { id: "not-sure" as const, title: "I have an idea, but need help explaining it", detail: "Describe it in your own words; no technical terms needed.", icon: Sparkles },
+  ];
+  const guideBudgetOptions = [
+    { id: "under-50k" as const, label: `Up to ${formatPrice(50000)}`, detail: "A useful first version" },
+    { id: "50-150k" as const, label: `${formatPrice(50000)} - ${formatPrice(150000)}`, detail: "Room for a dashboard or more features" },
+    { id: "150-300k" as const, label: `${formatPrice(150000)} - ${formatPrice(300000)}`, detail: "Full store or an online platform starter" },
+    { id: "300k-plus" as const, label: `${formatPrice(300000)}+`, detail: "Advanced or larger custom scope" },
+    { id: "not-sure" as const, label: "I'm not sure yet", detail: "Show me a sensible starting point" },
+  ];
   const submittedCalculation =
     submittedInquiry?.internationalCalculation || submittedInquiry?.calculation;
   const submittedCurrency: CurrencyCode = isCurrencyCode(submittedInquiry?.currency)
@@ -510,6 +603,142 @@ function CalculatorContent() {
   const selectablePricingPackages: PricingPackageId[] = selectedIsEcommerce
     ? Object.keys(ECOMMERCE_PACKAGES) as PricingPackageId[]
     : Object.keys(SAAS_PACKAGES) as PricingPackageId[];
+
+  if (currentStep === 0) {
+    return (
+      <div className="min-h-screen bg-white text-[#101216]">
+        <section className="border-b border-[#242830] bg-[#101216] py-10 text-white sm:py-14">
+          <div className="mx-auto max-w-5xl space-y-4 px-4 text-center sm:px-6 lg:px-8">
+            <span className="inline-flex rounded-md border border-[#E31E36]/40 bg-[#242830] px-3 py-1 text-[11px] font-bold uppercase text-red-300">
+              Start with your idea
+            </span>
+            <h1 className="text-3xl font-black sm:text-4xl">You don&apos;t need to know website terminology.</h1>
+            <p className="mx-auto max-w-2xl text-sm leading-relaxed text-gray-300">
+              Tell us what you want your business to do online and the total budget you&apos;re comfortable with. We&apos;ll suggest a practical first version, not a list of extras to buy.
+            </p>
+            <p className="mx-auto max-w-2xl text-xs leading-relaxed text-gray-400">
+              Aapko technical lafz jaan&apos;ne ki zaroorat nahi. Apni zaroorat aur budget bata dein, hum pehla munasib plan samjha denge.
+            </p>
+          </div>
+        </section>
+
+        <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+          <section>
+            <h2 className="text-lg font-extrabold">What would you like customers to do?</h2>
+            <p className="mt-1 text-xs text-gray-600">Choose the closest answer. You can explain the rest in your own words.</p>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {guideGoalOptions.map((option) => {
+                const Icon = option.icon;
+                const selected = guideGoal === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setGuideGoal(option.id)}
+                    className={`flex min-h-24 items-start gap-3 rounded-xl border p-4 text-left transition ${selected ? "border-[#E31E36] bg-red-50 ring-1 ring-[#E31E36]" : "border-gray-200 bg-white hover:border-gray-400"}`}
+                  >
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${selected ? "bg-[#E31E36] text-white" : "bg-gray-100 text-gray-600"}`}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span>
+                      <strong className="block text-sm">{option.title}</strong>
+                      <span className="mt-1 block text-xs leading-relaxed text-gray-600">{option.detail}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-extrabold">What is your total project budget?</h2>
+            <p className="mt-1 text-xs text-gray-600">This is your comfortable limit, not a target we expect you to spend.</p>
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {guideBudgetOptions.map((option) => {
+                const selected = guideBudget === option.id;
+                return (
+                  <label key={option.id} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition ${selected ? "border-[#E31E36] bg-red-50" : "border-gray-200 bg-white hover:border-gray-400"}`}>
+                    <input
+                      type="radio"
+                      name="beginner-project-budget"
+                      value={option.id}
+                      checked={selected}
+                      onChange={() => setGuideBudget(option.id)}
+                      className="mt-0.5 accent-[#E31E36]"
+                    />
+                    <span>
+                      <strong className="block text-xs">{option.label}</strong>
+                      <span className="mt-1 block text-[11px] text-gray-600">{option.detail}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </section>
+
+          <section>
+            <label htmlFor="plain-language-need" className="text-sm font-extrabold">In your own words, what should the website help with? <span className="font-normal text-gray-500">Optional</span></label>
+            <textarea
+              id="plain-language-need"
+              rows={3}
+              value={plainLanguageNeed}
+              onChange={(event) => setPlainLanguageNeed(event.target.value)}
+              placeholder="For example: I run a bakery. I want people to see the menu and message me to order cakes."
+              className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3.5 py-3 text-sm text-[#101216] placeholder:text-gray-400 focus:border-[#E31E36] focus:outline-none focus:ring-1 focus:ring-[#E31E36]"
+            />
+          </section>
+
+          <section className="border-y border-gray-200 py-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <span className="text-[11px] font-bold uppercase text-gray-500">Recommended starting scope</span>
+                <h2 className="mt-1 text-xl font-black">{guidePlan.title}</h2>
+                <p className="mt-1 text-xs text-gray-600">A practical first phase. The final scope and quote are confirmed with you before work begins.</p>
+              </div>
+              <div className="min-w-44 rounded-lg bg-[#101216] px-4 py-3 text-white">
+                <span className="block text-[10px] font-bold uppercase text-gray-300">One-time estimate</span>
+                <strong className="mt-1 block text-2xl font-black">{formatEstimate(guideCalculation.estimatedTotal)}</strong>
+                <span className="mt-1 block text-[11px] text-gray-300">Advance: {formatEstimate(guideCalculation.advanceAmount)}</span>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div>
+                <h3 className="text-xs font-extrabold text-emerald-800">Included in this starting plan</h3>
+                <ul className="mt-2 space-y-2">
+                  {guidePlan.included.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-xs leading-relaxed text-gray-700">
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" />{item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-xs font-extrabold text-gray-700">Not included unless we agree it</h3>
+                <ul className="mt-2 space-y-2">
+                  {guidePlan.notIncluded.map((item) => (
+                    <li key={item} className="text-xs leading-relaxed text-gray-600">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <p className="mt-5 border-t border-gray-200 pt-3 text-[11px] leading-relaxed text-gray-500">
+              You don&apos;t have to use your full budget. This estimate is a starting point; we&apos;ll review your needs and confirm the exact scope and total before any project starts.
+            </p>
+          </section>
+
+          <div className="flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+            <button type="button" onClick={() => setCurrentStep(1)} className="px-2 py-3 text-xs font-bold text-gray-600 underline decoration-gray-300 underline-offset-4 hover:text-[#101216]">
+              I already know what I need; skip this guide
+            </button>
+            <button type="button" onClick={handleStartWithGuidePlan} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#E31E36] px-6 py-3.5 text-sm font-extrabold text-white transition hover:bg-[#C8162D]">
+              Continue with this plan <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#FFFFFF] text-[#101216] min-h-screen">
@@ -1601,14 +1830,14 @@ function CalculatorContent() {
         {/* Bottom Back / Next Navigation Controls */}
         {currentStep < 8 && (
           <div className="mt-8 flex items-center justify-between pt-6 border-t border-gray-200">
-            {currentStep > 1 ? (
+            {currentStep > 0 ? (
               <button
                 type="button"
                 onClick={handleBack}
                 className="inline-flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-[#101216] bg-white px-5 py-2.5 rounded-xl border border-gray-300 transition"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back
+                {currentStep === 1 ? "Change plan" : "Back"}
               </button>
             ) : (
               <div />
