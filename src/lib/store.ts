@@ -73,7 +73,7 @@ function getInitialData(): DatabaseSchema {
   const initialSettings: SystemSettings = {
     businessName: "Durrani Web Developers",
     businessEmail: "durraniwebdevelopers@gmail.com",
-    businessPhone: "03299669565",
+    businessPhone: "03140073794",
     currency: "PKR",
     enablePublicBudgetDisplay: true,
     reminderLeadDays: [7, 3, 0],

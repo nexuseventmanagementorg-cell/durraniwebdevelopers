@@ -107,7 +107,7 @@ export default function AdminSettingsPage() {
                 <strong className="text-xs font-bold text-emerald-600 block">
                   {BUSINESS_INFO.phoneDisplay}
                 </strong>
-                <span className="text-[10px] text-gray-500">Format: +92 329 9669565</span>
+                <span className="text-[10px] text-gray-500">Format: +92 314 0073794</span>
               </div>
 
               <div className="bg-[#F4F5F7] p-4 rounded-xl border border-gray-200">

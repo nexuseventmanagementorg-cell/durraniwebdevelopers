@@ -162,9 +162,9 @@ test("Client admin and e-commerce packages do not double-charge included modules
 
 test("WhatsApp link formatting with country code 92 and no leading zero", () => {
   const link = buildWhatsAppLink("Hello Durrani Web Developers");
-  assert.equal(BUSINESS_INFO.phone, "+923299669565");
-  assert.equal(BUSINESS_INFO.phoneDisplay, "+923299669565");
-  assert.match(link, /^https:\/\/wa\.me\/923299669565\?text=/, "Must use 923299669565 without leading zero");
+  assert.equal(BUSINESS_INFO.phone, "+923140073794");
+  assert.equal(BUSINESS_INFO.phoneDisplay, "+923140073794");
+  assert.match(link, /^https:\/\/wa\.me\/923140073794\?text=/, "Must use 923140073794 without leading zero");
   assert.ok(link.includes("Hello%20Durrani%20Web%20Developers"), "Must properly url-encode message text");
 });
 

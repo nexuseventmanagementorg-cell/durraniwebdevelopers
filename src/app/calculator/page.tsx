@@ -1309,7 +1309,7 @@ function CalculatorContent() {
                 </label>
                 <input
                   type="tel"
-                  placeholder="e.g. 03299669565 or 03001234567"
+                  placeholder="e.g. 03001234567"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataStore } from "@/lib/store";
+import { BUSINESS_INFO } from "@/lib/constants";
 import { PaymentReminder } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
             channel: "whatsapp",
             scheduledDate: today.toISOString().split("T")[0],
             status,
-            messageText: `Assalam-o-Alaikum ${project.clientName}, your installment of PKR ${monthlyAmount} for ${project.name} is due on ${nextDue.toLocaleDateString()}. Durrani Web Developers (03299669565).`,
+            messageText: `Assalam-o-Alaikum ${project.clientName}, your installment of PKR ${monthlyAmount} for ${project.name} is due on ${nextDue.toLocaleDateString()}. Durrani Web Developers (${BUSINESS_INFO.phoneDisplay}).`,
             sentAt: hasExternalWhatsAppApi ? new Date().toISOString() : undefined,
           };
 
