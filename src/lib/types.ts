@@ -157,6 +157,22 @@ export interface ProjectAutomationWorkflow {
   tasks: ProjectWorkflowTask[];
 }
 
+export type PublicProjectMilestoneStatus = "waiting" | "ready" | "active" | "awaiting_admin" | "completed";
+
+export interface PublicProjectMilestone {
+  id: string;
+  label: string;
+  status: PublicProjectMilestoneStatus;
+}
+
+export interface PublicProjectProgress {
+  projectName: string;
+  milestones: PublicProjectMilestone[];
+  percentComplete: number;
+  updatedAt: string;
+  previewUrl?: string;
+}
+
 export interface Inquiry {
   id: string; // e.g. "DW-849201"
   createdAt: string;

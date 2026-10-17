@@ -36,8 +36,13 @@ import {
   buildProjectBuildBriefRecord,
   buildInquiryProjectBrief,
   buildProjectReadinessChecklist,
+  buildLocalAgentHandoff,
 } from "../src/lib/project-brief";
-import { createProjectAutomationWorkflow, updateProjectWorkflowTask } from "../src/lib/project-workflow";
+import {
+  buildPublicProjectProgress,
+  createProjectAutomationWorkflow,
+  updateProjectWorkflowTask,
+} from "../src/lib/project-workflow";
 import { reviewInquiryScope } from "../src/lib/inquiry-review";
 import { getBeginnerBudgetPlan } from "../src/lib/calculator-guide";
 import { createCalculatorLeadToken, validateCalculatorLeadContact, verifyCalculatorLeadToken } from "../src/lib/calculator-lead-security";
@@ -459,6 +464,34 @@ test("Free project brief captures scope, client assets, scan findings, and appro
   assert.ok(!checklist.some((item) => item.id === "payment-provider"));
 });
 
+test("Local agent handoff removes inquiry identity, payment metadata, and contact details", () => {
+  const handoff = buildLocalAgentHandoff(
+    "Test Store",
+    "E-commerce",
+    [
+      "# Project Build Brief: Test Store",
+      "Inquiry: DW-123456",
+      "Client: Test Client / Test Store",
+      "Workflow status: Advance Received",
+      "Approved estimate: PKR 150,000",
+      "Verified advance: recorded",
+      "Goals: Sell products online.",
+      "Contact: test@example.com, 03001234567",
+      "Access token: sensitive-value",
+      "Reference: https://example.com/preview?token=private",
+    ].join("\n")
+  );
+
+  assert.match(handoff, /Project: Test Store/);
+  assert.match(handoff, /Goals: Sell products online/);
+  assert.match(handoff, /# Approved project build scope/);
+  assert.doesNotMatch(handoff, /DW-123456|Test Client|Advance Received|150,000|recorded/);
+  assert.doesNotMatch(handoff, /test@example\.com|03001234567|sensitive-value|token=private/);
+  assert.match(handoff, /Reference: https:\/\/example\.com\/preview/);
+  assert.match(handoff, /quota runs out, stop/);
+  assert.match(handoff, /Do not deploy to production/);
+});
+
 test("Project handoff creates a brief and preserves completed readiness items", () => {
   const inquiry = {
     id: "DW-123456",
@@ -527,6 +560,44 @@ test("Project workflow creates assigned roles and gates implementation and relea
   assert.equal(workflow.tasks.find((item) => item.id === "production-release")?.status, "awaiting_admin");
   workflow = updateProjectWorkflowTask(workflow, "production-release", "completed")!;
   assert.equal(workflow.status, "completed");
+});
+
+test("Public project progress exposes safe milestones and gates the preview link", () => {
+  let workflow = createProjectAutomationWorkflow("DW-123456", "2026-10-17T00:00:00.000Z");
+  let progress = buildPublicProjectProgress(
+    "Test Store - E-commerce",
+    workflow,
+    "https://preview.example.com",
+    "2026-10-17T00:00:00.000Z"
+  );
+  assert.equal(progress.percentComplete, 0);
+  assert.equal(progress.milestones[0].status, "ready");
+  assert.equal("previewUrl" in progress, false);
+
+  for (const taskId of ["scope-review", "client-assets", "build-plan", "implementation", "quality-assurance", "client-preview"]) {
+    workflow = updateProjectWorkflowTask(workflow, taskId, "completed")!;
+  }
+
+  progress = buildPublicProjectProgress(
+    "Test Store - E-commerce",
+    workflow,
+    "https://preview.example.com",
+    "2026-10-18T00:00:00.000Z"
+  );
+  assert.equal(progress.percentComplete, 83);
+  assert.equal(progress.milestones.find((item) => item.id === "preview")?.status, "completed");
+  assert.equal(progress.milestones.find((item) => item.id === "launch")?.status, "awaiting_admin");
+  assert.equal(progress.previewUrl, "https://preview.example.com");
+  assert.equal("adminNotes" in progress, false);
+  assert.equal("clientEmail" in progress, false);
+
+  const unsafeProgress = buildPublicProjectProgress(
+    "Test Store - E-commerce",
+    workflow,
+    "http://localhost:3000",
+    "2026-10-18T00:00:00.000Z"
+  );
+  assert.equal("previewUrl" in unsafeProgress, false);
 });
 
 test("Every inquiry receives a scope review with missing details and safety flags", () => {

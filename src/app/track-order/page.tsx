@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatPKR, buildWhatsAppLink, BUSINESS_INFO } from "@/lib/constants";
+import type { PublicProjectProgress, PublicProjectMilestoneStatus } from "@/lib/types";
 import {
   Search,
   CheckCircle2,
@@ -13,6 +14,8 @@ import {
   FileText,
   Calendar,
   Layers,
+  ExternalLink,
+  Hammer,
 } from "lucide-react";
 
 function TrackOrderContent() {
@@ -25,6 +28,7 @@ function TrackOrderContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [inquiry, setInquiry] = useState<any | null>(null);
+  const [projectProgress, setProjectProgress] = useState<PublicProjectProgress | null>(null);
 
   const statuses = [
     "New Inquiry",
@@ -51,6 +55,7 @@ function TrackOrderContent() {
     setLoading(true);
     setError("");
     setInquiry(null);
+    setProjectProgress(null);
 
     try {
       const res = await fetch(
@@ -63,6 +68,7 @@ function TrackOrderContent() {
         throw new Error(data.error || "No matching inquiry found.");
       }
       setInquiry(data.inquiry);
+      setProjectProgress(data.projectProgress || null);
     } catch (err: any) {
       setError(err.message || "Failed to look up inquiry.");
     } finally {
@@ -90,7 +96,7 @@ function TrackOrderContent() {
             Track Your Web Application Inquiry
           </h1>
           <p className="text-xs sm:text-sm text-gray-300 max-w-xl mx-auto">
-            Check the live review status, quotation approval, and development milestone progress of your project submission.
+            Check your inquiry status and, after project approval, follow each build milestone and open your preview when it is shared.
           </p>
         </div>
       </section>
@@ -286,6 +292,104 @@ function TrackOrderContent() {
               </a>
             </div>
           </div>
+        )}
+
+        {inquiry && projectProgress && (
+          <section className="mt-8 overflow-hidden rounded-3xl border border-gray-200 bg-[#101216] text-white shadow-xl">
+            <div className="border-b border-white/10 bg-gradient-to-r from-[#191d25] to-[#242830] px-6 py-6 sm:px-8">
+              <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+                <div>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-emerald-300">
+                    <Hammer className="h-3 w-3" /> Website build progress
+                  </span>
+                  <h2 className="mt-3 text-xl font-black sm:text-2xl">{projectProgress.projectName}</h2>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Milestones update when our team advances the project. Refresh this tracker to see the latest progress.
+                  </p>
+                </div>
+                <div className="min-w-32 sm:text-right">
+                  <strong className="text-3xl font-black text-[#E31E36]">{projectProgress.percentComplete}%</strong>
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Milestones complete</span>
+                </div>
+              </div>
+              <div
+                className="mt-5 h-2 overflow-hidden rounded-full bg-white/10"
+                role="progressbar"
+                aria-label="Website build progress"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={projectProgress.percentComplete}
+              >
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#E31E36] to-orange-400 transition-all duration-700"
+                  style={{ width: `${projectProgress.percentComplete}%` }}
+                />
+              </div>
+            </div>
+
+            <ol className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2 sm:p-8 lg:grid-cols-3">
+              {projectProgress.milestones.map((milestone) => {
+                const stateLabels: Record<PublicProjectMilestoneStatus, string> = {
+                  waiting: "Coming up",
+                  ready: "Up next",
+                  active: "In progress",
+                  awaiting_admin: "Final team review",
+                  completed: "Complete",
+                };
+                const complete = milestone.status === "completed";
+                const active = milestone.status === "active" || milestone.status === "awaiting_admin";
+                const ready = milestone.status === "ready";
+                return (
+                  <li
+                    key={milestone.id}
+                    className={`flex min-h-24 items-start gap-3 rounded-2xl border p-4 ${
+                      complete
+                        ? "border-emerald-400/25 bg-emerald-400/[0.07]"
+                        : active
+                          ? "border-[#E31E36]/50 bg-[#E31E36]/[0.08]"
+                          : ready
+                            ? "border-sky-400/30 bg-sky-400/[0.06]"
+                          : "border-white/10 bg-white/[0.03]"
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${
+                        complete ? "bg-emerald-400 text-[#101216]" : active ? "bg-[#E31E36] text-white" : ready ? "bg-sky-400 text-[#101216]" : "bg-white/10 text-gray-400"
+                      }`}
+                    >
+                      {complete ? <CheckCircle2 className="h-4 w-4" /> : milestone.id === "preview" ? <ExternalLink className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                    </span>
+                    <span>
+                      <strong className="block text-xs font-extrabold">{milestone.label}</strong>
+                      <span className={`mt-1 block text-[10px] font-bold ${complete ? "text-emerald-300" : active ? "text-red-200" : ready ? "text-sky-200" : "text-gray-500"}`}>
+                        {stateLabels[milestone.status]}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+
+            {projectProgress.previewUrl ? (
+              <div className="px-5 pb-6 sm:px-8">
+                <a
+                  href={projectProgress.previewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-xs font-extrabold text-white transition hover:bg-emerald-600"
+                >
+                  <ExternalLink className="h-4 w-4" /> Open your website preview
+                </a>
+                <p className="mt-2 text-[10px] text-gray-400">
+                  This is a review preview. Production launch happens only after final approval.
+                </p>
+              </div>
+            ) : (
+              <p className="px-5 pb-6 text-[10px] text-gray-500 sm:px-8">
+                Your review preview link will appear here once it is ready and shared by our team.
+              </p>
+            )}
+          </section>
         )}
 
         {/* Privacy Guard Notice */}

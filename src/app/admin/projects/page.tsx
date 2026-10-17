@@ -15,7 +15,9 @@ import {
   MessageSquare,
   Plus,
   X,
+  ClipboardCopy,
 } from "lucide-react";
+import { buildLocalAgentHandoff } from "@/lib/project-brief";
 
 export default function AdminProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -146,6 +148,24 @@ export default function AdminProjectsPage() {
       alert(error instanceof Error ? error.message : "Could not update the workflow task.");
     } finally {
       setSavingWorkflow(false);
+    }
+  };
+
+  const handleCopyAgentHandoff = async () => {
+    if (!selectedProject?.projectBuildBrief) return;
+    try {
+      await navigator.clipboard.writeText(
+        buildLocalAgentHandoff(
+          selectedProject.name,
+          selectedProject.category,
+          selectedProject.projectBuildBrief.content
+        )
+      );
+      setSuccessMsg("Local agent task copied. Review it for sensitive details before pasting.");
+      setTimeout(() => setSuccessMsg(""), 5000);
+    } catch (error) {
+      console.error("Could not copy local agent handoff", error);
+      alert("Could not copy the task. Check browser clipboard permission and try again.");
     }
   };
 
@@ -356,9 +376,20 @@ export default function AdminProjectsPage() {
                 <section className="border-t border-gray-200 pt-4">
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <h4 className="font-bold text-gray-700">Build readiness</h4>
-                    <span className="text-[10px] text-gray-500">
-                      {selectedProject.projectBuildBrief.checklist.filter((item) => item.completed).length} / {selectedProject.projectBuildBrief.checklist.length} complete
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] text-gray-500">
+                        {selectedProject.projectBuildBrief.checklist.filter((item) => item.completed).length} / {selectedProject.projectBuildBrief.checklist.length} complete
+                      </span>
+                      {selectedProject.automationWorkflow?.tasks.some((task) => task.id === "implementation" && task.status === "in_progress") && (
+                        <button
+                          type="button"
+                          onClick={() => void handleCopyAgentHandoff()}
+                          className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-1 text-[10px] font-bold text-gray-700 hover:bg-gray-50"
+                        >
+                          <ClipboardCopy className="h-3 w-3" /> Copy local agent task
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="max-h-48 divide-y divide-gray-100 overflow-y-auto rounded-lg border border-gray-200">
                     {selectedProject.projectBuildBrief.checklist.map((item) => (
@@ -390,7 +421,7 @@ export default function AdminProjectsPage() {
                     </span>
                   </div>
                   <p className="mb-3 text-[10px] text-gray-500">
-                    Role-assigned work queue. Code generation and deployment agents are not connected yet.
+                    Role-assigned work queue. Start Implementation to copy a reviewed task into your local Antigravity/VS Code session. The app does not control the editor or deploy code automatically.
                   </p>
                   <div className="divide-y divide-gray-100 rounded-lg border border-gray-200">
                     {selectedProject.automationWorkflow.tasks.map((task) => (

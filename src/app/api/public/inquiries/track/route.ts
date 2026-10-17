@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getInquiryById } from "@/lib/inquiry-storage";
+import { getProjectRecordByInquiry } from "@/lib/project-storage";
+import { buildPublicProjectProgress } from "@/lib/project-workflow";
 
 export const dynamic = "force-dynamic";
 
@@ -56,15 +58,25 @@ export async function GET(request: NextRequest) {
       updatedAt: inquiry.updatedAt,
       hasConvertedProject: Boolean(inquiry.convertedProjectId),
     };
+    const project = await getProjectRecordByInquiry(inquiry.id);
+    const projectProgress = project?.automationWorkflow
+      ? buildPublicProjectProgress(
+          project.name,
+          project.automationWorkflow,
+          project.deploymentUrl,
+          project.updatedAt
+        )
+      : null;
 
     return NextResponse.json({
       success: true,
       inquiry: sanitizedInquiry,
+      projectProgress,
     });
   } catch (error) {
     console.error("Tracking lookup error", error);
     return NextResponse.json(
-      { success: false, error: "Failed to look up inquiry status" },
+      { success: false, error: "Failed to look up inquiry and project progress" },
       { status: 500 }
     );
   }

@@ -146,6 +146,10 @@ Project conversion and the role-assigned delivery workflow use Supabase-backed p
 
 Each advance-verified inquiry creates a gated work queue for requirements, client assets, planning, implementation, QA, preview, and release. The current queue is admin-assisted; code-writing and deployment agents are not connected yet. Production release remains behind explicit admin confirmation.
 
+When the implementation task is in progress, an admin can copy a privacy-filtered local agent handoff from the project workspace into Antigravity or VS Code. Review the copied text before pasting it into an AI tool. This is a manual handoff: the website does not control the local editor, manage AI quotas/accounts, or deploy client code. If provider usage runs out, preserve the local repository changes and resume from the reported checkpoint when usage is available again. Keep the production deployment behind the existing admin approval step.
+
+Clients can use `/track-order` with their inquiry reference and registered email to see a public, sanitized project milestone timeline once the inquiry has been converted to a project. The preview URL is shown only after the client-preview milestone is marked complete and the URL is HTTPS. Progress reflects admin-advanced workflow milestones; it is not a live screen recording or code stream from the local editor.
+
 ### Consented calculator leads
 
 The beginner calculator guide defaults to Roman Urdu for Pakistan visitors and English for other regions; visitors can switch languages. Calculator prices use the selected regional currency and exchange-rate snapshot. After a visitor provides an email or WhatsApp number and explicitly agrees to follow-up, the lead is created when they start the calculator and updated as they answer each step, even if no final inquiry is submitted. The record stores the selected goal, budget, recommendation, language, currency, and last saved step. Incomplete leads remain available for admin follow-up at `/admin/leads`; admins can update status and private notes and open prefilled email/WhatsApp follow-up links. Once a final inquiry is successfully submitted, its lead is linked to that inquiry and disappears from `/admin/leads`; the completed submission is handled by the existing `/admin/inquiries` inbox.
@@ -158,7 +162,7 @@ The project-start gate does not require an AI subscription or payment API. Move 
 
 If a client paid outside the receipt workflow, use **Verify Advance Manually** in the inquiry detail. The authenticated admin must enter the received amount, payment method, transaction reference, verification note, and confirm that funds were checked directly. This is an auditable human override, not an AI or bank verification. The system blocks project creation until that confirmation or an equivalent verified receipt exists.
 
-The current free milestone gates quoting and advance verification. It does not yet generate or deploy client websites automatically. A later build-brief and preview workflow can be added without a paid AI API; fully automated AI generation would need a local model or a separately funded API and a worker that remains available.
+The free milestone gate handles quoting and advance verification. After project conversion, clients can see admin-updated build milestones and a preview link when the admin marks the preview as shared. The local Antigravity/VS Code task handoff is still manual: it does not stream code changes, control the editor, or deploy client websites automatically. A persistent local worker and preview-deployment pipeline remain future work; production still requires admin approval.
 
 ### Private payment receipt setup
 

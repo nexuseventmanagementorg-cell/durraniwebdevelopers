@@ -76,6 +76,39 @@ export function buildInquiryProjectBrief(inquiry: Inquiry): string {
   ].join("\n");
 }
 
+export function buildLocalAgentHandoff(projectName: string, category: string, briefContent: string): string {
+  const sanitizeText = (value: string) => value
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[redacted email]")
+    .replace(/(?<!\w)(?:\+?\d{1,3}[-.\s]?)?(?:0?\d{2,4}[-.\s]?)\d{3,4}[-.\s]?\d{3,4}(?!\w)/g, "[redacted phone]")
+    .replace(/(https?:\/\/[^\s?#]+)[?#][^\s]*/gi, "$1");
+  const sanitizedBrief = briefContent
+    .split("\n")
+    .filter((line) =>
+      !/^(?:Inquiry|Client|Workflow status|Approved estimate|Verified advance):/i.test(line) &&
+      !/\b(?:api[_ -]?key|access[_ -]?token|password|passwd|secret|private[_ -]?key|credential)\b\s*[:=]/i.test(line)
+    )
+    .map((line) => sanitizeText(line.replace(/^# Project Build Brief:.*$/i, "# Approved project build scope")))
+    .join("\n");
+
+  return [
+    "# Local coding-agent handoff",
+    "",
+    `Project: ${sanitizeText(projectName)}`,
+    `Category: ${sanitizeText(category)}`,
+    "",
+    "Review this scope before using it with an AI coding agent. Do not add customer contact details, payment information, credentials, or secrets.",
+    "",
+    sanitizedBrief,
+    "",
+    "## Local execution and checkpoint rules",
+    "- Work only in the client project's dedicated local folder/repository.",
+    "- Implement only the approved scope above; ask the admin when requirements are unclear.",
+    "- Do not expose credentials, private customer records, or DWD admin data in code or prompts.",
+    "- Do not deploy to production. Prepare local test/build results and a preview for admin review.",
+    "- If usage quota runs out, stop without switching or creating accounts to bypass provider limits. Preserve local changes and report files changed, checks run, completed work, next step, and blockers so work can resume later.",
+  ].join("\n");
+}
+
 export function buildProjectReadinessChecklist(inquiry: Inquiry): ProjectReadinessChecklistItem[] {
   return [
     { id: "scope-approved", label: "Client-approved scope and quotation", completed: false },

@@ -1,5 +1,7 @@
 import type {
   ProjectAutomationWorkflow,
+  PublicProjectProgress,
+  PublicProjectMilestoneStatus,
   ProjectWorkflowTask,
   ProjectWorkflowTaskStatus,
 } from "@/lib/types";
@@ -13,6 +15,66 @@ const WORKFLOW_TASKS: Omit<ProjectWorkflowTask, "status">[] = [
   { id: "client-preview", role: "Client Review", title: "Share preview and collect client approval", dependsOn: ["quality-assurance"] },
   { id: "production-release", role: "Release Manager", title: "Approve production deployment and delivery", dependsOn: ["client-preview"], adminApprovalRequired: true },
 ];
+
+const PUBLIC_MILESTONES = [
+  { id: "requirements", label: "Requirements and content", taskIds: ["scope-review", "client-assets"] },
+  { id: "planning", label: "Design and technical plan", taskIds: ["build-plan"] },
+  { id: "development", label: "Website development", taskIds: ["implementation"] },
+  { id: "quality", label: "Quality checks", taskIds: ["quality-assurance"] },
+  { id: "preview", label: "Website preview", taskIds: ["client-preview"] },
+  { id: "launch", label: "Final launch approval", taskIds: ["production-release"] },
+] as const;
+
+function isPublicPreviewUrl(value: string | undefined): value is string {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
+export function buildPublicProjectProgress(
+  projectName: string,
+  workflow: ProjectAutomationWorkflow,
+  deploymentUrl: string | undefined,
+  updatedAt: string
+): PublicProjectProgress {
+  const milestones = PUBLIC_MILESTONES.map((milestone) => {
+    const tasks = milestone.taskIds.map((taskId) =>
+      workflow.tasks.find((task) => task.id === taskId)
+    );
+    const complete = tasks.every((task) => task?.status === "completed");
+    const awaitingAdmin = tasks.some((task) => task?.status === "awaiting_admin");
+    const inProgress = tasks.some((task) => task?.status === "in_progress");
+    const ready = tasks.some((task) => task?.status === "ready");
+    const status: PublicProjectMilestoneStatus = complete
+      ? "completed"
+      : awaitingAdmin
+        ? "awaiting_admin"
+        : inProgress
+          ? "active"
+          : ready
+            ? "ready"
+            : "waiting";
+
+    return { id: milestone.id, label: milestone.label, status };
+  });
+
+  const completedCount = milestones.filter((milestone) => milestone.status === "completed").length;
+  const previewMilestone = milestones.find((milestone) => milestone.id === "preview");
+
+  return {
+    projectName,
+    milestones,
+    percentComplete: Math.round((completedCount / milestones.length) * 100),
+    updatedAt,
+    ...(previewMilestone?.status === "completed" && isPublicPreviewUrl(deploymentUrl)
+      ? { previewUrl: deploymentUrl }
+      : {}),
+  };
+}
 
 export function createProjectAutomationWorkflow(
   sourceInquiryId: string,
