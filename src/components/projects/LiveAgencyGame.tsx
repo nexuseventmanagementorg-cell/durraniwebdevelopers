@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDownRight, Building2, Footprints, Handshake, ScanEye } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowDownRight, Building2, Footprints, Handshake, Pause, Play, ScanEye } from "lucide-react";
 import {
   DWD_WORKFORCE_AGENTS,
   DWD_WORKFORCE_DEPARTMENTS,
@@ -13,16 +13,16 @@ const ROOM_CENTERS = DWD_WORKFORCE_DEPARTMENTS.map((_, index) => ({
   y: index < 5 ? 46 : 72,
 }));
 const AGENT_OFFSETS = [
-  [-8, -5.5],
-  [-4, -5.5],
+  [-9, -6],
+  [-4.5, -6],
   [0, -5.5],
-  [4, -5.5],
-  [8, -5.5],
-  [-8, 5.5],
-  [-4, 5.5],
-  [0, 5.5],
-  [4, 5.5],
-  [8, 5.5],
+  [4.5, -6],
+  [9, -6],
+  [-9, 6],
+  [-4.5, 6],
+  [0, 6],
+  [4.5, 6],
+  [9, 6],
 ];
 const TRANSIT_DURATION_MS = 3400;
 
@@ -53,12 +53,11 @@ interface Handoff {
 }
 
 export default function LiveAgencyGame() {
-  const [roomByAgent, setRoomByAgent] = useState(HOME_ROOM_BY_AGENT);
   const [journeys, setJourneys] = useState<AgentJourney[]>([]);
   const [lastHandoff, setLastHandoff] = useState<Handoff | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<number | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const roomByAgentRef = useRef(HOME_ROOM_BY_AGENT);
+  const [isPlaying, setIsPlaying] = useState(true);
 
   const departmentAgentIndices = useMemo(
     () =>
@@ -75,7 +74,7 @@ export default function LiveAgencyGame() {
   }, []);
 
   useEffect(() => {
-    if (reducedMotion) return;
+    if (!isPlaying) return;
 
     let agentCursor = 0;
     const timers: number[] = [];
@@ -151,8 +150,6 @@ export default function LiveAgencyGame() {
           );
           const settleTimer = window.setTimeout(() => {
             if (cancelled) return;
-            roomByAgentRef.current[agentIndex] = fromRoom;
-            setRoomByAgent([...roomByAgentRef.current]);
             busyAgents.delete(agentIndex);
             busyAgents.delete(receiverIndex);
             setJourneys((current) =>
@@ -175,7 +172,7 @@ export default function LiveAgencyGame() {
       cancelled = true;
       timers.forEach((timer) => window.clearTimeout(timer));
     };
-  }, [departmentAgentIndices, reducedMotion]);
+  }, [departmentAgentIndices, isPlaying]);
 
   const followedJourney =
     (selectedAgent === null
@@ -189,10 +186,17 @@ export default function LiveAgencyGame() {
       ? null
       : followedJourney?.agentIndex === followedAgent
         ? followedJourney.toRoom
-        : roomByAgent[followedAgent];
-  const displayedRoomByAgent = roomByAgent.map((room, index) =>
+        : HOME_ROOM_BY_AGENT[followedAgent];
+  const displayedRoomByAgent = HOME_ROOM_BY_AGENT.map((room, index) =>
     journeys.find((item) => item.agentIndex === index)?.toRoom ?? room,
   );
+  const toggleSimulation = () => {
+    if (isPlaying) {
+      setJourneys([]);
+      setLastHandoff(null);
+    }
+    setIsPlaying((current) => !current);
+  };
 
   return (
     <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[#101216] text-white shadow-2xl">
@@ -214,12 +218,29 @@ export default function LiveAgencyGame() {
             Click an agent to follow them. Watch specialists travel, meet a teammate and hand off work.
           </p>
         </div>
-        <div className="flex items-center gap-2 self-start rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[9px] font-bold text-gray-300 sm:self-center">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" />
-            <span className="relative h-2 w-2 rounded-full bg-emerald-400" />
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+          <span className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[9px] font-bold text-gray-300">
+            {isPlaying ? (
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" />
+                <span className="relative h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+            ) : (
+              <span className="h-2 w-2 rounded-full bg-slate-500" />
+            )}
+            {isPlaying
+              ? `${DWD_WORKFORCE_AGENTS.length} roles · ${journeys.length} moving`
+              : "Simulation paused"}
           </span>
-          {reducedMotion ? "Interactive map · motion reduced" : `${journeys.length} agents on the move`}
+          <button
+            type="button"
+            onClick={toggleSimulation}
+            aria-label={isPlaying ? "Pause office simulation" : "Resume office simulation"}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-[#e31e36] px-3 py-2 text-[9px] font-extrabold text-white transition hover:bg-[#c8162d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+            {isPlaying ? "Pause" : "Resume"}
+          </button>
         </div>
       </header>
 
@@ -298,7 +319,7 @@ export default function LiveAgencyGame() {
               ? agentJourney.phase === "returning"
                 ? HOME_ROOM_BY_AGENT[index]
                 : agentJourney.toRoom
-              : roomByAgent[index];
+              : HOME_ROOM_BY_AGENT[index];
             const slotIndex = displayedRoomByAgent
               .slice(0, index)
               .filter((room) => room === displayedRoomByAgent[index]).length;
@@ -320,9 +341,10 @@ export default function LiveAgencyGame() {
                 key={agent.avatar}
                 type="button"
                 onClick={() => setSelectedAgent((current) => current === index ? null : index)}
+                title={agent.role}
                 aria-label={`${agent.role}${isReceivingHandoff && meetingJourney ? `, receiving work from ${DWD_WORKFORCE_AGENTS[meetingJourney.agentIndex].role}` : isWalking ? `, walking to ${DWD_WORKFORCE_DEPARTMENTS[agentJourney.toRoom].name}` : `, at ${DWD_WORKFORCE_DEPARTMENTS[roomIndex].name}`}`}
                 aria-pressed={isSelected}
-                className={`absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-lg p-[2px] transition-[left,top,transform,filter] focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                className={`absolute z-20 flex min-h-11 min-w-9 touch-manipulation -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-lg p-[2px] cursor-pointer transition-[left,top,transform,filter] focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
                   isWalking || isReceivingHandoff ? "z-30 scale-110" : ""
                 } ${isWalking ? "motion-safe:animate-bounce [animation-duration:0.8s]" : ""} ${isSelected ? "z-40 scale-125" : ""}`}
                 style={{
@@ -333,7 +355,7 @@ export default function LiveAgencyGame() {
                 }}
               >
                 {shouldShowName && (
-                  <span className="absolute bottom-full left-1/2 mb-1 w-max max-w-40 -translate-x-1/2 rounded-md border border-white/20 bg-[#101216]/95 px-2 py-1 text-[8px] font-extrabold text-white shadow-lg">
+                  <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1 w-max max-w-40 -translate-x-1/2 rounded-md border border-white/40 bg-[#101216] px-2 py-1.5 text-[8px] font-extrabold text-white shadow-[0_4px_18px_rgba(0,0,0,.85)] ring-1 ring-black/70">
                     {agent.role}
                     {isReceivingHandoff && meetingJourney
                       ? <span className="block font-medium text-amber-200">Collecting work from {DWD_WORKFORCE_AGENTS[meetingJourney.agentIndex].role}</span>
@@ -343,7 +365,7 @@ export default function LiveAgencyGame() {
                   </span>
                 )}
                 <span
-                  className={`relative block h-8 w-7 overflow-hidden rounded-md border-2 bg-[#101216] shadow-[0_2px_10px_rgba(0,0,0,.75)] sm:h-10 sm:w-8 ${
+                  className={`relative block h-10 w-8 overflow-hidden rounded-md border-2 bg-[#101216] shadow-[0_2px_10px_rgba(0,0,0,.75)] sm:h-12 sm:w-9 ${
                     isHandoff || isReceivingHandoff
                       ? "border-amber-200 shadow-[0_0_18px_rgba(251,191,36,.8)]"
                       : isWalking
