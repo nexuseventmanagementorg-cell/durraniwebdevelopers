@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Building2, Check, Clock3, Monitor, Rocket } from "lucide-react";
 import type {
   PublicProjectMilestoneStatus,
@@ -36,42 +36,17 @@ export default function WorkforceOffice({
   progress?: PublicProjectProgress | null;
   verifiedInquiry?: boolean;
 }) {
-  const [demoStep, setDemoStep] = useState(13);
   const [selectedCampusAgent, setSelectedCampusAgent] = useState<string | null>(null);
   const isDemo = !progress && !verifiedInquiry;
   const isAwaitingProject = !progress && verifiedInquiry;
 
-  useEffect(() => {
-    if (!isDemo || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      setDemoStep((current) => (
-        current >= DWD_WORKFORCE_AGENTS.length ? 0 : current + 1
-      ));
-    }, 1700);
-
-    return () => window.clearInterval(timer);
-  }, [isDemo]);
-
-  const agentsWithStatus = DWD_WORKFORCE_AGENTS.map((agent, index) => {
+  const agentsWithStatus = DWD_WORKFORCE_AGENTS.map((agent) => {
     const savedStatus = progress?.milestones.find(
       (milestone) => milestone.id === agent.milestoneId,
     )?.status;
-    const demoStatus: PublicProjectMilestoneStatus =
-      index < demoStep
-        ? "completed"
-        : index === demoStep
-          ? "active"
-          : index === demoStep + 1
-            ? "ready"
-            : "waiting";
-    const status = isDemo
-      ? demoStatus
-      : isAwaitingProject
-        ? "waiting"
-        : savedStatus ?? "waiting";
+    const status = isDemo || isAwaitingProject
+      ? "waiting"
+      : savedStatus ?? "waiting";
 
     return { ...agent, status };
   });
@@ -79,13 +54,8 @@ export default function WorkforceOffice({
   const activeAgents = agentsWithStatus.filter(({ status }) => status === "active");
   const completedMilestones =
     progress?.milestones.filter((milestone) => milestone.status === "completed").length ?? 0;
-  const completedDemoRoles = Math.min(demoStep, DWD_WORKFORCE_AGENTS.length);
-  const completedCount = isDemo ? completedDemoRoles : completedMilestones;
-  const totalCount = isDemo
-    ? DWD_WORKFORCE_AGENTS.length
-    : progress?.milestones.length ?? DWD_WORKFORCE_AGENTS.length;
-  const percent = progress?.percentComplete ??
-    (isDemo ? Math.round((completedDemoRoles / DWD_WORKFORCE_AGENTS.length) * 100) : 0);
+  const totalCount = progress?.milestones.length ?? DWD_WORKFORCE_AGENTS.length;
+  const percent = progress?.percentComplete ?? 0;
   const firstActiveAgent = activeAgents[0];
 
   return (
@@ -123,30 +93,30 @@ export default function WorkforceOffice({
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500">
-                {progress ? "Project completion" : isDemo ? "Demo progress" : "Project progress"}
+                {isDemo ? "Project progress" : progress ? "Project completion" : "Project progress"}
               </p>
               <p className="text-lg font-black leading-tight text-white">
-                {progress ? `${percent}% complete` : isDemo ? `${percent}% · demo phase` : "Not started"}
+                {progress ? `${percent}% complete` : "Not started"}
               </p>
             </div>
             <div className="text-right">
               <p className="text-[9px] text-emerald-300">
-                {completedCount} {isDemo ? "roles shown done" : "milestones done"}
+                {completedMilestones} milestones done
               </p>
               <p className="text-[9px] text-gray-400">
-                {isDemo
-                  ? `${DWD_WORKFORCE_AGENTS.length - completedDemoRoles} roles remaining`
-                  : `${Math.max(totalCount - completedMilestones, 0)} milestones left`}
+                {progress
+                  ? `${Math.max(totalCount - completedMilestones, 0)} milestones left`
+                  : "Starts after project approval"}
               </p>
             </div>
           </div>
           <div
             className="mt-2.5 h-2.5 overflow-hidden rounded-full border border-white/10 bg-white/10"
             role="progressbar"
-            aria-label={isDemo ? "Illustrative agency demo progress" : "Project milestone progress"}
+            aria-label="Saved project milestone progress"
             aria-valuemin={0}
-            aria-valuemax={isDemo ? DWD_WORKFORCE_AGENTS.length : totalCount}
-            aria-valuenow={isDemo ? completedDemoRoles : completedMilestones}
+            aria-valuemax={totalCount}
+            aria-valuenow={completedMilestones}
           >
             <div
               className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-lime-300 to-yellow-300 shadow-[0_0_12px_rgba(110,231,183,0.45)] transition-all duration-700"
@@ -155,7 +125,7 @@ export default function WorkforceOffice({
           </div>
           <p className="mt-1 text-right text-[8px] text-gray-500">
             {isDemo
-              ? "Looping showcase animation · not project work"
+              ? "Project progress changes only when real milestones are saved"
               : progress
                 ? `${completedMilestones} of ${totalCount} saved milestones complete`
                 : "Work starts after project approval"}
@@ -371,7 +341,7 @@ export default function WorkforceOffice({
 
       <p className="border-t border-white/10 bg-[#171a20] px-5 py-3 text-[9px] leading-relaxed text-gray-400 sm:px-7">
         {isDemo
-          ? "Illustrative agency showcase: the portraits, desk animations, roles and looping progress are a visual demo, not a live roster or connected autonomous AI workers. Enter a valid inquiry reference and matching email to open your project room."
+          ? "Illustrative agency showcase: portraits, desk animations and roles are a visual demo, not a live roster or connected autonomous AI workers. Project progress changes only when real milestones are saved. Enter a valid inquiry reference and matching email to open your project room."
           : isAwaitingProject
             ? "Your inquiry is verified. No project work is shown as started until DWD creates and approves its project workflow."
             : "This view maps the project's saved workflow milestones to relevant specialties; it does not claim individual autonomous agents are connected or show a live editor stream. Private notes and customer data are not displayed."}
