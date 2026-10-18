@@ -15,10 +15,10 @@ const ROOM_LAYOUT = [
   { seats: [80, 83, 86, 89, 92], y: 25, meeting: { x: 86, y: 30 } },
   { seats: [17, 20, 23, 26, 29], y: 36, meeting: { x: 23, y: 41 } },
   { seats: [38, 41, 44, 47, 50], y: 36, meeting: { x: 44, y: 41 } },
-  { seats: [60, 63, 66, 69, 72], y: 36, meeting: { x: 66, y: 41 } },
-  { seats: [80, 83, 86, 89, 92], y: 36, meeting: { x: 86, y: 41 } },
   { seats: [32, 35, 38, 41, 44], y: 49, meeting: { x: 38, y: 54 } },
   { seats: [56, 59, 62, 65, 68], y: 49, meeting: { x: 62, y: 54 } },
+  { seats: [60, 63, 66, 69, 72], y: 36, meeting: { x: 66, y: 41 } },
+  { seats: [80, 83, 86, 89, 92], y: 36, meeting: { x: 86, y: 41 } },
 ] as const;
 const TRANSIT_DURATION_MS = 3400;
 
