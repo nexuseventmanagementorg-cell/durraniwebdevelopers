@@ -50,6 +50,7 @@ import {
   DWD_WORKFORCE_AGENTS,
   DWD_WORKFORCE_DEPARTMENTS,
 } from "../src/lib/workforce-agents";
+import { summarizeNexusAgentActivity } from "../src/lib/nexus-agent-activity";
 import { reviewInquiryScope } from "../src/lib/inquiry-review";
 import { getBeginnerBudgetPlan } from "../src/lib/calculator-guide";
 import { createCalculatorLeadToken, validateCalculatorLeadContact, verifyCalculatorLeadToken } from "../src/lib/calculator-lead-security";
@@ -1233,4 +1234,40 @@ test("Payment backend errors distinguish missing configuration, missing schema, 
     describePaymentBackendError({ code: "NoSuchBucket" }, "storage"),
     /payment-receipts/
   );
+});
+
+test("Nexus run progress stays at zero until actual specialist replies are recorded", () => {
+  const idle = summarizeNexusAgentActivity([]);
+  assert.equal(idle.status, "idle");
+  assert.equal(idle.percentComplete, 0);
+  assert.equal(idle.completedSteps, 0);
+
+  const working = summarizeNexusAgentActivity([{
+    runId: "run-1",
+    step: 1,
+    kind: "dispatched",
+    senderRole: "Nexus Orchestrator",
+    recipientRole: "Property Matching AI",
+    instruction: "Review property matching.",
+    createdAt: "2026-10-19T00:00:00.000Z",
+  }]);
+  assert.equal(working.status, "working");
+  assert.equal(working.percentComplete, 0);
+  assert.equal(working.steps[0].status, "working");
+});
+
+test("Nexus run progress advances only from saved replies for the latest run", () => {
+  const result = summarizeNexusAgentActivity([
+    { runId: "run-old", step: 1, kind: "replied", senderRole: "Property Matching AI", recipientRole: "Listing Auditor AI", reply: "Old", createdAt: "2026-10-18T00:00:00.000Z" },
+    { runId: "run-new", step: 1, kind: "dispatched", senderRole: "Nexus Orchestrator", recipientRole: "Property Matching AI", instruction: "Check the current build.", createdAt: "2026-10-19T00:00:00.000Z" },
+    { runId: "run-new", step: 1, kind: "replied", senderRole: "Property Matching AI", recipientRole: "Listing Auditor AI", reply: "Reviewed actual records.", createdAt: "2026-10-19T00:00:01.000Z" },
+    { runId: "run-new", step: 2, kind: "dispatched", senderRole: "Property Matching AI", recipientRole: "Listing Auditor AI", instruction: "Audit the prior note.", createdAt: "2026-10-19T00:00:02.000Z" },
+  ]);
+
+  assert.equal(result.runId, "run-new");
+  assert.equal(result.status, "working");
+  assert.equal(result.completedSteps, 1);
+  assert.equal(result.percentComplete, 33);
+  assert.equal(result.steps[0].response?.reply, "Reviewed actual records.");
+  assert.equal(result.steps[1].status, "working");
 });

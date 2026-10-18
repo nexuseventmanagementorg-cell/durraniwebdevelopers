@@ -9,6 +9,7 @@ import {
   NEXUS_BUILD_WORK,
   type NexusBuildMilestoneStatus,
 } from "@/lib/nexus-build-progress";
+import { NEXUS_AGENT_ROLES, summarizeNexusAgentActivity, type NexusAgentActivityEvent } from "@/lib/nexus-agent-activity";
 
 const REPOSITORY = "https://github.com/nexuseventmanagementorg-cell/nexus.properties.network";
 
@@ -35,10 +36,44 @@ const STATUS_COPY: Record<NexusBuildMilestoneStatus, string> = {
   blocked: "Needs key",
 };
 
-export default function NexusBuildShowcase() {
+export default function NexusBuildShowcase({
+  activity,
+  activityAvailable,
+  activityError,
+  isAdmin,
+}: {
+  activity: NexusAgentActivityEvent[];
+  activityAvailable: boolean;
+  activityError: string;
+  isAdmin: boolean;
+}) {
   const [selectedRole, setSelectedRole] = useState(NEXUS_BUILD_WORK[1].role);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [sameOriginPreviewBlocked, setSameOriginPreviewBlocked] = useState(false);
+  const [runGoal, setRunGoal] = useState("Review the current Nexus property search and AI assistant implementation. Report confirmed behavior, gaps, and acceptance checks.");
+  const [isStartingRun, setIsStartingRun] = useState(false);
+  const [runError, setRunError] = useState("");
+  const runActivity = summarizeNexusAgentActivity(activity);
+
+  const startAgentRun = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsStartingRun(true);
+    setRunError("");
+    try {
+      const response = await fetch("/api/admin/nexus-agent-run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: runGoal }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "The Nexus agent run could not start.");
+      window.dispatchEvent(new Event("nexus-activity-refresh"));
+    } catch (error) {
+      setRunError(error instanceof Error ? error.message : "The Nexus agent run could not start.");
+    } finally {
+      setIsStartingRun(false);
+    }
+  };
 
   useEffect(() => {
     const configuredUrl = getNexusPreviewUrl();
@@ -78,11 +113,62 @@ export default function NexusBuildShowcase() {
           </a>
         </div>
 
+        <section className="mt-5 border-l-2 border-sky-300 bg-black/20 p-4" aria-label="Nexus project launch and live agent run">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-wider text-sky-200">Project launch · live specialist run</p>
+              <h3 className="mt-1 text-lg font-extrabold">Nexus Property Network</h3>
+              <p className="mt-1 text-[10px] text-slate-300">Sequential Gemini specialist review. Progress advances only after a model response is durably recorded.</p>
+            </div>
+            <span className={`border px-2 py-1 text-[9px] font-bold uppercase ${runActivity.status === "working" ? "border-sky-300/40 text-sky-100" : runActivity.status === "completed" ? "border-emerald-300/40 text-emerald-100" : runActivity.status === "failed" ? "border-rose-300/40 text-rose-100" : "border-white/15 text-slate-300"}`}>
+              {runActivity.status === "idle" ? "No active run" : runActivity.status}
+            </span>
+          </div>
+          <div className="mt-4 flex items-end justify-between gap-3">
+            <span className="text-[10px] text-slate-300">{runActivity.completedSteps} of {runActivity.totalSteps} specialist steps saved</span>
+            <strong className="text-xl font-black text-white">{runActivity.percentComplete}%</strong>
+          </div>
+          <div className="mt-2 h-2.5 overflow-hidden border border-white/10 bg-white/10" role="progressbar" aria-label="Saved Nexus specialist run progress" aria-valuemin={0} aria-valuemax={runActivity.totalSteps} aria-valuenow={runActivity.completedSteps}>
+            <div className="h-full bg-sky-300 transition-[width] duration-500" style={{ width: `${runActivity.percentComplete}%` }} />
+          </div>
+          <div className="mt-3 grid gap-2 md:grid-cols-3">
+            {NEXUS_AGENT_ROLES.map((agent, index) => {
+              const step = runActivity.steps.find((item) => item.step === index + 1);
+              const status = step?.status || "queued";
+              return (
+                <article key={agent.role} className="flex min-w-0 items-start gap-2 border border-white/10 bg-black/20 p-2.5">
+                  <Image src={`/agency/avatars/${agent.avatar}.webp`} alt="" width={36} height={46} className="h-11 w-8 shrink-0 bg-black/30 object-cover object-top" />
+                  <div className="min-w-0">
+                    <p className="truncate text-[10px] font-extrabold text-white">{agent.role}</p>
+                    <p className="mt-0.5 text-[9px] text-slate-400">{status === "working" ? "Model is working" : status === "completed" ? "Reply recorded" : status === "failed" ? "Run failed" : "Standby"}</p>
+                    <p className="mt-1 text-[9px] leading-relaxed text-slate-300">{step?.response?.reply || agent.task}</p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          {!activityAvailable && <p className="mt-3 text-[10px] text-amber-100" role="status">{activityError || "Durable agent activity is not connected."}</p>}
+          {activityAvailable && runActivity.status === "idle" && <p className="mt-3 text-[10px] text-slate-400" role="status">No agent run has been recorded yet. Nothing is moving until an authorized specialist run is started.</p>}
+          {isAdmin && (
+            <form onSubmit={startAgentRun} className="mt-4 border-t border-white/10 pt-3">
+              <label htmlFor="nexus-agent-goal" className="block text-[9px] font-bold uppercase tracking-wide text-slate-300">Project instruction</label>
+              <textarea id="nexus-agent-goal" value={runGoal} onChange={(event) => setRunGoal(event.target.value)} maxLength={1200} rows={2} className="mt-2 w-full resize-y border border-white/15 bg-black/30 p-2 text-[10px] text-white outline-none focus:border-sky-200" />
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="max-w-xl text-[9px] leading-relaxed text-slate-500">This launches an evidence-aware review only; it does not edit or deploy source code. Do not enter personal or confidential information.</p>
+                <button type="submit" disabled={isStartingRun || !activityAvailable || !runGoal.trim()} className="border border-sky-200/40 bg-sky-300/10 px-3 py-2 text-[9px] font-bold text-sky-100 hover:bg-sky-300/20 disabled:cursor-not-allowed disabled:opacity-40">
+                  {isStartingRun ? "Running specialists..." : "Start specialist review"}
+                </button>
+              </div>
+              {runError && <p className="mt-2 text-[10px] text-rose-200" role="alert">{runError}</p>}
+            </form>
+          )}
+        </section>
+
         <section className="mt-5 border-l-2 border-emerald-300 bg-black/20 p-4" aria-label="Nexus AI assistant MVP progress">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-[9px] font-black uppercase tracking-wider text-emerald-200">Nexus AI assistant MVP scope</p>
-              <p className="mt-1 text-[10px] text-slate-300">Calculated from completed implementation milestones, not the whole property platform.</p>
+              <p className="text-[9px] font-black uppercase tracking-wider text-emerald-200">Delivered Nexus AI assistant MVP checklist</p>
+              <p className="mt-1 text-[10px] text-slate-300">Historical implementation scope; this percentage is not a live autonomous coding run.</p>
             </div>
             <p className="text-2xl font-black text-white">{NEXUS_BUILD_PROGRESS.percentComplete}%</p>
           </div>
@@ -208,7 +294,7 @@ export default function NexusBuildShowcase() {
             <div className="border-l-2 border-amber-200 bg-amber-100/[0.06] p-4">
               <p className="text-xs font-bold text-amber-100">Public preview URL not configured</p>
               <p className="mt-1 text-[10px] leading-relaxed text-slate-300">
-                Local development embeds `http://127.0.0.1:3001`. For public visitors, set `NEXT_PUBLIC_NEXUS_PREVIEW_URL` to the externally hosted HTTPS preview deployment; a visitor cannot reach a developer's localhost.
+                Local development embeds `http://127.0.0.1:3001`. For public visitors, set `NEXT_PUBLIC_NEXUS_PREVIEW_URL` to the externally hosted HTTPS preview deployment; a visitor cannot reach a developer&apos;s localhost.
               </p>
             </div>
           )}

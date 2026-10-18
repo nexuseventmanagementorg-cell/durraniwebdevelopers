@@ -3,8 +3,10 @@
 import type {
   PublicProjectProgress,
 } from "@/lib/types";
+import { useEffect, useState } from "react";
 import { DWD_WORKFORCE_AGENTS } from "@/lib/workforce-agents";
 import { NEXUS_BUILD_PROGRESS } from "@/lib/nexus-build-progress";
+import type { NexusAgentActivityEvent } from "@/lib/nexus-agent-activity";
 import NexusBuildShowcase from "@/components/projects/NexusBuildShowcase";
 import ProjectWorkFloor from "@/components/projects/ProjectWorkFloor";
 
@@ -15,6 +17,47 @@ export default function WorkforceOffice({
   progress?: PublicProjectProgress | null;
   verifiedInquiry?: boolean;
 }) {
+  const [agentActivity, setAgentActivity] = useState<NexusAgentActivityEvent[]>([]);
+  const [activityAvailable, setActivityAvailable] = useState(false);
+  const [activityError, setActivityError] = useState("Loading recorded Nexus agent activity...");
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let disposed = false;
+    const refreshActivity = async () => {
+      try {
+        const response = await fetch("/api/public/nexus-activity", { cache: "no-store" });
+        const result = await response.json();
+        if (disposed) return;
+        setActivityAvailable(Boolean(result.available));
+        setAgentActivity(Array.isArray(result.events) ? result.events as NexusAgentActivityEvent[] : []);
+        setActivityError(result.available ? "" : result.error || "Nexus agent activity is unavailable.");
+      } catch {
+        if (!disposed) {
+          setActivityAvailable(false);
+          setActivityError("Nexus agent activity is unavailable.");
+        }
+      }
+    };
+
+    void refreshActivity();
+    void fetch("/api/admin/me", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((result) => { if (!disposed) setIsAdmin(Boolean(result?.authenticated)); })
+      .catch(() => { if (!disposed) setIsAdmin(false); });
+
+    const interval = window.setInterval(() => {
+      void refreshActivity();
+    }, 3000);
+    const refreshEvent = () => { void refreshActivity(); };
+    window.addEventListener("nexus-activity-refresh", refreshEvent);
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+      window.removeEventListener("nexus-activity-refresh", refreshEvent);
+    };
+  }, []);
+
   const isDemo = !progress && !verifiedInquiry;
   const isAwaitingProject = !progress && verifiedInquiry;
   const completedMilestones = progress
@@ -50,7 +93,7 @@ export default function WorkforceOffice({
           </h2>
           <p className="mt-1 text-[11px] text-gray-400">
             {isDemo
-              ? `Nexus AI assistant MVP · ${completedMilestones} of ${totalCount} scoped milestones complete.`
+              ? "Nexus Property Network · live run status is shown from durable specialist events below."
               : isAwaitingProject
                 ? "Your inquiry is verified. Project milestone updates appear here once your project is approved and created."
                 : firstActiveAgent
@@ -59,7 +102,7 @@ export default function WorkforceOffice({
           </p>
         </div>
 
-        <div className="min-w-48 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+        {!isDemo && <div className="min-w-48 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500">
@@ -100,16 +143,21 @@ export default function WorkforceOffice({
                 ? `${completedMilestones} of ${totalCount} saved milestones complete`
                 : "Work starts after project approval"}
           </p>
-        </div>
+        </div>}
       </header>
 
-      <NexusBuildShowcase />
+      <NexusBuildShowcase
+        activity={agentActivity}
+        activityAvailable={activityAvailable}
+        activityError={activityError}
+        isAdmin={isAdmin}
+      />
 
-      <ProjectWorkFloor />
+      <ProjectWorkFloor activity={agentActivity} />
 
       <p className="border-t border-white/10 bg-[#171a20] px-5 py-3 text-[9px] leading-relaxed text-gray-400 sm:px-7">
         {isDemo
-          ? "Illustrative agency showcase: portraits, desk animations and roles are a visual demo, not a live roster or connected autonomous AI workers. Project progress changes only when real milestones are saved. Enter a valid inquiry reference and matching email to open your project room."
+          ? "Live specialist cards and project progress update only from stored Nexus model-run events. The 54-role registry is not 54 deployed workers, and no office walking is simulated. Enter a valid inquiry reference and matching email to open your project room."
           : isAwaitingProject
             ? "Your inquiry is verified. No project work is shown as started until DWD creates and approves its project workflow."
             : "This view maps the project's saved workflow milestones to relevant specialties; it does not claim individual autonomous agents are connected or show a live editor stream. Private notes and customer data are not displayed."}
