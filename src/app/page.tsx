@@ -27,6 +27,7 @@ import {
   PhoneCall,
   Check,
   ChevronRight,
+  Download,
   ExternalLink,
 } from "lucide-react";
 
@@ -236,9 +237,18 @@ export default function HomePage() {
                   <source src="/logoanimation2.mp4" type="video/mp4" />
                   Your browser does not support HTML video.
                 </video>
-                <div className="mt-3 flex items-center justify-between text-xs px-2 text-gray-400">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 px-2 text-xs text-gray-400">
                   <span className="font-semibold text-white">Durrani Web Developers</span>
-                  <span>Ideas • Code • Real Solutions</span>
+                  <span className="sm:ml-auto">Ideas • Code • Real Solutions</span>
+                  <a
+                    href="/logoanimation2.mp4"
+                    download="durrani-web-developers-intro.mp4"
+                    className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-2 font-semibold text-white transition hover:border-[#E31E36]/60 hover:bg-[#E31E36]/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E31E36]"
+                    aria-label="Download the Durrani Web Developers introduction video"
+                  >
+                    <Download className="h-4 w-4 text-[#E31E36]" />
+                    Download video
+                  </a>
                 </div>
               </div>
             </div>
