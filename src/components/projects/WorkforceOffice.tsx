@@ -11,6 +11,7 @@ import {
   DWD_WORKFORCE_AGENTS,
   DWD_WORKFORCE_DEPARTMENTS,
 } from "@/lib/workforce-agents";
+import LiveAgencyGame from "@/components/projects/LiveAgencyGame";
 
 const STATUS_LABELS: Record<PublicProjectMilestoneStatus, string> = {
   waiting: "Waiting",
@@ -160,6 +161,8 @@ export default function WorkforceOffice({
           </p>
         </div>
       </header>
+
+      <LiveAgencyGame />
 
       <div className="relative overflow-hidden bg-[#61725a] p-3 sm:p-5">
         <div

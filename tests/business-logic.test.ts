@@ -99,6 +99,11 @@ test("DWD agency showcase has 50 unique portraits assigned across 10 departments
       `Portrait file for ${avatar} must exist`,
     );
   }
+
+  assert.ok(
+    existsSync(join(process.cwd(), "public", "agency", "scenes", "dwd-future-office.webp")),
+    "The cinematic office scene used by the interactive agency view must exist",
+  );
 });
 
 test("Package 1: Web App Without Client Admin Panel (PKR 35,000)", () => {
