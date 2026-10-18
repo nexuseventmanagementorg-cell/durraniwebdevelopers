@@ -344,7 +344,7 @@ export default function LiveAgencyGame() {
                 title={agent.role}
                 aria-label={`${agent.role}${isReceivingHandoff && meetingJourney ? `, receiving work from ${DWD_WORKFORCE_AGENTS[meetingJourney.agentIndex].role}` : isWalking ? `, walking to ${DWD_WORKFORCE_DEPARTMENTS[agentJourney.toRoom].name}` : `, at ${DWD_WORKFORCE_DEPARTMENTS[roomIndex].name}`}`}
                 aria-pressed={isSelected}
-                className={`absolute z-20 flex min-h-11 min-w-9 touch-manipulation -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-lg p-[2px] cursor-pointer transition-[left,top,transform,filter] focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                className={`absolute z-20 flex min-h-11 min-w-9 touch-manipulation -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-lg p-[2px] cursor-pointer transition-[left,top] focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
                   isWalking || isReceivingHandoff ? "z-30 scale-110" : ""
                 } ${isWalking ? "motion-safe:animate-bounce [animation-duration:0.8s]" : ""} ${isSelected ? "z-40 scale-125" : ""}`}
                 style={{
