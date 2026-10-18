@@ -11,6 +11,7 @@ import {
   DWD_WORKFORCE_AGENTS,
   DWD_WORKFORCE_DEPARTMENTS,
 } from "@/lib/workforce-agents";
+import { NEXUS_BUILD_PROGRESS } from "@/lib/nexus-build-progress";
 import LiveAgencyGame from "@/components/projects/LiveAgencyGame";
 import NexusBuildShowcase from "@/components/projects/NexusBuildShowcase";
 
@@ -53,10 +54,11 @@ export default function WorkforceOffice({
   });
 
   const activeAgents = agentsWithStatus.filter(({ status }) => status === "active");
-  const completedMilestones =
-    progress?.milestones.filter((milestone) => milestone.status === "completed").length ?? 0;
-  const totalCount = progress?.milestones.length ?? DWD_WORKFORCE_AGENTS.length;
-  const percent = progress?.percentComplete ?? 0;
+  const completedMilestones = progress
+    ? progress.milestones.filter((milestone) => milestone.status === "completed").length
+    : isDemo ? NEXUS_BUILD_PROGRESS.completedMilestones : 0;
+  const totalCount = progress?.milestones.length ?? (isDemo ? NEXUS_BUILD_PROGRESS.totalMilestones : 1);
+  const percent = progress?.percentComplete ?? (isDemo ? NEXUS_BUILD_PROGRESS.percentComplete : 0);
   const firstActiveAgent = activeAgents[0];
 
   return (
@@ -69,19 +71,19 @@ export default function WorkforceOffice({
               DWD agency district
             </span>
             <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider ${isDemo ? "bg-amber-300/10 text-amber-200" : isAwaitingProject ? "bg-sky-300/10 text-sky-200" : "bg-emerald-300/10 text-emerald-200"}`}>
-              {isDemo ? "Illustrative demo" : isAwaitingProject ? "Inquiry verified" : "Project workspace"}
+              {isDemo ? "Nexus build showcase" : isAwaitingProject ? "Inquiry verified" : "Project workspace"}
             </span>
           </div>
           <h2 className="mt-3 text-xl font-black tracking-tight sm:text-2xl">
             {isDemo
-              ? "Welcome to the DWD digital agency"
+              ? "Nexus Property Network"
               : isAwaitingProject
                 ? "Your project room is getting ready"
                 : progress?.projectName}
           </h2>
           <p className="mt-1 text-[11px] text-gray-400">
             {isDemo
-              ? `${DWD_WORKFORCE_AGENTS.length} illustrated specialist roles across ${DWD_WORKFORCE_DEPARTMENTS.length} departments.`
+              ? `Nexus AI assistant MVP · ${completedMilestones} of ${totalCount} scoped milestones complete.`
               : isAwaitingProject
                 ? "Your inquiry is verified. Project milestone updates appear here once your project is approved and created."
                 : firstActiveAgent
@@ -94,10 +96,10 @@ export default function WorkforceOffice({
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500">
-                {isDemo ? "Project progress" : progress ? "Project completion" : "Project progress"}
+                {isDemo ? "Nexus MVP progress" : progress ? "Project completion" : "Project progress"}
               </p>
               <p className="text-lg font-black leading-tight text-white">
-                {progress ? `${percent}% complete` : "Not started"}
+                {progress || isDemo ? `${percent}% complete` : "Not started"}
               </p>
             </div>
             <div className="text-right">
@@ -105,7 +107,7 @@ export default function WorkforceOffice({
                 {completedMilestones} milestones done
               </p>
               <p className="text-[9px] text-gray-400">
-                {progress
+                {progress || isDemo
                   ? `${Math.max(totalCount - completedMilestones, 0)} milestones left`
                   : "Starts after project approval"}
               </p>
@@ -114,7 +116,7 @@ export default function WorkforceOffice({
           <div
             className="mt-2.5 h-2.5 overflow-hidden rounded-full border border-white/10 bg-white/10"
             role="progressbar"
-            aria-label="Saved project milestone progress"
+            aria-label={isDemo ? "Nexus AI assistant MVP progress" : "Saved project milestone progress"}
             aria-valuemin={0}
             aria-valuemax={totalCount}
             aria-valuenow={completedMilestones}
@@ -126,7 +128,7 @@ export default function WorkforceOffice({
           </div>
           <p className="mt-1 text-right text-[8px] text-gray-500">
             {isDemo
-              ? "Project progress changes only when real milestones are saved"
+              ? "Progress is calculated from the scoped Nexus MVP milestones below"
               : progress
                 ? `${completedMilestones} of ${totalCount} saved milestones complete`
                 : "Work starts after project approval"}
