@@ -3,7 +3,12 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { CheckCircle2, ChevronDown, CircleDashed, ExternalLink, LoaderCircle } from "lucide-react";
-import { NEXUS_BUILD_MILESTONES, NEXUS_BUILD_PROGRESS } from "@/lib/nexus-build-progress";
+import {
+  NEXUS_BUILD_MILESTONES,
+  NEXUS_BUILD_PROGRESS,
+  NEXUS_BUILD_WORK,
+  type NexusBuildMilestoneStatus,
+} from "@/lib/nexus-build-progress";
 
 const REPOSITORY = "https://github.com/nexuseventmanagementorg-cell/nexus.properties.network";
 
@@ -23,67 +28,7 @@ function getNexusPreviewUrl(): string | null {
   }
 }
 
-type BuildStatus = "completed" | "active" | "queued" | "blocked";
-
-interface BuildRole {
-  role: string;
-  avatar: string;
-  status: BuildStatus;
-  task: string;
-  output: string;
-  artifact: string;
-  file: string;
-}
-
-const BUILD_ROLES: BuildRole[] = [
-  {
-    role: "AI Systems Architect",
-    avatar: "backend-architect",
-    status: "completed",
-    task: "Audited the 54-role registry, assistant routing, and declared backend gaps.",
-    output: "Confirmed that the 54-role registry is a design catalogue, not 54 deployed workers. Property records are sample data and require clear provenance.",
-    artifact: `${REPOSITORY}/blob/main/NEXUS_PHASE_1_IMPLEMENTATION_REPORT_v1.0.md`,
-    file: "NEXUS_PHASE_1_IMPLEMENTATION_REPORT_v1.0.md",
-  },
-  {
-    role: "Conversation Engineer",
-    avatar: "automation-workflow-engineer",
-    status: "completed",
-    task: "Added a server-only Gemini gateway, bounded conversation history, and honest no-key fallback.",
-    output: "The drawer uses the gateway for unmatched conversation; exact sample search and FAQ answers stay deterministic. No provider key is in the browser bundle.",
-    artifact: `${REPOSITORY}/blob/main/src/server/aiChat.ts`,
-    file: "src/server/aiChat.ts",
-  },
-  {
-    role: "Property Intelligence Engineer",
-    avatar: "business-analyst",
-    status: "queued",
-    task: "Connect responses to property search evidence without inventing listings.",
-    output: "Next: pass only clearly labelled sample or verified records into the response context; never upgrade sample data to verified.",
-    artifact: `${REPOSITORY}/blob/main/src/utils/propertyIntentParser.ts`,
-    file: "src/utils/propertyIntentParser.ts",
-  },
-  {
-    role: "Quality & Safety Engineer",
-    avatar: "qa-testing-bot",
-    status: "completed",
-    task: "Added five mocked tests for validation, key isolation, safeguards, and provider failures.",
-    output: "All five gateway tests pass without paid API calls. Live provider quality still needs a configured key and human-reviewed evaluations.",
-    artifact: `${REPOSITORY}/blob/main/tests/ai-chat.test.ts`,
-    file: "tests/ai-chat.test.ts",
-  },
-  {
-    role: "Model Operations",
-    avatar: "devops-cloud-engineer",
-    status: "blocked",
-    task: "Enable live Gemini responses after a server-only API key is configured.",
-    output: "No API key was shared or committed. Until the owner configures NEXUS_GEMINI_API_KEY in local server env and Vercel, the assistant correctly stays in local-preview mode.",
-    artifact: `${REPOSITORY}/blob/main/.env.example`,
-    file: ".env.example",
-  },
-];
-
-const STATUS_COPY: Record<BuildStatus, string> = {
+const STATUS_COPY: Record<NexusBuildMilestoneStatus, string> = {
   completed: "Complete",
   active: "In progress",
   queued: "Next",
@@ -91,7 +36,7 @@ const STATUS_COPY: Record<BuildStatus, string> = {
 };
 
 export default function NexusBuildShowcase() {
-  const [selectedRole, setSelectedRole] = useState(BUILD_ROLES[1].role);
+  const [selectedRole, setSelectedRole] = useState(NEXUS_BUILD_WORK[1].role);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [sameOriginPreviewBlocked, setSameOriginPreviewBlocked] = useState(false);
 
@@ -163,7 +108,7 @@ export default function NexusBuildShowcase() {
 
         <div className="grid gap-5 pt-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,.75fr)]">
           <ol className="space-y-2">
-            {BUILD_ROLES.map((item) => {
+            {NEXUS_BUILD_WORK.map((item) => {
               const selected = selectedRole === item.role;
               const StatusIcon = item.status === "completed"
                 ? CheckCircle2
