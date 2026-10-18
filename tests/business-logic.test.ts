@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
 import { createHmac } from "crypto";
 import {
@@ -43,6 +45,10 @@ import {
   createProjectAutomationWorkflow,
   updateProjectWorkflowTask,
 } from "../src/lib/project-workflow";
+import {
+  DWD_WORKFORCE_AGENTS,
+  DWD_WORKFORCE_DEPARTMENTS,
+} from "../src/lib/workforce-agents";
 import { reviewInquiryScope } from "../src/lib/inquiry-review";
 import { getBeginnerBudgetPlan } from "../src/lib/calculator-guide";
 import { createCalculatorLeadToken, validateCalculatorLeadContact, verifyCalculatorLeadToken } from "../src/lib/calculator-lead-security";
@@ -67,6 +73,33 @@ import {
   toSafepayMinorUnits,
   verifySafepayWebhookSignature,
 } from "../src/lib/safepay";
+
+test("DWD agency showcase has 50 unique portraits assigned across 10 departments", () => {
+  assert.equal(DWD_WORKFORCE_AGENTS.length, 50);
+  assert.equal(DWD_WORKFORCE_DEPARTMENTS.length, 10);
+
+  const roles = DWD_WORKFORCE_AGENTS.map((agent) => agent.role);
+  const avatars = DWD_WORKFORCE_AGENTS.map((agent) => agent.avatar);
+  const departmentRoles = DWD_WORKFORCE_DEPARTMENTS.flatMap(
+    (department) => department.agentRoles,
+  );
+
+  assert.equal(new Set(roles).size, roles.length, "Agent role names must be unique");
+  assert.equal(new Set(avatars).size, avatars.length, "Each role must have a unique portrait");
+  assert.equal(new Set(departmentRoles).size, departmentRoles.length, "A role cannot appear in multiple departments");
+  assert.deepEqual([...departmentRoles].sort(), [...roles].sort(), "Every role must be assigned to one department");
+
+  for (const department of DWD_WORKFORCE_DEPARTMENTS) {
+    assert.equal(department.agentRoles.length, 5, `${department.name} must contain five roles`);
+  }
+
+  for (const avatar of avatars) {
+    assert.ok(
+      existsSync(join(process.cwd(), "public", "agency", "avatars", `${avatar}.webp`)),
+      `Portrait file for ${avatar} must exist`,
+    );
+  }
+});
 
 test("Package 1: Web App Without Client Admin Panel (PKR 35,000)", () => {
   const calc = calculateBudget("none", []);

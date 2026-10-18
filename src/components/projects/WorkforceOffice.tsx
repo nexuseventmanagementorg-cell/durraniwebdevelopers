@@ -1,207 +1,366 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
+import { Building2, Check, Clock3, Monitor, Rocket } from "lucide-react";
+import type {
+  PublicProjectMilestoneStatus,
+  PublicProjectProgress,
+} from "@/lib/types";
 import {
-  Check,
-  Code2,
-  Eye,
-  FileSearch,
-  Layers3,
-  Monitor,
-  Paintbrush2,
-  Rocket,
-  Sparkles,
-  type LucideIcon,
-} from "lucide-react";
-import type { PublicProjectProgress, PublicProjectMilestoneStatus } from "@/lib/types";
-
-const AGENTS: {
-  role: string;
-  task: string;
-  milestoneId: string;
-  icon: LucideIcon;
-  color: string;
-  avatar: string;
-}[] = [
-  { role: "Requirements Analyst", task: "Reviewing project scope", milestoneId: "requirements", icon: FileSearch, color: "text-sky-700 bg-sky-100", avatar: "🧑🏻‍💼" },
-  { role: "UI / UX Designer", task: "Planning the experience", milestoneId: "planning", icon: Paintbrush2, color: "text-violet-700 bg-violet-100", avatar: "👩🏽‍🎨" },
-  { role: "Solution Architect", task: "Mapping the build plan", milestoneId: "planning", icon: Layers3, color: "text-indigo-700 bg-indigo-100", avatar: "🧑🏽‍💻" },
-  { role: "Web Developer", task: "Building the website", milestoneId: "development", icon: Code2, color: "text-emerald-700 bg-emerald-100", avatar: "👨🏽‍💻" },
-  { role: "QA Engineer", task: "Checking every detail", milestoneId: "quality", icon: Eye, color: "text-amber-700 bg-amber-100", avatar: "👩🏻‍🔬" },
-  { role: "Release Manager", task: "Preparing a safe launch", milestoneId: "launch", icon: Rocket, color: "text-rose-700 bg-rose-100", avatar: "🧑🏾‍🚀" },
-];
+  DWD_WORKFORCE_AGENTS,
+  DWD_WORKFORCE_DEPARTMENTS,
+} from "@/lib/workforce-agents";
 
 const STATUS_LABELS: Record<PublicProjectMilestoneStatus, string> = {
   waiting: "Waiting",
   ready: "Up next",
   active: "In progress",
-  awaiting_admin: "Review",
+  awaiting_admin: "Team review",
   completed: "Complete",
 };
 
-function DemoOffice({ activeIndex }: { activeIndex: number }) {
-  return AGENTS.map((agent, index) => {
-    const state: PublicProjectMilestoneStatus =
-      index < activeIndex ? "completed" :
-        index === activeIndex ? "active" :
-          index === activeIndex + 1 ? "ready" : "waiting";
-    return { agent, state };
-  });
-}
+const DEPARTMENT_TONES = {
+  blue: "text-sky-200",
+  violet: "text-violet-200",
+  green: "text-emerald-200",
+  amber: "text-amber-200",
+  rose: "text-rose-200",
+} as const;
 
-export default function WorkforceOffice({ progress }: { progress?: PublicProjectProgress | null }) {
-  const [demoIndex, setDemoIndex] = useState(2);
-  const isDemo = !progress;
+export default function WorkforceOffice({
+  progress,
+  verifiedInquiry = false,
+}: {
+  progress?: PublicProjectProgress | null;
+  verifiedInquiry?: boolean;
+}) {
+  const [demoStep, setDemoStep] = useState(13);
+  const isDemo = !progress && !verifiedInquiry;
+  const isAwaitingProject = !progress && verifiedInquiry;
 
   useEffect(() => {
-    if (!isDemo) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!isDemo || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
     const timer = window.setInterval(() => {
-      setDemoIndex((current) => (current + 1) % AGENTS.length);
-    }, 2600);
+      setDemoStep((current) => (
+        current >= DWD_WORKFORCE_AGENTS.length ? 0 : current + 1
+      ));
+    }, 1700);
+
     return () => window.clearInterval(timer);
   }, [isDemo]);
 
-  const officeAgents = isDemo
-    ? DemoOffice({ activeIndex: demoIndex })
-    : AGENTS.map((agent) => ({
-        agent,
-        state: progress.milestones.find((milestone) => milestone.id === agent.milestoneId)?.status ?? "waiting",
-      }));
-  const activeAgent = officeAgents.find(({ state }) => state === "active");
+  const agentsWithStatus = DWD_WORKFORCE_AGENTS.map((agent, index) => {
+    const savedStatus = progress?.milestones.find(
+      (milestone) => milestone.id === agent.milestoneId,
+    )?.status;
+    const demoStatus: PublicProjectMilestoneStatus =
+      index < demoStep
+        ? "completed"
+        : index === demoStep
+          ? "active"
+          : index === demoStep + 1
+            ? "ready"
+            : "waiting";
+    const status = isDemo
+      ? demoStatus
+      : isAwaitingProject
+        ? "waiting"
+        : savedStatus ?? "waiting";
+
+    return { ...agent, status };
+  });
+
+  const activeAgents = agentsWithStatus.filter(({ status }) => status === "active");
+  const completedMilestones =
+    progress?.milestones.filter((milestone) => milestone.status === "completed").length ?? 0;
+  const completedDemoRoles = Math.min(demoStep, DWD_WORKFORCE_AGENTS.length);
+  const completedCount = isDemo ? completedDemoRoles : completedMilestones;
+  const totalCount = isDemo
+    ? DWD_WORKFORCE_AGENTS.length
+    : progress?.milestones.length ?? DWD_WORKFORCE_AGENTS.length;
+  const percent = progress?.percentComplete ??
+    (isDemo ? Math.round((completedDemoRoles / DWD_WORKFORCE_AGENTS.length) * 100) : 0);
+  const firstActiveAgent = activeAgents[0];
 
   return (
     <section className="overflow-hidden rounded-[28px] border border-[#252b35] bg-[#101216] text-white shadow-2xl">
-      <div className="flex flex-col justify-between gap-4 border-b border-white/10 bg-[#171a20] px-5 py-5 sm:flex-row sm:items-center sm:px-7">
+      <header className="flex flex-col justify-between gap-4 border-b border-white/10 bg-[#171a20] px-5 py-5 sm:flex-row sm:items-center sm:px-7">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.16em] text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              DWD digital studio
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e31e36]/30 bg-[#e31e36]/10 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.16em] text-rose-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#e31e36]" />
+              DWD agency district
             </span>
-            <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider ${isDemo ? "bg-amber-300/10 text-amber-200" : "bg-sky-300/10 text-sky-200"}`}>
-              {isDemo ? "Interactive demo" : "Project room"}
+            <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider ${isDemo ? "bg-amber-300/10 text-amber-200" : isAwaitingProject ? "bg-sky-300/10 text-sky-200" : "bg-emerald-300/10 text-emerald-200"}`}>
+              {isDemo ? "Illustrative demo" : isAwaitingProject ? "Inquiry verified" : "Project workspace"}
             </span>
           </div>
           <h2 className="mt-3 text-xl font-black tracking-tight sm:text-2xl">
-            {isDemo ? "Meet the website team" : progress.projectName}
+            {isDemo
+              ? "Welcome to the DWD digital agency"
+              : isAwaitingProject
+                ? "Your project room is getting ready"
+                : progress?.projectName}
           </h2>
           <p className="mt-1 text-[11px] text-gray-400">
             {isDemo
-              ? "A sample animation showing how each project moves through our delivery workflow."
-              : activeAgent
-                ? `${activeAgent.agent.role} · ${activeAgent.agent.task}`
-                : "Project stages update as our team advances the approved workflow."}
+              ? `${DWD_WORKFORCE_AGENTS.length} illustrated specialist roles across ${DWD_WORKFORCE_DEPARTMENTS.length} departments.`
+              : isAwaitingProject
+                ? "Your inquiry is verified. Project milestone updates appear here once your project is approved and created."
+                : firstActiveAgent
+                  ? `${firstActiveAgent.role} · ${firstActiveAgent.task}`
+                  : "Team status below is mapped from this project's saved workflow milestones."}
           </p>
         </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E31E36]/15 text-[#ff6b7d]">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500">
-              {isDemo ? "Sample workflow" : "Milestones complete"}
-            </p>
-            <p className="text-lg font-black leading-tight text-white">
-              {isDemo ? "Design → Launch" : `${progress.percentComplete}%`}
-            </p>
-          </div>
-        </div>
-      </div>
 
-      <div className="relative overflow-hidden bg-[#242a31] p-3 sm:p-5">
+        <div className="min-w-48 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500">
+                {progress ? "Project completion" : isDemo ? "Demo progress" : "Project progress"}
+              </p>
+              <p className="text-lg font-black leading-tight text-white">
+                {progress ? `${percent}% complete` : isDemo ? `${percent}% · demo phase` : "Not started"}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] text-emerald-300">
+                {completedCount} {isDemo ? "roles shown done" : "milestones done"}
+              </p>
+              <p className="text-[9px] text-gray-400">
+                {isDemo
+                  ? `${DWD_WORKFORCE_AGENTS.length - completedDemoRoles} roles remaining`
+                  : `${Math.max(totalCount - completedMilestones, 0)} milestones left`}
+              </p>
+            </div>
+          </div>
+          <div
+            className="mt-2.5 h-2.5 overflow-hidden rounded-full border border-white/10 bg-white/10"
+            role="progressbar"
+            aria-label={isDemo ? "Illustrative agency demo progress" : "Project milestone progress"}
+            aria-valuemin={0}
+            aria-valuemax={isDemo ? DWD_WORKFORCE_AGENTS.length : totalCount}
+            aria-valuenow={isDemo ? completedDemoRoles : completedMilestones}
+          >
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-lime-300 to-yellow-300 shadow-[0_0_12px_rgba(110,231,183,0.45)] transition-all duration-700"
+              style={{ width: `${Math.max(0, Math.min(percent, 100))}%` }}
+            />
+          </div>
+          <p className="mt-1 text-right text-[8px] text-gray-500">
+            {isDemo
+              ? "Looping showcase animation · not project work"
+              : progress
+                ? `${completedMilestones} of ${totalCount} saved milestones complete`
+                : "Work starts after project approval"}
+          </p>
+        </div>
+      </header>
+
+      <div className="relative overflow-hidden bg-[#61725a] p-3 sm:p-5">
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.12]"
+          className="pointer-events-none absolute inset-0 opacity-20"
           style={{
-            backgroundImage: "linear-gradient(rgba(255,255,255,.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.2) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
+            backgroundImage:
+              "linear-gradient(35deg, transparent 47%, rgba(211,226,186,.16) 48%, rgba(211,226,186,.16) 51%, transparent 52%), radial-gradient(circle at 18% 28%, #b0c98b 0 2px, transparent 3px), radial-gradient(circle at 75% 76%, #b0c98b 0 2px, transparent 3px)",
+            backgroundSize: "170px 120px, 32px 32px, 38px 38px",
           }}
         />
-        <div className="relative grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {officeAgents.map(({ agent, state }, index) => {
-            const AgentIcon = agent.icon;
-            const isActive = state === "active";
-            const isComplete = state === "completed";
+
+        <div className="relative mb-3 flex flex-col gap-3 rounded-2xl border border-white/20 bg-[#26313a] p-3 shadow-lg sm:flex-row sm:items-center sm:justify-between sm:px-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/20 bg-black">
+              <Image
+                src="/logo.jpg"
+                alt="Durrani Web Developers logo"
+                width={48}
+                height={48}
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <div>
+              <p className="text-[8px] font-extrabold uppercase tracking-[0.2em] text-rose-300">
+                Durrani Web Developers
+              </p>
+              <h3 className="text-sm font-black text-white sm:text-base">Agency City · Main Campus</h3>
+              <p className="text-[9px] text-slate-300">
+                {DWD_WORKFORCE_DEPARTMENTS.length} office buildings · {DWD_WORKFORCE_AGENTS.length} unique portraits
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-start rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[8px] font-bold uppercase tracking-wider text-gray-300 sm:self-center">
+            <Building2 className="h-3.5 w-3.5 text-amber-300" />
+            Top-down office district
+          </div>
+        </div>
+
+        <div className="relative mb-3 flex items-center gap-2 overflow-hidden rounded-lg border-y-4 border-[#3a4245] bg-[#30383b] px-3 py-2">
+          <span className="shrink-0 rounded bg-[#e31e36] px-2 py-1 text-[8px] font-black uppercase tracking-wider text-white">
+            DWD campus
+          </span>
+          <div className="flex flex-1 items-center justify-center gap-2 opacity-80" aria-hidden="true">
+            {Array.from({ length: 8 }, (_, index) => (
+              <span key={index} className="h-0.5 flex-1 rounded bg-amber-200/80" />
+            ))}
+          </div>
+          <span className="shrink-0 text-[8px] font-bold uppercase tracking-wider text-slate-300">
+            Main street
+          </span>
+        </div>
+
+        <div className="relative grid gap-4 lg:grid-cols-2">
+          {DWD_WORKFORCE_DEPARTMENTS.map((department, departmentIndex) => {
+            const departmentAgents = department.agentRoles.map((role) =>
+              agentsWithStatus.find((agent) => agent.role === role)!,
+            );
+
             return (
-              <article
-                key={agent.role}
-                className={`relative min-h-[166px] overflow-hidden rounded-2xl border p-4 transition-all duration-500 ${
-                  isActive
-                    ? "border-emerald-300/70 bg-[#f6f5eb] shadow-[0_0_26px_rgba(52,211,153,0.18)]"
-                    : isComplete
-                      ? "border-emerald-300/35 bg-[#eef3e9]"
-                      : "border-white/10 bg-[#e8e6dc]"
-                }`}
+              <section
+                key={department.name}
+                className="overflow-hidden rounded-2xl border-[5px] border-[#c9b58c] bg-[#ded3b8] p-2 shadow-[0_8px_0_rgba(36,47,40,.55),0_12px_22px_rgba(0,0,0,.25)]"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${agent.color}`}>
-                      <AgentIcon className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <h3 className="text-[11px] font-extrabold leading-tight text-[#20252b]">{agent.role}</h3>
-                      <p className="mt-0.5 text-[9px] text-gray-500">DWD project team</p>
-                    </div>
+                <div className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-[#303a40] px-3 py-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Building2 className={`h-3.5 w-3.5 shrink-0 ${DEPARTMENT_TONES[department.tone]}`} />
+                    <h3 className="truncate text-[9px] font-extrabold uppercase tracking-[0.13em] text-white">
+                      {department.name}
+                    </h3>
                   </div>
-                  <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[8px] font-extrabold uppercase tracking-wide ${
-                    isActive ? "bg-emerald-600 text-white" :
-                      isComplete ? "bg-emerald-100 text-emerald-800" :
-                        state === "ready" ? "bg-sky-100 text-sky-800" :
-                          state === "awaiting_admin" ? "bg-amber-100 text-amber-900" : "bg-gray-200 text-gray-500"
-                  }`}>
-                    {isActive && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />}
-                    {isComplete && <Check className="h-2.5 w-2.5" />}
-                    {STATUS_LABELS[state]}
+                  <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[8px] font-bold text-gray-200">
+                    {department.agentRoles.length} desks
                   </span>
                 </div>
 
-                <div className="mt-3 flex items-end gap-3">
-                  <div className={`flex h-16 w-14 shrink-0 items-center justify-center rounded-t-[22px] border border-black/10 bg-gradient-to-b from-white to-[#d8d6cb] text-[30px] shadow-inner ${isActive ? "animate-bounce [animation-duration:1.8s] motion-reduce:animate-none" : ""}`}>
-                    <span aria-hidden="true">{agent.avatar}</span>
-                  </div>
-                  <div className="mb-1 min-w-0 flex-1">
-                    <p className="truncate text-[10px] font-bold text-[#252a30]">
-                      {isActive ? agent.task : isComplete ? "Milestone finished" : state === "ready" ? "Getting ready" : "Standing by"}
-                    </p>
-                    <div className="mt-2 flex h-9 items-end gap-1 rounded-lg border border-black/5 bg-white/65 px-2 py-1.5">
-                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((bar) => (
-                        <span
-                          key={bar}
-                          className={`w-full rounded-t-[2px] transition-all duration-500 motion-reduce:animate-none ${isActive ? "animate-pulse bg-emerald-500/70" : isComplete ? "bg-emerald-500/45" : "bg-slate-400/40"}`}
-                          style={{
-                            height: `${isActive ? 25 + ((bar * 17 + index * 11) % 65) : isComplete ? 52 : 18 + ((bar * 13 + index * 7) % 32)}%`,
-                            animationDelay: `${bar * 90}ms`,
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <div className="mb-1 hidden h-8 w-10 items-center justify-center rounded-md border border-black/10 bg-[#d3d6d0] text-[#4b5563] sm:flex">
-                    <Monitor className="h-4 w-4" />
-                  </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {departmentAgents.map((agent) => {
+                    const isActive = agent.status === "active";
+                    const isComplete = agent.status === "completed";
+                    const isReady = agent.status === "ready";
+
+                    return (
+                      <article
+                        key={agent.role}
+                        className={`overflow-hidden rounded-xl border bg-[#f6f3e9] shadow-sm transition-all duration-500 ${
+                          isActive
+                            ? "border-emerald-500 ring-2 ring-emerald-400/60"
+                            : isComplete
+                              ? "border-emerald-700/40"
+                              : isReady
+                                ? "border-sky-500/50"
+                                : "border-[#665e4c]/20"
+                        }`}
+                      >
+                        <div className="relative h-[76px] overflow-hidden bg-[#17191d] sm:h-[88px]">
+                          <Image
+                            src={`/agency/avatars/${agent.avatar}.webp`}
+                            alt={`${agent.role} portrait`}
+                            width={192}
+                            height={144}
+                            sizes="(max-width: 640px) 44vw, (max-width: 1024px) 26vw, 16vw"
+                            className={`h-full w-full object-cover object-top transition-transform duration-700 ${
+                              isActive
+                                ? "motion-safe:animate-bounce [animation-duration:2.2s] scale-105"
+                                : "scale-100"
+                            }`}
+                          />
+                          <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/90 to-transparent px-1.5 pb-1 pt-4">
+                            <span className="truncate text-[7px] font-bold text-white">
+                              {agent.role}
+                            </span>
+                            <span
+                              className={`ml-1 h-1.5 w-1.5 shrink-0 rounded-full ${
+                                isActive
+                                  ? "animate-pulse bg-emerald-300"
+                                  : isComplete
+                                    ? "bg-emerald-400"
+                                    : isReady
+                                      ? "bg-sky-300"
+                                      : "bg-slate-500"
+                              }`}
+                            />
+                          </div>
+                          {isActive && (
+                            <span className="absolute right-1 top-1 rounded bg-emerald-500 px-1 py-0.5 text-[6px] font-black uppercase text-white">
+                              Active
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex min-h-[48px] items-center justify-between gap-1 px-1.5 py-1">
+                          <div className="min-w-0">
+                            <p className="truncate text-[7px] font-semibold text-[#343b42]">
+                              {isActive
+                                ? agent.task
+                                : isDemo
+                                  ? isComplete
+                                    ? "Demo phase complete"
+                                    : isReady
+                                      ? "Next in demo"
+                                      : "Showcase role"
+                                  : isAwaitingProject
+                                    ? "Waiting for project approval"
+                                    : isComplete
+                                      ? "Milestone complete"
+                                      : agent.task}
+                            </p>
+                            <p className="mt-0.5 truncate text-[6px] font-bold uppercase tracking-wide text-slate-500">
+                              {STATUS_LABELS[agent.status]}
+                            </p>
+                          </div>
+                          <div className="flex h-6 w-7 shrink-0 items-center justify-center rounded border border-black/10 bg-[#d7d6cd] text-[#46515b]">
+                            {isComplete ? (
+                              <Check className="h-3 w-3 text-emerald-700" />
+                            ) : isActive ? (
+                              <Monitor className="h-3 w-3 animate-pulse text-emerald-700" />
+                            ) : (
+                              <Clock3 className="h-3 w-3" />
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
-              </article>
+
+                {departmentIndex < DWD_WORKFORCE_DEPARTMENTS.length - 1 && (
+                  <div className="mt-2 flex items-center justify-center gap-2 text-[7px] font-extrabold uppercase tracking-[0.16em] text-[#615b4f]">
+                    <span className="h-px w-8 bg-[#988b70]" />
+                    Campus road
+                    <span className="h-px w-8 bg-[#988b70]" />
+                  </div>
+                )}
+              </section>
             );
           })}
         </div>
-        <div className="relative mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-gray-300">
+
+        <div className="relative mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-[#26313a] px-4 py-3">
+          <div className="flex items-center gap-2 text-[9px] font-bold text-gray-200">
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10">
-              <Layers3 className="h-3 w-3" />
+              <Rocket className="h-3 w-3 text-amber-200" />
             </span>
-            {isDemo ? "Sample project workflow" : "Secure client project workflow"}
+            {isDemo
+              ? "Full-agency showcase"
+              : isAwaitingProject
+                ? "Project setup is pending"
+                : "Your saved project workflow"}
           </div>
-          <div className="flex items-center gap-2 text-[9px] text-gray-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            Production launch always needs admin approval
+          <div className="text-[8px] text-gray-400">
+            Project launch requires DWD team approval
           </div>
         </div>
       </div>
 
-      <p className="border-t border-white/10 bg-[#171a20] px-5 py-3 text-[9px] leading-relaxed text-gray-500 sm:px-7">
+      <p className="border-t border-white/10 bg-[#171a20] px-5 py-3 text-[9px] leading-relaxed text-gray-400 sm:px-7">
         {isDemo
-          ? "Demo note: this animation is illustrative sample activity, not a live AI coding session. Verify an inquiry below to see its real saved workflow milestones."
-          : "This visual reflects saved workflow milestones; it does not stream the local editor or live code changes. Personal details and private admin notes are never shown here."}
+          ? "Illustrative agency showcase: the portraits, desk animations, roles and looping progress are a visual demo, not a live roster or connected autonomous AI workers. Enter a valid inquiry reference and matching email to open your project room."
+          : isAwaitingProject
+            ? "Your inquiry is verified. No project work is shown as started until DWD creates and approves its project workflow."
+            : "This view maps the project's saved workflow milestones to relevant specialties; it does not claim individual autonomous agents are connected or show a live editor stream. Private notes and customer data are not displayed."}
       </p>
     </section>
   );
