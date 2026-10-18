@@ -2,28 +2,24 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownRight, Building2, Footprints, Handshake, Pause, Play, ScanEye } from "lucide-react";
+import { ArrowDownRight, Footprints, Handshake, Pause, Play, ScanEye } from "lucide-react";
 import {
   DWD_WORKFORCE_AGENTS,
   DWD_WORKFORCE_DEPARTMENTS,
 } from "@/lib/workforce-agents";
 
-const ROOM_CENTERS = DWD_WORKFORCE_DEPARTMENTS.map((_, index) => ({
-  x: 10 + (index % 5) * 20,
-  y: index < 5 ? 46 : 72,
-}));
-const AGENT_OFFSETS = [
-  [-9, -6],
-  [-4.5, -6],
-  [0, -5.5],
-  [4.5, -6],
-  [9, -6],
-  [-9, 6],
-  [-4.5, 6],
-  [0, 6],
-  [4.5, 6],
-  [9, 6],
-];
+const ROOM_LAYOUT = [
+  { seats: [19, 22, 25, 28, 31], y: 25, meeting: { x: 25, y: 30 } },
+  { seats: [38, 41, 44, 47, 50], y: 25, meeting: { x: 44, y: 30 } },
+  { seats: [60, 63, 66, 69, 72], y: 25, meeting: { x: 66, y: 30 } },
+  { seats: [80, 83, 86, 89, 92], y: 25, meeting: { x: 86, y: 30 } },
+  { seats: [17, 20, 23, 26, 29], y: 36, meeting: { x: 23, y: 41 } },
+  { seats: [38, 41, 44, 47, 50], y: 36, meeting: { x: 44, y: 41 } },
+  { seats: [60, 63, 66, 69, 72], y: 36, meeting: { x: 66, y: 41 } },
+  { seats: [80, 83, 86, 89, 92], y: 36, meeting: { x: 86, y: 41 } },
+  { seats: [32, 35, 38, 41, 44], y: 49, meeting: { x: 38, y: 54 } },
+  { seats: [56, 59, 62, 65, 68], y: 49, meeting: { x: 62, y: 54 } },
+] as const;
 const TRANSIT_DURATION_MS = 3400;
 
 const HOME_ROOM_BY_AGENT = DWD_WORKFORCE_AGENTS.map((agent) =>
@@ -32,10 +28,13 @@ const HOME_ROOM_BY_AGENT = DWD_WORKFORCE_AGENTS.map((agent) =>
   ),
 );
 
-function getAgentPoint(agentIndex: number, roomIndex: number) {
-  const room = ROOM_CENTERS[roomIndex];
-  const [offsetX, offsetY] = AGENT_OFFSETS[agentIndex % AGENT_OFFSETS.length];
-  return { x: room.x + offsetX, y: room.y + offsetY };
+function getAgentPoint(agentIndex: number, roomIndex: number, atHandoff = false) {
+  const room = ROOM_LAYOUT[roomIndex];
+  if (atHandoff) return room.meeting;
+
+  const agent = DWD_WORKFORCE_AGENTS[agentIndex];
+  const seatIndex = DWD_WORKFORCE_DEPARTMENTS[roomIndex].agentRoles.indexOf(agent.role);
+  return { x: room.seats[seatIndex], y: room.y };
 }
 
 interface AgentJourney {
@@ -56,7 +55,6 @@ export default function LiveAgencyGame() {
   const [journeys, setJourneys] = useState<AgentJourney[]>([]);
   const [lastHandoff, setLastHandoff] = useState<Handoff | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<number | null>(null);
-  const [reducedMotion, setReducedMotion] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
 
   const departmentAgentIndices = useMemo(
@@ -68,10 +66,6 @@ export default function LiveAgencyGame() {
       ),
     [],
   );
-
-  useEffect(() => {
-    setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  }, []);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -187,9 +181,6 @@ export default function LiveAgencyGame() {
       : followedJourney?.agentIndex === followedAgent
         ? followedJourney.toRoom
         : HOME_ROOM_BY_AGENT[followedAgent];
-  const displayedRoomByAgent = HOME_ROOM_BY_AGENT.map((room, index) =>
-    journeys.find((item) => item.agentIndex === index)?.toRoom ?? room,
-  );
   const toggleSimulation = () => {
     if (isPlaying) {
       setJourneys([]);
@@ -247,12 +238,10 @@ export default function LiveAgencyGame() {
       <div className="overflow-x-auto overscroll-x-contain bg-[#171a20]">
         <div
           className="relative mx-auto aspect-[3/2] min-w-[880px] overflow-hidden bg-[#202a35] bg-cover bg-center sm:min-w-0"
-          style={{ backgroundImage: "url('/agency/scenes/dwd-future-office.webp')" }}
-          aria-label="Illustrated Durrani Web Developers office with fifty selectable agents"
+          style={{ backgroundImage: "url('/agency/scenes/dwd-50-agent-office-map.png')" }}
+          aria-label="Durrani Web Developers fifty-agent office map with selectable animated agents"
           role="group"
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0d1018]/20 via-transparent to-[#080a0e]/40" />
-
           <svg
             className="pointer-events-none absolute inset-0 h-full w-full"
             viewBox="0 0 100 100"
@@ -267,9 +256,17 @@ export default function LiveAgencyGame() {
               strokeDasharray="1 1.8"
             />
             {journeys.map((journey) => {
-              const fromRoom = ROOM_CENTERS[journey.fromRoom];
-              const toRoom = ROOM_CENTERS[journey.toRoom];
-              const path = `M${fromRoom.x} ${fromRoom.y} L${fromRoom.x} 59 L${toRoom.x} 59 L${toRoom.x} ${toRoom.y}`;
+              const from = getAgentPoint(
+                journey.agentIndex,
+                journey.fromRoom,
+                journey.phase === "returning",
+              );
+              const to = getAgentPoint(
+                journey.agentIndex,
+                journey.toRoom,
+                journey.phase !== "returning",
+              );
+              const path = `M${from.x} ${from.y} L${to.x} ${to.y}`;
               return (
               <g key={journey.agentIndex}>
                 <path
@@ -294,36 +291,18 @@ export default function LiveAgencyGame() {
             })}
           </svg>
 
-          {DWD_WORKFORCE_DEPARTMENTS.map((department, index) => (
-            <div
-              key={department.name}
-              className={`absolute z-10 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-1 text-[7px] font-black uppercase tracking-wide shadow-lg sm:px-2 sm:text-[8px] ${
-                journeys.some((item) => item.toRoom === index)
-                  ? "border-emerald-200 bg-emerald-500 text-white"
-                  : "border-white/60 bg-[#101820]/90 text-white"
-              }`}
-              style={{
-                left: `${ROOM_CENTERS[index].x}%`,
-                top: `${ROOM_CENTERS[index].y - 7}%`,
-              }}
-            >
-              <Building2 className="h-2.5 w-2.5 shrink-0" />
-              {department.name}
-            </div>
-          ))}
-
           {DWD_WORKFORCE_AGENTS.map((agent, index) => {
             const agentJourney =
               journeys.find((item) => item.agentIndex === index) ?? null;
-            const roomIndex = agentJourney
+            const roomIndex =
+              agentJourney && agentJourney.phase !== "returning"
+                ? agentJourney.toRoom
+                : HOME_ROOM_BY_AGENT[index];
+            const point = agentJourney
               ? agentJourney.phase === "returning"
-                ? HOME_ROOM_BY_AGENT[index]
-                : agentJourney.toRoom
-              : HOME_ROOM_BY_AGENT[index];
-            const slotIndex = displayedRoomByAgent
-              .slice(0, index)
-              .filter((room) => room === displayedRoomByAgent[index]).length;
-            const point = getAgentPoint(slotIndex, roomIndex);
+                ? getAgentPoint(index, HOME_ROOM_BY_AGENT[index])
+                : getAgentPoint(index, agentJourney.toRoom, true)
+              : getAgentPoint(index, HOME_ROOM_BY_AGENT[index]);
             const isSelected = selectedAgent === index;
             const isWalking = agentJourney !== null;
             const isHandoff = agentJourney?.phase === "handoff";
@@ -344,7 +323,7 @@ export default function LiveAgencyGame() {
                 title={agent.role}
                 aria-label={`${agent.role}${isReceivingHandoff && meetingJourney ? `, receiving work from ${DWD_WORKFORCE_AGENTS[meetingJourney.agentIndex].role}` : isWalking ? `, walking to ${DWD_WORKFORCE_DEPARTMENTS[agentJourney.toRoom].name}` : `, at ${DWD_WORKFORCE_DEPARTMENTS[roomIndex].name}`}`}
                 aria-pressed={isSelected}
-                className={`absolute z-20 flex min-h-11 min-w-9 touch-manipulation -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-lg p-[2px] cursor-pointer transition-[left,top] focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                className={`absolute z-20 flex h-8 w-6 touch-manipulation -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded cursor-pointer transition-[left,top] focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
                   isWalking || isReceivingHandoff ? "z-30 scale-110" : ""
                 } ${isWalking ? "motion-safe:animate-bounce [animation-duration:0.8s]" : ""} ${isSelected ? "z-40 scale-125" : ""}`}
                 style={{
@@ -365,7 +344,7 @@ export default function LiveAgencyGame() {
                   </span>
                 )}
                 <span
-                  className={`relative block h-10 w-8 overflow-hidden rounded-md border-2 bg-[#101216] shadow-[0_2px_10px_rgba(0,0,0,.75)] sm:h-12 sm:w-9 ${
+                  className={`relative block h-7 w-5 overflow-hidden rounded border border-2 bg-[#101216] shadow-[0_2px_10px_rgba(0,0,0,.75)] ${
                     isHandoff || isReceivingHandoff
                       ? "border-amber-200 shadow-[0_0_18px_rgba(251,191,36,.8)]"
                       : isWalking
@@ -401,8 +380,8 @@ export default function LiveAgencyGame() {
               key={journey.agentIndex}
               className="absolute z-30 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-emerald-500 p-1.5 text-white shadow-lg"
               style={{
-                left: `${ROOM_CENTERS[journey.toRoom].x}%`,
-                top: `${ROOM_CENTERS[journey.toRoom].y + 1}%`,
+                left: `${ROOM_LAYOUT[journey.toRoom].meeting.x}%`,
+                top: `${ROOM_LAYOUT[journey.toRoom].meeting.y}%`,
               }}
               aria-label={`${DWD_WORKFORCE_AGENTS[journey.receiverIndex].role} meeting ${DWD_WORKFORCE_AGENTS[journey.agentIndex].role}`}
             >
