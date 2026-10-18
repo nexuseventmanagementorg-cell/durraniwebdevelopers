@@ -13,9 +13,9 @@ export interface NexusAgentActivityEvent {
 }
 
 export const NEXUS_AGENT_ROLES = [
-  { role: "Property Matching AI", department: "Research & Insights", avatar: "business-analyst", task: "Review property discovery and matching requirements." },
-  { role: "Listing Auditor AI", department: "Cloud, Quality & Knowledge", avatar: "cybersecurity-guardian", task: "Check listing, ownership, and verification claims against available evidence." },
-  { role: "QA Testing Bot", department: "Cloud, Quality & Knowledge", avatar: "qa-testing-bot", task: "Prepare acceptance checks and identify unresolved blockers." },
+  { role: "Property Matching AI", agencyRole: "Business Analyst", department: "Research & Insights", avatar: "business-analyst", task: "Review property discovery and matching requirements." },
+  { role: "Listing Auditor AI", agencyRole: "Cybersecurity Guardian", department: "Cloud, Quality & Knowledge", avatar: "cybersecurity-guardian", task: "Check listing, ownership, and verification claims against available evidence." },
+  { role: "QA Testing Bot", agencyRole: "QA Testing Bot", department: "Cloud, Quality & Knowledge", avatar: "qa-testing-bot", task: "Prepare acceptance checks and identify unresolved blockers." },
 ] as const;
 
 export type NexusAgentStepStatus = "queued" | "working" | "completed" | "failed";

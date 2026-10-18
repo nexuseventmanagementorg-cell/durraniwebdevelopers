@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { CheckCircle2, CircleDashed, ExternalLink, LockKeyhole, X } from "lucide-react";
-import { DWD_WORKFORCE_DEPARTMENTS } from "@/lib/workforce-agents";
+import { DWD_WORKFORCE_AGENTS, DWD_WORKFORCE_DEPARTMENTS } from "@/lib/workforce-agents";
 import { NEXUS_AGENT_ROLES, summarizeNexusAgentActivity, type NexusAgentActivityEvent } from "@/lib/nexus-agent-activity";
 
 const DEPARTMENT_DESKS = [
@@ -72,6 +72,50 @@ export default function ProjectWorkFloor({ activity }: { activity: NexusAgentAct
           </div>
         </div>
       </header>
+
+      <section className="border-b border-white/10 px-4 py-5 sm:px-6" aria-labelledby="agency-roster-title">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-wider text-emerald-200">Agency role directory</p>
+            <h3 id="agency-roster-title" className="mt-1 text-base font-extrabold">50 specialist profiles</h3>
+            <p className="mt-1 text-[10px] text-slate-400">Only the mapped specialists show run activity. Other portraits are role profiles, not deployed workers.</p>
+          </div>
+          <span className="text-[9px] text-slate-400">{runActivity.steps.length} model-backed roles in this workflow</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+          {DWD_WORKFORCE_AGENTS.map((agent) => {
+            const department = DWD_WORKFORCE_DEPARTMENTS.find((item) => item.agentRoles.includes(agent.role));
+            const specialist = NEXUS_AGENT_ROLES.find((item) => item.agencyRole === agent.role);
+            const step = specialist && runActivity.steps.find((item) => item.role === specialist.role);
+            const status = step?.status === "working"
+              ? "Working · run recorded"
+              : step?.status === "completed"
+                ? "Reply saved"
+                : step?.status === "failed"
+                  ? "Run failed"
+                  : "Roster only · no current task";
+            const detail = step?.response?.reply || (step?.dispatch ? step.dispatch.instruction : agent.task);
+
+            return (
+              <article key={agent.role} className="flex min-w-0 gap-2 border border-white/10 bg-black/20 p-2">
+                <Image
+                  src={`/agency/avatars/${agent.avatar}.webp`}
+                  alt={`${agent.role} profile`}
+                  width={52}
+                  height={68}
+                  className="h-[68px] w-[52px] shrink-0 bg-black/30 object-cover object-top"
+                />
+                <div className="min-w-0 py-0.5">
+                  <p className="line-clamp-2 text-[9px] font-extrabold leading-snug text-white">{agent.role}</p>
+                  <p className="mt-1 truncate text-[8px] text-slate-500">{department?.name || "Agency roster"}</p>
+                  <p className={`mt-1 text-[8px] font-bold ${step && step.status !== "queued" ? "text-sky-200" : "text-slate-400"}`}>{status}</p>
+                  <p className="mt-1 line-clamp-2 text-[8px] leading-snug text-slate-400">{detail}</p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
 
       <div className="grid gap-0 xl:grid-cols-[minmax(0,1.4fr)_minmax(340px,.8fr)]">
         <div className="border-b border-white/10 p-3 sm:p-5 xl:border-b-0 xl:border-r">
