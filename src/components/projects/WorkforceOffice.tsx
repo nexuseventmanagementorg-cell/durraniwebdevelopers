@@ -12,6 +12,7 @@ import {
   DWD_WORKFORCE_DEPARTMENTS,
 } from "@/lib/workforce-agents";
 import LiveAgencyGame from "@/components/projects/LiveAgencyGame";
+import NexusBuildShowcase from "@/components/projects/NexusBuildShowcase";
 
 const STATUS_LABELS: Record<PublicProjectMilestoneStatus, string> = {
   waiting: "Waiting",
@@ -132,6 +133,8 @@ export default function WorkforceOffice({
           </p>
         </div>
       </header>
+
+      <NexusBuildShowcase />
 
       <LiveAgencyGame />
 
