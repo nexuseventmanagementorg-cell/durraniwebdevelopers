@@ -334,8 +334,9 @@ export default function LiveAgencyGame() {
                 }}
               >
                 {shouldShowName && (
-                  <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1 w-max max-w-40 -translate-x-1/2 rounded-md border border-white/40 bg-[#101216] px-2 py-1.5 text-[8px] font-extrabold text-white shadow-[0_4px_18px_rgba(0,0,0,.85)] ring-1 ring-black/70">
+                  <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1 w-max max-w-56 -translate-x-1/2 rounded-md border border-white/40 bg-[#101216] px-2 py-1.5 text-[8px] font-extrabold text-white shadow-[0_4px_18px_rgba(0,0,0,.85)] ring-1 ring-black/70 sm:text-[9px]">
                     {agent.role}
+                    <span className="block font-medium text-gray-200">{agent.task}</span>
                     {isReceivingHandoff && meetingJourney
                       ? <span className="block font-medium text-amber-200">Collecting work from {DWD_WORKFORCE_AGENTS[meetingJourney.agentIndex].role}</span>
                       : isHandoff
@@ -410,7 +411,7 @@ export default function LiveAgencyGame() {
                     />
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-[9px] font-black text-white">
+                    <p className="truncate text-[10px] font-black text-white sm:text-xs">
                       {followedAgentData.role}
                       {followedJourney?.phase === "handoff"
                         ? " · handing off work"
@@ -418,12 +419,15 @@ export default function LiveAgencyGame() {
                           ? followedJourney.phase === "returning" ? " · heading back" : " · walking"
                           : " · at desk"}
                     </p>
-                    <p className="truncate text-[8px] text-gray-300">
+                    <p className="truncate text-[9px] text-gray-200 sm:text-[10px]">
+                      Task: {followedAgentData.task}
+                    </p>
+                    <p className="truncate text-[8px] text-gray-400">
                       {followedJourney
                         ? followedJourney.phase === "handoff"
                           ? `Handing work to ${DWD_WORKFORCE_AGENTS[followedJourney.receiverIndex].role} in ${DWD_WORKFORCE_DEPARTMENTS[followedJourney.toRoom].name}`
                           : `${followedJourney.phase === "returning" ? "Returning to" : "Heading to"} ${DWD_WORKFORCE_DEPARTMENTS[followedJourney.toRoom].name} · route highlighted on map`
-                        : `Currently in ${currentRoom === null ? "the office" : DWD_WORKFORCE_DEPARTMENTS[currentRoom].name} · ${followedAgentData.task}`}
+                        : `Currently in ${currentRoom === null ? "the office" : DWD_WORKFORCE_DEPARTMENTS[currentRoom].name}`}
                     </p>
                   </div>
                 </>

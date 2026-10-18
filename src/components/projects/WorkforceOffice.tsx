@@ -37,6 +37,7 @@ export default function WorkforceOffice({
   verifiedInquiry?: boolean;
 }) {
   const [demoStep, setDemoStep] = useState(13);
+  const [selectedCampusAgent, setSelectedCampusAgent] = useState<string | null>(null);
   const isDemo = !progress && !verifiedInquiry;
   const isAwaitingProject = !progress && verifiedInquiry;
 
@@ -240,14 +241,26 @@ export default function WorkforceOffice({
 
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {departmentAgents.map((agent) => {
+                    const agentIndex = DWD_WORKFORCE_AGENTS.findIndex(
+                      (item) => item.role === agent.role,
+                    );
                     const isActive = agent.status === "active";
                     const isComplete = agent.status === "completed";
                     const isReady = agent.status === "ready";
+                    const isSelected = selectedCampusAgent === agent.role;
 
                     return (
-                      <article
+                      <button
+                        type="button"
                         key={agent.role}
-                        className={`overflow-hidden rounded-xl border bg-[#f6f3e9] shadow-sm transition-all duration-500 ${
+                        onClick={() =>
+                          setSelectedCampusAgent((current) =>
+                            current === agent.role ? null : agent.role,
+                          )
+                        }
+                        aria-label={`${agent.role}, ${agent.task}, ${STATUS_LABELS[agent.status]}`}
+                        aria-expanded={isSelected}
+                        className={`w-full overflow-hidden rounded-xl border bg-[#f6f3e9] text-left shadow-sm transition-all duration-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e31e36] ${
                           isActive
                             ? "border-emerald-500 ring-2 ring-emerald-400/60"
                             : isComplete
@@ -257,25 +270,24 @@ export default function WorkforceOffice({
                                 : "border-[#665e4c]/20"
                         }`}
                       >
-                        <div className="relative h-[76px] overflow-hidden bg-[#17191d] sm:h-[88px]">
+                        <div className="relative h-[92px] overflow-hidden bg-[#17191d] sm:h-[108px]">
                           <Image
                             src={`/agency/avatars/${agent.avatar}.webp`}
                             alt={`${agent.role} portrait`}
                             width={192}
                             height={144}
                             sizes="(max-width: 640px) 44vw, (max-width: 1024px) 26vw, 16vw"
-                            className={`h-full w-full object-cover object-top transition-transform duration-700 ${
-                              isActive
-                                ? "motion-safe:animate-bounce [animation-duration:2.2s] scale-105"
-                                : "scale-100"
+                            className={`h-full w-full object-cover object-top ${
+                              isActive ? "dwd-agent-walking" : "dwd-agent-working"
                             }`}
+                            style={{ animationDelay: `${(agentIndex % 10) * -110}ms` }}
                           />
                           <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/90 to-transparent px-1.5 pb-1 pt-4">
-                            <span className="truncate text-[7px] font-bold text-white">
+                            <span className="truncate text-[9px] font-bold text-white sm:text-[10px]">
                               {agent.role}
                             </span>
                             <span
-                              className={`ml-1 h-1.5 w-1.5 shrink-0 rounded-full ${
+                              className={`ml-1 h-2 w-2 shrink-0 rounded-full ${
                                 isActive
                                   ? "animate-pulse bg-emerald-300"
                                   : isComplete
@@ -287,34 +299,22 @@ export default function WorkforceOffice({
                             />
                           </div>
                           {isActive && (
-                            <span className="absolute right-1 top-1 rounded bg-emerald-500 px-1 py-0.5 text-[6px] font-black uppercase text-white">
+                            <span className="absolute right-1 top-1 rounded bg-emerald-500 px-1.5 py-0.5 text-[8px] font-black uppercase text-white">
                               Active
                             </span>
                           )}
                         </div>
 
-                        <div className="flex min-h-[48px] items-center justify-between gap-1 px-1.5 py-1">
+                        <div className="flex min-h-[58px] items-center justify-between gap-1.5 px-2 py-2">
                           <div className="min-w-0">
-                            <p className="truncate text-[7px] font-semibold text-[#343b42]">
-                              {isActive
-                                ? agent.task
-                                : isDemo
-                                  ? isComplete
-                                    ? "Demo phase complete"
-                                    : isReady
-                                      ? "Next in demo"
-                                      : "Showcase role"
-                                  : isAwaitingProject
-                                    ? "Waiting for project approval"
-                                    : isComplete
-                                      ? "Milestone complete"
-                                      : agent.task}
+                            <p className="min-h-7 overflow-hidden text-[9px] font-semibold leading-3.5 text-[#343b42] sm:text-[10px]">
+                              {agent.task}
                             </p>
-                            <p className="mt-0.5 truncate text-[6px] font-bold uppercase tracking-wide text-slate-500">
+                            <p className="mt-1 truncate text-[8px] font-bold uppercase tracking-wide text-slate-500">
                               {STATUS_LABELS[agent.status]}
                             </p>
                           </div>
-                          <div className="flex h-6 w-7 shrink-0 items-center justify-center rounded border border-black/10 bg-[#d7d6cd] text-[#46515b]">
+                          <div className="flex h-7 w-8 shrink-0 items-center justify-center rounded border border-black/10 bg-[#d7d6cd] text-[#46515b]">
                             {isComplete ? (
                               <Check className="h-3 w-3 text-emerald-700" />
                             ) : isActive ? (
@@ -324,7 +324,18 @@ export default function WorkforceOffice({
                             )}
                           </div>
                         </div>
-                      </article>
+                        {isSelected && (
+                          <div className="border-t border-[#665e4c]/20 bg-white/80 px-2 py-2.5 text-[9px] leading-relaxed text-[#343b42] sm:text-[10px]">
+                            <span className="block font-extrabold text-[#101216]">
+                              Current task
+                            </span>
+                            <span className="mt-0.5 block">{agent.task}</span>
+                            <span className="mt-1 block font-bold text-slate-500">
+                              {department.name} · {STATUS_LABELS[agent.status]}
+                            </span>
+                          </div>
+                        )}
+                      </button>
                     );
                   })}
                 </div>
