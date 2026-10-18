@@ -4,6 +4,7 @@ import type {
   PublicProjectMilestoneStatus,
   ProjectWorkflowTask,
   ProjectWorkflowTaskStatus,
+  WebsiteDraft,
 } from "@/lib/types";
 
 const WORKFLOW_TASKS: Omit<ProjectWorkflowTask, "status">[] = [
@@ -39,7 +40,8 @@ export function buildPublicProjectProgress(
   projectName: string,
   workflow: ProjectAutomationWorkflow,
   deploymentUrl: string | undefined,
-  updatedAt: string
+  updatedAt: string,
+  websiteDraft?: WebsiteDraft
 ): PublicProjectProgress {
   const milestones = PUBLIC_MILESTONES.map((milestone) => {
     const tasks = milestone.taskIds.map((taskId) =>
@@ -72,6 +74,9 @@ export function buildPublicProjectProgress(
     updatedAt,
     ...(previewMilestone?.status === "completed" && isPublicPreviewUrl(deploymentUrl)
       ? { previewUrl: deploymentUrl }
+      : {}),
+    ...(previewMilestone?.status === "completed" && websiteDraft
+      ? { previewHtml: websiteDraft.html.slice(0, 20000) }
       : {}),
   };
 }

@@ -64,7 +64,8 @@ export async function GET(request: NextRequest) {
           project.name,
           project.automationWorkflow,
           project.deploymentUrl,
-          project.updatedAt
+          project.updatedAt,
+          project.websiteDraft
         )
       : null;
 

@@ -394,6 +394,20 @@ function TrackOrderContent() {
                 Your review preview link will appear here once it is ready and shared by our team.
               </p>
             )}
+            {projectProgress.previewHtml && (
+              <div className="px-5 pb-6 sm:px-8">
+                <h3 className="mb-3 text-sm font-extrabold">Website concept for your review</h3>
+                <iframe
+                  title={`${projectProgress.projectName} website concept`}
+                  srcDoc={projectProgress.previewHtml}
+                  sandbox=""
+                  className="h-[720px] w-full rounded-xl border border-white/15 bg-white"
+                />
+                <p className="mt-2 text-[10px] text-gray-400">
+                  This is a template-based concept preview, not the final functional website.
+                </p>
+              </div>
+            )}
           </section>
         )}
 

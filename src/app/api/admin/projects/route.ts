@@ -125,6 +125,12 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ success: false, error: "Complete the prerequisite tasks before advancing this workflow." }, { status: 409 });
       }
       updates.automationWorkflow = workflow;
+      if (automationTask.taskId === "implementation" && automationTask.status === "in_progress" && !current.websiteDraft) {
+        if (!current.projectBuildBrief) {
+          return NextResponse.json({ success: false, error: "A saved project brief is required before implementation can start." }, { status: 409 });
+        }
+        updates.websiteDraft = buildWebsiteDraft(current);
+      }
     }
     if (body.projectBuildBrief && typeof body.projectBuildBrief === "object") {
       if (!current.projectBuildBrief) {

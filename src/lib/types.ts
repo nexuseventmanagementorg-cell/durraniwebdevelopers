@@ -177,6 +177,7 @@ export interface PublicProjectProgress {
   percentComplete: number;
   updatedAt: string;
   previewUrl?: string;
+  previewHtml?: string;
 }
 
 export interface Inquiry {

@@ -444,7 +444,7 @@ export default function AdminProjectsPage() {
                     </span>
                   </div>
                   <p className="mb-3 text-[10px] text-gray-500">
-                    Role-assigned work queue. Start Implementation to copy a reviewed task into your local Antigravity/VS Code session. The app does not control the editor or deploy code automatically.
+                    Starting Implementation generates a template-based concept from the project scope. Copy the reviewed handoff separately to build functional features in your local Antigravity/VS Code session; this app does not control the editor or deploy code automatically.
                   </p>
                   {selectedProject.automationWorkflow.tasks.some((task) => task.id === "implementation" && (task.status === "in_progress" || task.status === "completed")) && (
                     <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3">

@@ -627,15 +627,22 @@ test("Website draft worker creates a safe responsive concept from project scope"
 
 test("Public project progress exposes safe milestones and gates the preview link", () => {
   let workflow = createProjectAutomationWorkflow("DW-123456", "2026-10-17T00:00:00.000Z");
+  const websiteDraft = {
+    generatedAt: "2026-10-17T00:00:00.000Z",
+    generator: "template-v1" as const,
+    html: "<main>Reviewed website concept</main>",
+  };
   let progress = buildPublicProjectProgress(
     "Test Store - E-commerce",
     workflow,
     "https://preview.example.com",
-    "2026-10-17T00:00:00.000Z"
+    "2026-10-17T00:00:00.000Z",
+    websiteDraft
   );
   assert.equal(progress.percentComplete, 0);
   assert.equal(progress.milestones[0].status, "ready");
   assert.equal("previewUrl" in progress, false);
+  assert.equal("previewHtml" in progress, false);
 
   for (const taskId of ["scope-review", "client-assets", "build-plan", "implementation", "quality-assurance", "client-preview"]) {
     workflow = updateProjectWorkflowTask(workflow, taskId, "completed")!;
@@ -645,12 +652,14 @@ test("Public project progress exposes safe milestones and gates the preview link
     "Test Store - E-commerce",
     workflow,
     "https://preview.example.com",
-    "2026-10-18T00:00:00.000Z"
+    "2026-10-18T00:00:00.000Z",
+    websiteDraft
   );
   assert.equal(progress.percentComplete, 83);
   assert.equal(progress.milestones.find((item) => item.id === "preview")?.status, "completed");
   assert.equal(progress.milestones.find((item) => item.id === "launch")?.status, "awaiting_admin");
   assert.equal(progress.previewUrl, "https://preview.example.com");
+  assert.equal(progress.previewHtml, websiteDraft.html);
   assert.equal("adminNotes" in progress, false);
   assert.equal("clientEmail" in progress, false);
 
