@@ -18,6 +18,35 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+@keyframes dwd-agent-work {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes dwd-agent-walk {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0);
+  }
+  25% {
+    transform: translate(-1px, -3px) rotate(-4deg);
+  }
+  75% {
+    transform: translate(1px, -3px) rotate(4deg);
+  }
+}
+
+.dwd-agent-working {
+  animation: dwd-agent-work 2s ease-in-out infinite;
+}
+
+.dwd-agent-walking {
+  animation: dwd-agent-walk 420ms ease-in-out infinite;
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 8px;

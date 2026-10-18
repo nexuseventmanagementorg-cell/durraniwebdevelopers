@@ -202,10 +202,10 @@ export default function LiveAgencyGame() {
               Illustrative · not connected AI workers
             </span>
           </div>
-          <h2 className="mt-2 text-lg font-black tracking-tight sm:text-xl">
+          <h2 className="mt-2 text-xl font-black tracking-tight sm:text-2xl">
             Follow the work around Agency City
           </h2>
-          <p className="mt-1 text-[10px] text-gray-400">
+          <p className="mt-1 text-xs text-gray-400 sm:text-sm">
             Click an agent to follow them. Watch specialists travel, meet a teammate and hand off work.
           </p>
         </div>
@@ -323,9 +323,9 @@ export default function LiveAgencyGame() {
                 title={agent.role}
                 aria-label={`${agent.role}${isReceivingHandoff && meetingJourney ? `, receiving work from ${DWD_WORKFORCE_AGENTS[meetingJourney.agentIndex].role}` : isWalking ? `, walking to ${DWD_WORKFORCE_DEPARTMENTS[agentJourney.toRoom].name}` : `, at ${DWD_WORKFORCE_DEPARTMENTS[roomIndex].name}`}`}
                 aria-pressed={isSelected}
-                className={`absolute z-20 flex h-8 w-6 touch-manipulation -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded cursor-pointer transition-[left,top] focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                className={`absolute z-20 flex h-9 w-7 touch-manipulation -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded cursor-pointer transition-[left,top] focus-visible:z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
                   isWalking || isReceivingHandoff ? "z-30 scale-110" : ""
-                } ${isWalking ? "motion-safe:animate-bounce [animation-duration:0.8s]" : ""} ${isSelected ? "z-40 scale-125" : ""}`}
+                } ${isSelected ? "z-40 scale-125" : ""}`}
                 style={{
                   left: `${point.x}%`,
                   top: `${point.y}%`,
@@ -344,7 +344,7 @@ export default function LiveAgencyGame() {
                   </span>
                 )}
                 <span
-                  className={`relative block h-7 w-5 overflow-hidden rounded border border-2 bg-[#101216] shadow-[0_2px_10px_rgba(0,0,0,.75)] ${
+                  className={`relative block h-8 w-6 overflow-hidden rounded border-2 bg-[#101216] shadow-[0_2px_10px_rgba(0,0,0,.75)] sm:h-9 sm:w-7 ${
                     isHandoff || isReceivingHandoff
                       ? "border-amber-200 shadow-[0_0_18px_rgba(251,191,36,.8)]"
                       : isWalking
@@ -352,7 +352,8 @@ export default function LiveAgencyGame() {
                       : isSelected
                         ? "border-white shadow-[0_0_18px_rgba(255,255,255,.7)]"
                         : "border-white/80"
-                  }`}
+                  } ${isWalking ? "dwd-agent-walking" : "dwd-agent-working"}`}
+                  style={{ animationDelay: `${(index % 10) * -110}ms` }}
                 >
                   <Image
                     src={`/agency/avatars/${agent.avatar}.webp`}
@@ -365,7 +366,7 @@ export default function LiveAgencyGame() {
                   />
                 </span>
                 <span
-                  className={`mt-0.5 max-w-16 truncate rounded bg-black/85 px-1 text-[6px] font-black text-white sm:text-[7px] ${
+                  className={`mt-0.5 max-w-24 truncate rounded bg-black/90 px-1 text-[8px] font-black text-white sm:text-[9px] ${
                     isSelected || isWalking || isReceivingHandoff ? "block" : "hidden"
                   }`}
                 >

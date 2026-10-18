@@ -89,29 +89,29 @@ function TrackOrderContent() {
     <div className="bg-[#FFFFFF] text-[#101216] min-h-screen">
       {/* Header Banner */}
       <section className="bg-[#101216] text-white py-14 border-b border-[#242830]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-3">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
           <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest bg-[#242830] px-3.5 py-1 rounded-full border border-[#E31E36]/30">
             Secure Progress Tracker
           </span>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tight">
             Track Your Web Application Inquiry
           </h1>
-          <p className="text-xs sm:text-sm text-gray-300 max-w-xl mx-auto">
+          <p className="text-sm sm:text-base text-gray-300 max-w-3xl mx-auto">
             Check your inquiry status and, after project approval, follow each build milestone and open your preview when it is shared.
           </p>
         </div>
       </section>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="mb-12">
           <WorkforceOffice progress={projectProgress} verifiedInquiry={Boolean(inquiry)} />
         </div>
 
         {/* Lookup Form */}
-        <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 mb-10 shadow-sm">
-          <form onSubmit={handleTrack} className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+        <div className="bg-[#F4F5F7] p-6 sm:p-9 rounded-2xl border border-gray-200 mb-12 shadow-sm">
+          <form onSubmit={handleTrack} className="grid grid-cols-1 sm:grid-cols-12 gap-5 items-end">
             <div className="sm:col-span-5">
-              <label className="block text-xs font-bold text-gray-700 mb-1">
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">
                 Inquiry Reference Code (e.g. DW-849201)
               </label>
               <input
@@ -119,13 +119,13 @@ function TrackOrderContent() {
                 placeholder="DW-XXXXXX"
                 value={refId}
                 onChange={(e) => setRefId(e.target.value.toUpperCase())}
-                className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                className="w-full bg-white text-sm text-[#101216] px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
                 required
               />
             </div>
 
             <div className="sm:col-span-5">
-              <label className="block text-xs font-bold text-gray-700 mb-1">
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">
                 Registered Email Address
               </label>
               <input
@@ -133,7 +133,7 @@ function TrackOrderContent() {
                 placeholder="your-email@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
+                className="w-full bg-white text-sm text-[#101216] px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
                 required
               />
             </div>
@@ -142,7 +142,7 @@ function TrackOrderContent() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#E31E36] hover:bg-[#C8162D] text-white py-2.5 rounded-xl font-bold text-xs shadow-glow transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+                className="w-full bg-[#E31E36] hover:bg-[#C8162D] text-white py-3 rounded-xl font-bold text-sm shadow-glow transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
@@ -157,7 +157,7 @@ function TrackOrderContent() {
           </form>
 
           {error && (
-            <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-[#E31E36] font-semibold flex items-center gap-2">
+            <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-[#E31E36] font-semibold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
