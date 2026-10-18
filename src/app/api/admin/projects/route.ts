@@ -5,6 +5,7 @@ import { Project, OrderStatus } from "@/lib/types";
 import { getProjectRecord, getProjectRecords, saveProjectRecord, updateProjectRecord } from "@/lib/project-storage";
 import { updateProjectWorkflowTask } from "@/lib/project-workflow";
 import { ProjectWorkspaceStorageError } from "@/lib/project-storage";
+import { buildWebsiteDraft } from "@/lib/website-draft-worker";
 
 export async function GET(request: NextRequest) {
   if (!verifyAdminRequest(request)) {
@@ -81,7 +82,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { id, status, deploymentUrl, adminNotes, deliveryTimeline, approvedPrice, automationTask } = body;
+    const { id, status, deploymentUrl, adminNotes, deliveryTimeline, approvedPrice, automationTask, generateWebsiteDraft } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: "Project ID is required" }, { status: 400 });
@@ -97,6 +98,16 @@ export async function PATCH(request: NextRequest) {
     if (deploymentUrl !== undefined) updates.deploymentUrl = deploymentUrl;
     if (adminNotes !== undefined) updates.adminNotes = adminNotes;
     if (deliveryTimeline !== undefined) updates.deliveryTimeline = deliveryTimeline;
+    if (generateWebsiteDraft === true) {
+      const implementationTask = current.automationWorkflow?.tasks.find((task) => task.id === "implementation");
+      if (!current.inquiryId || !current.projectBuildBrief || !implementationTask) {
+        return NextResponse.json({ success: false, error: "A verified inquiry project and approved build brief are required." }, { status: 409 });
+      }
+      if (implementationTask.status !== "in_progress" && implementationTask.status !== "completed") {
+        return NextResponse.json({ success: false, error: "Start the implementation workflow before generating a website concept." }, { status: 409 });
+      }
+      updates.websiteDraft = buildWebsiteDraft(current);
+    }
     if (automationTask !== undefined) {
       if (!automationTask || typeof automationTask.taskId !== "string" ||
           !["in_progress", "completed"].includes(automationTask.status)) {

@@ -45,6 +45,7 @@ import {
   createProjectAutomationWorkflow,
   updateProjectWorkflowTask,
 } from "../src/lib/project-workflow";
+import { buildWebsiteDraft } from "../src/lib/website-draft-worker";
 import {
   DWD_WORKFORCE_AGENTS,
   DWD_WORKFORCE_DEPARTMENTS,
@@ -602,6 +603,26 @@ test("Project workflow creates assigned roles and gates implementation and relea
   assert.equal(workflow.tasks.find((item) => item.id === "production-release")?.status, "awaiting_admin");
   workflow = updateProjectWorkflowTask(workflow, "production-release", "completed")!;
   assert.equal(workflow.status, "completed");
+});
+
+test("Website draft worker creates a safe responsive concept from project scope", () => {
+  const draft = buildWebsiteDraft({
+    name: "<script>Business</script>",
+    category: "Online store",
+    description: "Build a catalog for local customers.",
+    selectedFeatures: ["product_catalog", "online-orders", "product_catalog"],
+  }, "2026-10-18T00:00:00.000Z");
+
+  assert.equal(draft.generator, "template-v1");
+  assert.equal(draft.generatedAt, "2026-10-18T00:00:00.000Z");
+  assert.match(draft.html, /Build a catalog for local customers\./);
+  assert.match(draft.html, /Product Catalog/);
+  assert.match(draft.html, /Online Orders/);
+  assert.match(draft.html, /@media\(max-width:560px\)/);
+  assert.match(draft.html, /Content-Security-Policy/);
+  assert.doesNotMatch(draft.html, /<script>Business<\/script>/);
+  assert.match(draft.html, /&lt;script&gt;Business&lt;\/script&gt;/);
+  assert.doesNotMatch(draft.html, /clientEmail|clientPhone|paymentRef/i);
 });
 
 test("Public project progress exposes safe milestones and gates the preview link", () => {

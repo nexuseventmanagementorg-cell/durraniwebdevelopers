@@ -157,6 +157,12 @@ export interface ProjectAutomationWorkflow {
   tasks: ProjectWorkflowTask[];
 }
 
+export interface WebsiteDraft {
+  generatedAt: string;
+  generator: "template-v1";
+  html: string;
+}
+
 export type PublicProjectMilestoneStatus = "waiting" | "ready" | "active" | "awaiting_admin" | "completed";
 
 export interface PublicProjectMilestone {
@@ -266,6 +272,7 @@ export interface Project {
   inquiryId?: string;
   projectBuildBrief?: ProjectBuildBriefRecord;
   automationWorkflow?: ProjectAutomationWorkflow;
+  websiteDraft?: WebsiteDraft;
   clientId: string;
   clientName: string;
   clientEmail: string;

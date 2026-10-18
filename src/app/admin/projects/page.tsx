@@ -30,6 +30,7 @@ export default function AdminProjectsPage() {
   const [saving, setSaving] = useState(false);
   const [savingChecklist, setSavingChecklist] = useState(false);
   const [savingWorkflow, setSavingWorkflow] = useState(false);
+  const [generatingDraft, setGeneratingDraft] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
@@ -148,6 +149,28 @@ export default function AdminProjectsPage() {
       alert(error instanceof Error ? error.message : "Could not update the workflow task.");
     } finally {
       setSavingWorkflow(false);
+    }
+  };
+
+  const handleGenerateWebsiteDraft = async () => {
+    if (!selectedProject) return;
+    setGeneratingDraft(true);
+    try {
+      const response = await fetch("/api/admin/projects", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedProject.id, generateWebsiteDraft: true }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not generate the website concept.");
+      setSelectedProject(result.project);
+      setProjects((previous) => previous.map((project) => project.id === result.project.id ? result.project : project));
+      setSuccessMsg("Template-based website concept generated for review.");
+      setTimeout(() => setSuccessMsg(""), 4000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Could not generate the website concept.");
+    } finally {
+      setGeneratingDraft(false);
     }
   };
 
@@ -423,6 +446,27 @@ export default function AdminProjectsPage() {
                   <p className="mb-3 text-[10px] text-gray-500">
                     Role-assigned work queue. Start Implementation to copy a reviewed task into your local Antigravity/VS Code session. The app does not control the editor or deploy code automatically.
                   </p>
+                  {selectedProject.automationWorkflow.tasks.some((task) => task.id === "implementation" && (task.status === "in_progress" || task.status === "completed")) && (
+                    <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] font-bold text-gray-800">Website concept draft</p>
+                          <p className="text-[10px] text-gray-500">Rule-based responsive template; no paid AI service or client contact details.</p>
+                        </div>
+                        <button type="button" disabled={generatingDraft} onClick={() => void handleGenerateWebsiteDraft()} className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[10px] font-bold text-gray-700 disabled:opacity-50">
+                          {generatingDraft ? "Generating..." : selectedProject.websiteDraft ? "Regenerate concept" : "Generate concept"}
+                        </button>
+                      </div>
+                      {selectedProject.websiteDraft && (
+                        <iframe
+                          title={`${selectedProject.name} website concept preview`}
+                          srcDoc={selectedProject.websiteDraft.html}
+                          sandbox=""
+                          className="mt-3 h-[420px] w-full rounded-md border border-gray-300 bg-white"
+                        />
+                      )}
+                    </div>
+                  )}
                   <div className="divide-y divide-gray-100 rounded-lg border border-gray-200">
                     {selectedProject.automationWorkflow.tasks.map((task) => (
                       <div key={task.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5">
