@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, ChevronDown, CircleDashed, ExternalLink, LoaderCircle } from "lucide-react";
 import {
   NEXUS_BUILD_MILESTONES,
@@ -50,9 +50,16 @@ export default function NexusBuildShowcase({
   const [selectedRole, setSelectedRole] = useState(NEXUS_BUILD_WORK[1].role);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [sameOriginPreviewBlocked, setSameOriginPreviewBlocked] = useState(false);
-  const [runGoal, setRunGoal] = useState("Review the current Nexus property search and AI assistant implementation. Report confirmed behavior, gaps, and acceptance checks.");
+  const [runGoal, setRunGoal] = useState("Prepare requirements for a property search website with property listings, filters, and inquiry forms. Identify assumptions and open questions.");
   const [isStartingRun, setIsStartingRun] = useState(false);
   const [runError, setRunError] = useState("");
+  const [runResult, setRunResult] = useState<{
+    summary: string;
+    requirements: string[];
+    acceptanceCriteria: string[];
+    openQuestions: string[];
+  } | null>(null);
+  const requestId = useRef<string | null>(null);
   const runActivity = summarizeNexusAgentActivity(activity);
 
   const startAgentRun = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -60,13 +67,19 @@ export default function NexusBuildShowcase({
     setIsStartingRun(true);
     setRunError("");
     try {
-      const response = await fetch("/api/admin/nexus-agent-run", {
+      requestId.current ||= crypto.randomUUID();
+      const response = await fetch("/api/admin/workforce/requirements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal: runGoal }),
+        body: JSON.stringify({ goal: runGoal, requestId: requestId.current }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "The Nexus agent run could not start.");
+      if (!response.ok) {
+        if (result.runId) requestId.current = null;
+        throw new Error(result.error || "The Nexus agent run could not start.");
+      }
+      setRunResult(result.run?.result || null);
+      requestId.current = null;
       window.dispatchEvent(new Event("nexus-activity-refresh"));
     } catch (error) {
       setRunError(error instanceof Error ? error.message : "The Nexus agent run could not start.");
@@ -84,6 +97,27 @@ export default function NexusBuildShowcase({
     }
     setPreviewUrl(configuredUrl);
   }, []);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    let active = true;
+    void fetch("/api/admin/workforce/requirements", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return response.json();
+      })
+      .then((data) => {
+        if (!active) return;
+        const latestCompleted = Array.isArray(data?.runs)
+          ? data.runs.find((run: { status?: string; result?: unknown }) => run.status === "completed" && run.result)
+          : null;
+        setRunResult(latestCompleted?.result || null);
+      })
+      .catch(() => {
+        if (active) setRunError("Saved agent results could not be loaded.");
+      });
+    return () => { active = false; };
+  }, [isAdmin]);
 
   const isLocalNexusPreview = Boolean(
     previewUrl && ["localhost", "127.0.0.1", "[::1]"].includes(new URL(previewUrl).hostname)
@@ -118,7 +152,7 @@ export default function NexusBuildShowcase({
             <div>
               <p className="text-[9px] font-black uppercase tracking-wider text-sky-200">Project launch · live specialist run</p>
               <h3 className="mt-1 text-lg font-extrabold">Nexus Property Network</h3>
-              <p className="mt-1 text-[10px] text-slate-300">Sequential Gemini specialist review. Progress advances only after a model response is durably recorded.</p>
+              <p className="mt-1 text-[10px] text-slate-300">One Gemini Requirements Analyst calls a bounded, read-only capability tool and saves a structured draft for admin review.</p>
             </div>
             <span className={`border px-2 py-1 text-[9px] font-bold uppercase ${runActivity.status === "working" ? "border-sky-300/40 text-sky-100" : runActivity.status === "completed" ? "border-emerald-300/40 text-emerald-100" : runActivity.status === "failed" ? "border-rose-300/40 text-rose-100" : "border-white/15 text-slate-300"}`}>
               {runActivity.status === "idle" ? "No active run" : runActivity.status}
@@ -131,7 +165,7 @@ export default function NexusBuildShowcase({
           <div className="mt-2 h-2.5 overflow-hidden border border-white/10 bg-white/10" role="progressbar" aria-label="Saved Nexus specialist run progress" aria-valuemin={0} aria-valuemax={runActivity.totalSteps} aria-valuenow={runActivity.completedSteps}>
             <div className="h-full bg-sky-300 transition-[width] duration-500" style={{ width: `${runActivity.percentComplete}%` }} />
           </div>
-          <div className="mt-3 grid gap-2 md:grid-cols-3">
+          <div className="mt-3 grid gap-2">
             {NEXUS_AGENT_ROLES.map((agent, index) => {
               const step = runActivity.steps.find((item) => item.step === index + 1);
               const status = step?.status || "queued";
@@ -154,12 +188,31 @@ export default function NexusBuildShowcase({
               <label htmlFor="nexus-agent-goal" className="block text-[9px] font-bold uppercase tracking-wide text-slate-300">Project instruction</label>
               <textarea id="nexus-agent-goal" value={runGoal} onChange={(event) => setRunGoal(event.target.value)} maxLength={1200} rows={2} className="mt-2 w-full resize-y border border-white/15 bg-black/30 p-2 text-[10px] text-white outline-none focus:border-sky-200" />
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                <p className="max-w-xl text-[9px] leading-relaxed text-slate-500">This launches an evidence-aware review only; it does not edit or deploy source code. Do not enter personal or confidential information.</p>
+                <p className="max-w-xl text-[9px] leading-relaxed text-slate-500">This drafts requirements only. It cannot edit files, execute code, install packages, or deploy. Do not enter personal or confidential information.</p>
                 <button type="submit" disabled={isStartingRun || !activityAvailable || !runGoal.trim()} className="border border-sky-200/40 bg-sky-300/10 px-3 py-2 text-[9px] font-bold text-sky-100 hover:bg-sky-300/20 disabled:cursor-not-allowed disabled:opacity-40">
-                  {isStartingRun ? "Running specialists..." : "Start specialist review"}
+                  {isStartingRun ? "Running analyst..." : "Run Requirements Analyst"}
                 </button>
               </div>
               {runError && <p className="mt-2 text-[10px] text-rose-200" role="alert">{runError}</p>}
+              {runResult && (
+                <div className="mt-3 space-y-2 border border-white/10 bg-black/20 p-3 text-[10px]">
+                  <p className="font-bold text-white">{runResult.summary}</p>
+                  <div>
+                    <h4 className="font-bold text-sky-100">Requirements</h4>
+                    <ul className="list-disc space-y-1 pl-4 text-slate-300">{runResult.requirements.map((item, index) => <li key={`requirement-${index}`}>{item}</li>)}</ul>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sky-100">Acceptance criteria</h4>
+                    <ul className="list-disc space-y-1 pl-4 text-slate-300">{runResult.acceptanceCriteria.map((item, index) => <li key={`criterion-${index}`}>{item}</li>)}</ul>
+                  </div>
+                  {runResult.openQuestions.length > 0 && (
+                    <div>
+                      <h4 className="font-bold text-amber-100">Open questions</h4>
+                      <ul className="list-disc space-y-1 pl-4 text-slate-300">{runResult.openQuestions.map((item, index) => <li key={`question-${index}`}>{item}</li>)}</ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </form>
           )}
         </section>

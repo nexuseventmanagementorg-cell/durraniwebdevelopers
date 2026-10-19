@@ -19,7 +19,7 @@ export default function WorkforceOffice({
 }) {
   const [agentActivity, setAgentActivity] = useState<NexusAgentActivityEvent[]>([]);
   const [activityAvailable, setActivityAvailable] = useState(false);
-  const [activityError, setActivityError] = useState("Loading recorded Nexus agent activity...");
+  const [activityError, setActivityError] = useState("Loading saved Requirements Analyst activity...");
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export default function WorkforceOffice({
       } catch {
         if (!disposed) {
           setActivityAvailable(false);
-          setActivityError("Nexus agent activity is unavailable.");
+          setActivityError("Saved Requirements Analyst activity is unavailable.");
         }
       }
     };
@@ -93,7 +93,7 @@ export default function WorkforceOffice({
           </h2>
           <p className="mt-1 text-[11px] text-gray-400">
             {isDemo
-              ? "Nexus Property Network · live run status is shown from durable specialist events below."
+              ? "Nexus Property Network · status below reflects a persisted Requirements Analyst run."
               : isAwaitingProject
                 ? "Your inquiry is verified. Project milestone updates appear here once your project is approved and created."
                 : firstActiveAgent
@@ -157,7 +157,7 @@ export default function WorkforceOffice({
 
       <p className="border-t border-white/10 bg-[#171a20] px-5 py-3 text-[9px] leading-relaxed text-gray-400 sm:px-7">
         {isDemo
-          ? "Live specialist cards and project progress update only from stored Nexus model-run events. The 54-role registry is not 54 deployed workers, and no office walking is simulated. Enter a valid inquiry reference and matching email to open your project room."
+          ? "Only the Requirements Analyst is connected to a model. Its saved status is shown here; the broader role registry is illustrative, and no office walking is simulated. Enter a valid inquiry reference and matching email to open your project room."
           : isAwaitingProject
             ? "Your inquiry is verified. No project work is shown as started until DWD creates and approves its project workflow."
             : "This view maps the project's saved workflow milestones to relevant specialties; it does not claim individual autonomous agents are connected or show a live editor stream. Private notes and customer data are not displayed."}

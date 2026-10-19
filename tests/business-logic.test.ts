@@ -51,6 +51,10 @@ import {
   DWD_WORKFORCE_DEPARTMENTS,
 } from "../src/lib/workforce-agents";
 import { summarizeNexusAgentActivity } from "../src/lib/nexus-agent-activity";
+import {
+  NexusAgentExecutionError,
+  runRequirementsAnalyst,
+} from "../src/lib/nexus-agent-runtime";
 import { reviewInquiryScope } from "../src/lib/inquiry-review";
 import { getBeginnerBudgetPlan } from "../src/lib/calculator-guide";
 import { createCalculatorLeadToken, validateCalculatorLeadContact, verifyCalculatorLeadToken } from "../src/lib/calculator-lead-security";
@@ -1247,7 +1251,7 @@ test("Nexus run progress stays at zero until actual specialist replies are recor
     step: 1,
     kind: "dispatched",
     senderRole: "Nexus Orchestrator",
-    recipientRole: "Property Matching AI",
+    recipientRole: "Requirements Analyst",
     instruction: "Review property matching.",
     createdAt: "2026-10-19T00:00:00.000Z",
   }]);
@@ -1256,18 +1260,94 @@ test("Nexus run progress stays at zero until actual specialist replies are recor
   assert.equal(working.steps[0].status, "working");
 });
 
-test("Nexus run progress advances only from saved replies for the latest run", () => {
+test("Nexus run progress advances only from saved Requirements Analyst replies", () => {
   const result = summarizeNexusAgentActivity([
-    { runId: "run-old", step: 1, kind: "replied", senderRole: "Property Matching AI", recipientRole: "Listing Auditor AI", reply: "Old", createdAt: "2026-10-18T00:00:00.000Z" },
-    { runId: "run-new", step: 1, kind: "dispatched", senderRole: "Nexus Orchestrator", recipientRole: "Property Matching AI", instruction: "Check the current build.", createdAt: "2026-10-19T00:00:00.000Z" },
-    { runId: "run-new", step: 1, kind: "replied", senderRole: "Property Matching AI", recipientRole: "Listing Auditor AI", reply: "Reviewed actual records.", createdAt: "2026-10-19T00:00:01.000Z" },
-    { runId: "run-new", step: 2, kind: "dispatched", senderRole: "Property Matching AI", recipientRole: "Listing Auditor AI", instruction: "Audit the prior note.", createdAt: "2026-10-19T00:00:02.000Z" },
+    { runId: "run-old", step: 1, kind: "replied", senderRole: "Requirements Analyst", recipientRole: "Nexus Orchestrator", reply: "Old", createdAt: "2026-10-18T00:00:00.000Z" },
+    { runId: "run-new", step: 1, kind: "dispatched", senderRole: "Nexus Orchestrator", recipientRole: "Requirements Analyst", instruction: "Prepare the current project requirements.", createdAt: "2026-10-19T00:00:00.000Z" },
+    { runId: "run-new", step: 1, kind: "replied", senderRole: "Requirements Analyst", recipientRole: "Nexus Orchestrator", reply: "A requirements draft was saved.", createdAt: "2026-10-19T00:00:01.000Z" },
   ]);
 
   assert.equal(result.runId, "run-new");
-  assert.equal(result.status, "working");
+  assert.equal(result.status, "completed");
   assert.equal(result.completedSteps, 1);
-  assert.equal(result.percentComplete, 33);
-  assert.equal(result.steps[0].response?.reply, "Reviewed actual records.");
-  assert.equal(result.steps[1].status, "working");
+  assert.equal(result.percentComplete, 100);
+  assert.equal(result.steps[0].response?.reply, "A requirements draft was saved.");
+});
+
+test("Requirements Analyst requires its only permitted read-only tool before returning structured output", async () => {
+  const requests: RequestInit[] = [];
+  const result = await runRequirementsAnalyst(
+    "Build a property search site with filters and an inquiry form.",
+    "unit-test-key",
+    async (_input, init) => {
+      requests.push(init || {});
+      const body = JSON.parse(String(init?.body));
+      assert.equal(body.tools[0].functionDeclarations[0].name, "get_workforce_capabilities");
+      assert.equal(body.toolConfig.functionCallingConfig.mode, requests.length === 1 ? "ANY" : "NONE");
+      if (requests.length === 1) {
+        return new Response(JSON.stringify({
+          candidates: [{
+            content: {
+              parts: [{
+                functionCall: {
+                  name: "get_workforce_capabilities",
+                  args: {},
+                },
+              }],
+            },
+          }],
+        }), { status: 200 });
+      }
+      assert.equal(body.contents[2].parts[0].functionResponse.name, "get_workforce_capabilities");
+      return new Response(JSON.stringify({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                summary: "A searchable property listings website.",
+                requirements: ["Users can filter listings."],
+                acceptanceCriteria: ["Filters update visible results."],
+                openQuestions: ["Which property fields are required?"],
+              }),
+            }],
+          },
+        }],
+      }), { status: 200 });
+    }
+  );
+
+  assert.equal(requests.length, 2);
+  assert.equal(result.toolEvidence.name, "get_workforce_capabilities");
+  assert.equal(result.requirements[0], "Users can filter listings.");
+});
+
+test("Requirements Analyst rejects unapproved tool requests and malformed output", async () => {
+  await assert.rejects(
+    runRequirementsAnalyst("A useful project brief.", "unit-test-key", async () =>
+      new Response(JSON.stringify({
+        candidates: [{
+          content: {
+            parts: [{ functionCall: { name: "execute_shell", args: {} } }],
+          },
+        }],
+      }), { status: 200 })
+    ),
+    (error: unknown) => error instanceof NexusAgentExecutionError && error.code === "tool_call"
+  );
+
+  await assert.rejects(
+    runRequirementsAnalyst("A useful project brief.", "unit-test-key", async (_input, init) => {
+      const body = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify({
+        candidates: [{
+          content: {
+            parts: body.contents.length === 1
+              ? [{ functionCall: { name: "get_workforce_capabilities", args: {} } }]
+              : [{ text: "{\"summary\":\"ok\",\"requirements\":[1],\"acceptanceCriteria\":[],\"openQuestions\":[]}" }],
+          },
+        }],
+      }), { status: 200 });
+    }),
+    (error: unknown) => error instanceof NexusAgentExecutionError && error.code === "invalid_output"
+  );
 });

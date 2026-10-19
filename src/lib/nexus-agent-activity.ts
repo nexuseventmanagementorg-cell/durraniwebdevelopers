@@ -13,9 +13,7 @@ export interface NexusAgentActivityEvent {
 }
 
 export const NEXUS_AGENT_ROLES = [
-  { role: "Property Matching AI", agencyRole: "Business Analyst", department: "Research & Insights", avatar: "business-analyst", task: "Review property discovery and matching requirements." },
-  { role: "Listing Auditor AI", agencyRole: "Cybersecurity Guardian", department: "Cloud, Quality & Knowledge", avatar: "cybersecurity-guardian", task: "Check listing, ownership, and verification claims against available evidence." },
-  { role: "QA Testing Bot", agencyRole: "QA Testing Bot", department: "Cloud, Quality & Knowledge", avatar: "qa-testing-bot", task: "Prepare acceptance checks and identify unresolved blockers." },
+  { role: "Requirements Analyst", agencyRole: "Business Analyst", department: "Executive & Project Delivery", avatar: "business-analyst", task: "Convert a project brief into a structured, human-reviewable requirements draft." },
 ] as const;
 
 export type NexusAgentStepStatus = "queued" | "working" | "completed" | "failed";
@@ -65,7 +63,13 @@ export function summarizeNexusAgentActivity(events: NexusAgentActivityEvent[]): 
   const completedSteps = steps.filter((step) => step.status === "completed").length;
   const failed = steps.some((step) => step.status === "failed");
   const working = steps.some((step) => step.status === "working");
-  const status = completion ? "completed" : failed ? "failed" : working ? "working" : "idle";
+  const status = completion || (steps.length > 0 && completedSteps === steps.length)
+    ? "completed"
+    : failed
+      ? "failed"
+      : working
+        ? "working"
+        : "idle";
 
   return {
     runId,

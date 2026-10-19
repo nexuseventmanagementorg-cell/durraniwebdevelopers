@@ -149,6 +149,14 @@ Each advance-verified inquiry creates a gated work queue for requirements, clien
 
 When the implementation task is in progress, an admin can copy a privacy-filtered local agent handoff from the project workspace into Antigravity or VS Code. Review the copied text before pasting it into an AI tool. This is a manual handoff: the website does not control the local editor, manage AI quotas/accounts, or deploy client code. If provider usage runs out, preserve the local repository changes and resume from the reported checkpoint when usage is available again. Keep the production deployment behind the existing admin approval step.
 
+### First operational AI workforce milestone
+
+The initial team is intentionally one server-side Gemini Requirements Analyst, not 50 simulated workers. It can draft structured requirements, acceptance criteria, and open questions using one allowlisted read-only capability lookup. It cannot create or modify customer files, run a shell, install dependencies, access customer databases, or deploy software. Treat its output as an untrusted draft requiring admin review.
+
+Before enabling it, review and apply [`supabase/agent-workforce.sql`](./supabase/agent-workforce.sql) to the dedicated DWD Supabase project and set `NEXUS_GEMINI_API_KEY` as a server-only environment variable. Runs are persisted with an admin owner, idempotency key, agent version, status, single-attempt count, result, and safe error code. The migration is not applied automatically. Do not test with customer or confidential information. No external provider call or database write is part of local unit tests.
+
+This is a foundation, not a customer website factory: code generation, isolated workspaces, builds, tests, repair loops, previews, and deployment are not implemented by this milestone. The public activity view exposes run status only; prompts and result details remain available only through the authenticated admin route.
+
 Clients can use `/track-order` with their inquiry reference and registered email to see a public, sanitized project milestone timeline once the inquiry has been converted to a project. The page includes an illustrative 50-role DWD agency-city showcase and clickable office simulation with animated travel and handoffs; these are not live work activity or connected autonomous AI workers. After verification, project statuses map to saved workflow milestones, and an inquiry without an approved project remains in a waiting state. The preview URL is shown only after the client-preview milestone is marked complete and the URL is HTTPS. Progress reflects admin-advanced workflow milestones; it is not a live screen recording or code stream from the local editor.
 
 ### Consented calculator leads
