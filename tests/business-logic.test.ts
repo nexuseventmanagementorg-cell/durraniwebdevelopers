@@ -488,7 +488,7 @@ test("Student Burgers & Shawarmas appears in the public portfolio at PKR 65,000 
   assert.equal(project.budgetLabel, "Project Budget");
   assert.equal(
     project.imageUrl,
-    "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-4.webp"
+    "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-1.webp"
   );
   assert.match(project.fullDescription, /personal domain and its registration are not included/i);
   assert.ok(project.technologies.includes("WhatsApp Ordering"));
@@ -504,6 +504,7 @@ test("Student Burgers portfolio updates the old seeded image but preserves admin
   const previousImages = [
     "https://student-burgers-and-shawarmas.vercel.app/images/hero/hero-shawarma.webp",
     "https://student-burgers-and-shawarmas.vercel.app/images/products/chicken-shawarma-s.webp",
+    "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-4.webp",
   ];
   const customImage = { ...project, imageUrl: "https://example.com/custom-portfolio-image.webp" };
 
@@ -516,7 +517,7 @@ test("Student Burgers portfolio updates the old seeded image but preserves admin
     (item) => item.id === project.id
   )?.imageUrl;
 
-  assert.deepEqual(migratedImages, [project.imageUrl, project.imageUrl]);
+  assert.deepEqual(migratedImages, [project.imageUrl, project.imageUrl, project.imageUrl]);
   assert.equal(preservedImage, customImage.imageUrl);
 });
 

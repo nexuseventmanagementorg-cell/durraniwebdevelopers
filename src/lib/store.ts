@@ -56,7 +56,7 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     category: "Restaurant web applications",
     shortDescription: "Restaurant website with a digital menu, WhatsApp ordering, and dine-in table QR access.",
     fullDescription: "A live restaurant website for Student Burgers & Shawarmas in Ramgarh, Lahore. Customers can browse its menu and student deals, order directly through WhatsApp, or scan a table QR code for dine-in. The project budget is PKR 65,000. The website uses a Vercel subdomain; a personal domain and its registration are not included.",
-    imageUrl: "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-4.webp",
+    imageUrl: "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-1.webp",
     technologies: ["Next.js", "Responsive Web Design", "Digital Menu", "WhatsApp Ordering", "Dine-In Table QR"],
     status: "Live",
     demoUrl: "https://student-burgers-and-shawarmas.vercel.app/",
@@ -74,6 +74,7 @@ const LEGACY_PORTFOLIO_IMAGE_URLS: Record<string, string[]> = {
   "student-burgers-shawarmas": [
     "https://student-burgers-and-shawarmas.vercel.app/images/hero/hero-shawarma.webp",
     "https://student-burgers-and-shawarmas.vercel.app/images/products/chicken-shawarma-s.webp",
+    "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-4.webp",
   ],
 };
 

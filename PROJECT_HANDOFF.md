@@ -1514,8 +1514,8 @@ This implementation supersedes the audit-only recommendation above. The user aut
 - Existing deployments with a saved portfolio list receive the new default project in the public/admin portfolio response without overwriting saved project records. Added a regression test for the project details and price.
 - Validation: **103 tests passed**, TypeScript passed, and the local public portfolio API returned the new project at PKR 65,000.
 
-### Student Burgers portfolio image correction (2026-10-22)
+### Student Burgers portfolio image selection (2026-10-22)
 
-- Replaced the shawarma-only product photo with the current `Zinger Burger + Fries` deal image (`/images/deals/deal-4.webp`), which clearly shows the Student Burgers & Shawarmas branding/logo.
-- Added a seed migration so deployments with either previous seeded image update to this branded deal image while administrator-selected custom images remain unchanged.
+- Set the portfolio cover to the requested Student Deal 1 image (`/images/deals/deal-1.webp`), showing the Student Burgers & Shawarmas logo, zinger burger, fries, and drink.
+- Added a seed migration so deployments with any of the previous seeded cover images update to Student Deal 1 while administrator-selected custom images remain unchanged.
 - Validation: **104 tests passed**, TypeScript and production build passed; the local public portfolio API returned the new image URL and retained the PKR 65,000 budget.
