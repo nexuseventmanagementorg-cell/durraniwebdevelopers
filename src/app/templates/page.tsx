@@ -74,14 +74,17 @@ export default function WebsiteTemplatesPage() {
           (project) => project.templateAvailable !== false
         );
         const requestedTemplateId = new URLSearchParams(window.location.search).get("template");
+        const initiallySelectedTemplate = availableTemplates.find(
+          (template) => template.id === requestedTemplateId
+        ) || availableTemplates[0];
         setAddons(addonsResult.addons as AddonOption[]);
         setTemplates(availableTemplates);
-        setSelectedTemplateId(
-          availableTemplates.find((template) => template.id === requestedTemplateId)?.id ||
-            availableTemplates[0]?.id ||
-            ""
-        );
+        setSelectedTemplateId(initiallySelectedTemplate?.id || "");
         setSelectedPlanId("template_starting");
+        setSelectedAddonIds(
+          (initiallySelectedTemplate?.templateIncludedAddonIds || [])
+            .filter((id) => (addonsResult.addons as AddonOption[]).some((addon) => addon.id === id))
+        );
       } catch (error) {
         console.error("Failed to load website templates", error);
         setLoadError("Template list is temporarily unavailable. Please try again shortly.");
@@ -113,7 +116,9 @@ export default function WebsiteTemplatesPage() {
   const chargeableAddonIds = getChargeableAddonIds(selectedAddonIds, packageId, adminPanelType);
   const selectedAddons = addons.filter((addon) => selectedAddonIds.includes(addon.id));
   const chargeableAddons = selectedAddons.filter((addon) => chargeableAddonIds.includes(addon.id));
-  const priceForAddon = (addon: AddonOption) => getAddonPriceForPackage(addon, packageId);
+  const priceForAddon = (addon: AddonOption) =>
+    selectedTemplate?.templateIncludedAddonPrices?.[addon.id] ??
+    getAddonPriceForPackage(addon, packageId);
   const oneTimeAddonTotal = chargeableAddons
     .filter((addon) => (addon.billingPeriod || "one_time") === "one_time")
     .reduce((total, addon) => total + priceForAddon(addon), 0);
@@ -282,7 +287,10 @@ export default function WebsiteTemplatesPage() {
                       onClick={() => {
                         setSelectedTemplateId(template.id);
                         setSelectedPlanId("template_starting");
-                        setSelectedAddonIds([]);
+                        setSelectedAddonIds(
+                          (template.templateIncludedAddonIds || [])
+                            .filter((id) => addons.some((addon) => addon.id === id))
+                        );
                         document.getElementById("template-request")?.scrollIntoView({ behavior: "smooth" });
                       }}
                       className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#101216] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#252a33]"
@@ -333,9 +341,13 @@ export default function WebsiteTemplatesPage() {
                 id="template-choice"
                 value={selectedTemplateId}
                 onChange={(event) => {
-                  setSelectedTemplateId(event.target.value);
+                  const nextTemplate = templates.find((template) => template.id === event.target.value);
+                  setSelectedTemplateId(nextTemplate?.id || "");
                   setSelectedPlanId("template_starting");
-                  setSelectedAddonIds([]);
+                  setSelectedAddonIds(
+                    (nextTemplate?.templateIncludedAddonIds || [])
+                      .filter((id) => addons.some((addon) => addon.id === id))
+                  );
                 }}
                 required
                 disabled={templates.length === 0}

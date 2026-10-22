@@ -518,20 +518,26 @@ test("DataStore Ledger Calculations & Isolation", () => {
   assert.equal(pricingConfig.baseWithAdmin, 45000);
 });
 
-test("Student Burgers & Shawarmas appears in the public portfolio at PKR 65,000 without domain pricing", () => {
+test("Student Burgers & Shawarmas portfolio shows the PKR 185,000 e-commerce build estimate", () => {
   const project = INITIAL_PORTFOLIO_PROJECTS.find(
     (item) => item.id === "student-burgers-shawarmas"
   );
   assert.ok(project);
   assert.equal(project.isPublic, true);
   assert.equal(project.demoUrl, "https://student-burgers-and-shawarmas.vercel.app/");
-  assert.equal(project.approvedPublicBudget, 65000);
-  assert.equal(project.budgetLabel, "Project Budget");
+  assert.equal(project.approvedPublicBudget, 185000);
+  assert.equal(project.budgetLabel, "Estimated Build Price");
+  assert.equal(project.clientConsentForBudget, false);
+  assert.equal(project.templatePricingPackage, "ecommerce_business");
+  assert.equal(project.templateStartingPrice, 150000);
+  assert.deepEqual(project.templateIncludedAddonIds, ["restaurant_qr_menu", "order_tracking"]);
+  assert.deepEqual(project.templateIncludedAddonPrices, { restaurant_qr_menu: 10000, order_tracking: 25000 });
   assert.equal(
     project.imageUrl,
     "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-1.webp"
   );
   assert.match(project.fullDescription, /personal domain and its registration are not included/i);
+  assert.match(project.fullDescription, /PKR 185,000/);
   assert.ok(project.technologies.includes("WhatsApp Ordering"));
   assert.ok(project.technologies.includes("Dine-In Table QR"));
 });
@@ -560,6 +566,32 @@ test("Student Burgers portfolio updates the old seeded image but preserves admin
 
   assert.deepEqual(migratedImages, [project.imageUrl, project.imageUrl, project.imageUrl]);
   assert.equal(preservedImage, customImage.imageUrl);
+});
+
+test("Student Burgers legacy portfolio price migrates to its estimate and template package metadata", () => {
+  const seed = INITIAL_PORTFOLIO_PROJECTS.find((project) => project.id === "student-burgers-shawarmas");
+  assert.ok(seed);
+  const legacyProject = {
+    ...seed,
+    fullDescription: "A live restaurant website for Student Burgers & Shawarmas in Ramgarh, Lahore. Customers can browse its menu and student deals, order directly through WhatsApp, or scan a table QR code for dine-in. The project budget is PKR 65,000. The website uses a Vercel subdomain; a personal domain and its registration are not included.",
+    approvedPublicBudget: 65000,
+    budgetLabel: "Project Budget",
+    clientConsentForBudget: true,
+    templatePricingPackage: undefined,
+    templateStartingPrice: undefined,
+    templateIncludedAddonIds: undefined,
+    templateIncludedAddonPrices: undefined,
+  };
+  const migrated = mergePortfolioSeedProjects([legacyProject]).find(
+    (project) => project.id === seed.id
+  );
+  assert.equal(migrated?.approvedPublicBudget, 185000);
+  assert.equal(migrated?.budgetLabel, "Estimated Build Price");
+  assert.equal(migrated?.templatePricingPackage, "ecommerce_business");
+  assert.equal(migrated?.templateStartingPrice, 150000);
+  assert.deepEqual(migrated?.templateIncludedAddonIds, ["restaurant_qr_menu", "order_tracking"]);
+  assert.deepEqual(migrated?.templateIncludedAddonPrices, { restaurant_qr_menu: 10000, order_tracking: 25000 });
+  assert.equal(migrated?.clientConsentForBudget, false);
 });
 
 test("Saved portfolio records default missing availability and template fields without overriding explicit choices", () => {
@@ -2157,7 +2189,7 @@ test("Known template URL estimates stay anchored to the published starting price
   for (const estimate of normalizedEstimates) {
     assert.equal(estimate.estimatedTotal, 150000);
     assert.equal(estimate.basePrice, 150000);
-    assert.equal(estimate.suggestedPricingOptionId, "template_grillvi-gtroad");
+    assert.equal(estimate.suggestedPricingOptionId, "ecommerce_business");
     assert.equal(estimate.matchedTemplateId, template.id);
     assert.deepEqual(estimate.addons, []);
     assert.deepEqual(getDefaultNewBuildAddonIds(estimate), []);
@@ -2165,6 +2197,39 @@ test("Known template URL estimates stay anchored to the published starting price
       (option.adminPanelType === "client_admin" ? option.basePriceWithAdmin : option.basePrice) >= 150000
     ));
   }
+});
+
+test("Student Burgers template estimator uses its Business package and fixed feature add-ons", async () => {
+  const template = INITIAL_PORTFOLIO_PROJECTS.find(
+    (project) => project.id === "student-burgers-shawarmas"
+  );
+  assert.ok(template);
+  const estimate = await estimateWebsite(
+    "https://student-burgers-and-shawarmas.vercel.app/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": `<title>Student Burgers</title><h1>Menu and deals</h1><button>Add to cart</button><a href="/checkout">Checkout</a><a href="https://wa.me/923000000000">Order on WhatsApp</a><p>Scan QR code at your dine-in table. Track your order online.</p>`,
+      "/sitemap.xml": `<urlset></urlset>`,
+    })
+  );
+  const normalized = applyPortfolioTemplateStartingPrice(
+    estimate,
+    template,
+    template.templateStartingPrice || 0
+  );
+
+  assert.equal(normalized.basePrice, 150000);
+  assert.equal(normalized.pricingPackage, "ecommerce_business");
+  assert.equal(normalized.basePackage, "E-Commerce Business");
+  assert.equal(normalized.estimatedTotal, 185000);
+  assert.deepEqual(
+    normalized.addons.map((addon) => [addon.id, addon.price]),
+    [["restaurant_qr_menu", 10000], ["order_tracking", 25000]]
+  );
+  assert.equal(normalized.matchedTemplateId, template.id);
+  assert.deepEqual(getDefaultNewBuildAddonIds(normalized), ["restaurant_qr_menu", "order_tracking"]);
 });
 
 test("Template request plans always use the template price as their minimum", () => {
@@ -2180,11 +2245,21 @@ test("Template request plans always use the template price as their minimum", ()
   const millionRupeeTemplate = {
     ...restaurantTemplate,
     approvedPublicBudget: 1_000_000,
+    templateStartingPrice: 1_000_000,
   };
   const millionRupeePlans = getTemplateRequestPlans(millionRupeeTemplate);
   assert.equal(millionRupeePlans[0]?.id, "template_starting");
   assert.equal(millionRupeePlans[0]?.price, 1_000_000);
   assert.ok(millionRupeePlans.every((plan) => plan.price >= 1_000_000));
+
+  const studentTemplate = INITIAL_PORTFOLIO_PROJECTS.find(
+    (project) => project.id === "student-burgers-shawarmas"
+  );
+  assert.ok(studentTemplate);
+  const studentPlans = getTemplateRequestPlans(studentTemplate);
+  assert.equal(studentPlans[0]?.price, 150000);
+  assert.equal(studentPlans[0]?.packageId, "ecommerce_business");
+  assert.ok(studentPlans.every((plan) => plan.price >= 150000));
 });
 
 test("URL estimator offers every published package and uses configured rates and add-ons", async () => {

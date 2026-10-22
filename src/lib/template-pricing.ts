@@ -46,7 +46,9 @@ function getTemplatePackage(
 }
 
 export function getTemplateRequestPlans(template: PortfolioProject): TemplateRequestPlan[] {
-  const templatePrice = template.approvedPublicBudget ?? DEFAULT_PRICING_CONFIG.baseWithoutAdmin;
+  const templatePrice = template.templateStartingPrice ??
+    template.approvedPublicBudget ??
+    DEFAULT_PRICING_CONFIG.baseWithoutAdmin;
   const explicitPlan = template.templatePricingPackage
     ? BASE_TEMPLATE_PLANS.find((plan) => plan.id === template.templatePricingPackage)
     : undefined;

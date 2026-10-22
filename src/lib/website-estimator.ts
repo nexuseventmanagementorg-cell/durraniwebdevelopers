@@ -140,15 +140,16 @@ export interface WebsitePricingOption {
 export function applyPortfolioTemplateStartingPrice(
   estimate: WebsiteEstimateResult,
   template: PortfolioProject,
-  startingPrice: number
+  startingPrice: number,
+  startingAddonIds: string[] = template.templateIncludedAddonIds || []
 ): WebsiteEstimateResult {
   const packageId = template.templatePricingPackage || estimate.pricingPackage;
   const selectedPackage = packageId
     ? estimate.pricingOptions.find((option) => option.id === packageId)
     : undefined;
   const templateOption: WebsitePricingOption = {
-    id: `template_${template.id}`,
-    label: `${template.title} — template starting plan`,
+    id: packageId || `template_${template.id}`,
+    label: selectedPackage?.label || `${template.title} — template starting plan`,
     basePrice: startingPrice,
     basePriceWithAdmin: startingPrice,
     adminPanelType: selectedPackage?.adminPanelType || (packageId ? "client_admin" : "none"),
@@ -161,6 +162,35 @@ export function applyPortfolioTemplateStartingPrice(
       : option.basePrice;
     return price >= startingPrice;
   });
+  const addons = startingAddonIds.flatMap((id) => {
+    const detectedAddon = estimate.addons.find((addon) => addon.id === id);
+    const templateBasePrice = template.templateIncludedAddonPrices?.[id];
+    const templatePrice = templateBasePrice === undefined
+      ? undefined
+      : Math.round(
+          templateBasePrice *
+          (startingPrice / (template.templateStartingPrice || startingPrice)) *
+          100
+        ) / 100;
+    if (detectedAddon) {
+      return [templatePrice === undefined ? detectedAddon : { ...detectedAddon, price: templatePrice }];
+    }
+    const catalogAddon = estimate.addonCatalog.find((addon) => addon.id === id);
+    return catalogAddon
+      ? [{
+          id,
+          title: catalogAddon.title,
+          price: templatePrice ?? catalogAddon.price,
+          billingPeriod: catalogAddon.billingPeriod,
+        }]
+      : [];
+  });
+  const addonTotal = addons
+    .filter((addon) => addon.billingPeriod !== "monthly")
+    .reduce((total, addon) => total + addon.price, 0);
+  const monthlyAddonTotal = addons
+    .filter((addon) => addon.billingPeriod === "monthly")
+    .reduce((total, addon) => total + addon.price, 0);
 
   return {
     ...estimate,
@@ -175,14 +205,14 @@ export function applyPortfolioTemplateStartingPrice(
     ],
     suggestedPricingOptionId: templateOption.id,
     matchedTemplateId: template.id,
-    basePackage: templateOption.label,
+    basePackage: selectedPackage?.label || templateOption.label,
     basePrice: startingPrice,
     basePriceWithAdmin: startingPrice,
-    addons: [],
-    monthlyAddonTotal: 0,
-    estimatedTotal: startingPrice,
+    addons,
+    monthlyAddonTotal,
+    estimatedTotal: startingPrice + addonTotal,
     assumptions: [
-      `This URL matches the published ${template.title}. Its visible template features are included in the fixed ${estimate.currency} ${startingPrice.toLocaleString()} starting price; detected feature signals do not add inconsistent charges.`,
+      `This URL matches the published ${template.title}. The ${estimate.currency} ${startingPrice.toLocaleString()} ${templateOption.label} starting price is stable; template-specific add-ons are listed separately.`,
       ...estimate.assumptions,
     ],
   };

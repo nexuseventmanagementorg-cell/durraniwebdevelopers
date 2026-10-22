@@ -71,8 +71,7 @@ export async function POST(request: NextRequest) {
     const templateProject = DataStore.getPortfolio(false).find((project) => {
       if (
         project.templateAvailable === false ||
-        project.budgetLabel !== "Template Price" ||
-        !project.approvedPublicBudget ||
+        !(project.templateStartingPrice || (project.budgetLabel === "Template Price" && project.approvedPublicBudget)) ||
         !project.demoUrl
       ) return false;
       const demoHost = new URL(project.demoUrl).hostname.toLowerCase();
@@ -82,13 +81,16 @@ export async function POST(request: NextRequest) {
       const recognizedHosts = [demoHost, ...(legacyHosts[project.id] || [])];
       return recognizedHosts.includes(sourceHost) || recognizedHosts.includes(requestedHost);
     });
-    if (templateProject?.approvedPublicBudget) {
+    const templateStartingPrice = templateProject?.templateStartingPrice ??
+      templateProject?.approvedPublicBudget;
+    if (templateProject && templateStartingPrice) {
       const rate = requestedCurrency === "PKR" ? 1 : snapshot?.rates[requestedCurrency];
       if (!rate) throw new Error("Exchange rate is unavailable for the selected currency.");
       estimate = applyPortfolioTemplateStartingPrice(
         estimate,
         templateProject,
-        Math.round(templateProject.approvedPublicBudget * rate * 100) / 100
+        Math.round(templateStartingPrice * rate * 100) / 100,
+        templateProject.templateIncludedAddonIds
       );
     }
     const historicalProject = DataStore.getPortfolio(false).find((project) => {

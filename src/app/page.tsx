@@ -869,6 +869,11 @@ export default function HomePage() {
                           Original PKR fee converted at current FX only
                         </span>
                       )}
+                      {item.budgetLabel === "Estimated Build Price" && (
+                        <span className="block text-[9px] text-gray-400">
+                          Estimated new-build price based on visible features
+                        </span>
+                      )}
                     </div>
                   ) : (
                     <span className="text-xs text-gray-500 italic">Custom Scope</span>

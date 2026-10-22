@@ -389,6 +389,9 @@ export interface PortfolioProject {
   availabilityStatus?: "Online" | "Offline";
   templateAvailable?: boolean;
   templatePricingPackage?: "ecommerce_starter" | "ecommerce_business" | "ecommerce_advanced" | "saas_starter" | "saas_business" | "saas_enterprise";
+  templateStartingPrice?: number;
+  templateIncludedAddonIds?: string[];
+  templateIncludedAddonPrices?: Record<string, number>;
   demoUrl?: string;
   isPublic: boolean;
   approvedPublicBudget?: number;

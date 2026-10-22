@@ -44,6 +44,7 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     availabilityStatus: "Online",
     templateAvailable: true,
     templatePricingPackage: "ecommerce_business",
+    templateStartingPrice: 150000,
     demoUrl: "https://gtroad1.vercel.app/",
     isPublic: true,
     approvedPublicBudget: 150000,
@@ -56,18 +57,22 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     title: "Student Burgers & Shawarmas - Restaurant Website",
     category: "Restaurant web applications",
     shortDescription: "Restaurant website with a digital menu, WhatsApp ordering, and dine-in table QR access.",
-    fullDescription: "A live restaurant website for Student Burgers & Shawarmas in Ramgarh, Lahore. Customers can browse its menu and student deals, order directly through WhatsApp, or scan a table QR code for dine-in. The project budget is PKR 65,000. The website uses a Vercel subdomain; a personal domain and its registration are not included.",
+    fullDescription: "A live restaurant website for Student Burgers & Shawarmas in Ramgarh, Lahore. Customers can browse its menu and student deals, order directly through WhatsApp, or scan a table QR code for dine-in. The comparable new-build estimate is PKR 185,000, based on the E-Commerce Business package plus restaurant digital menu/QR and order-tracking features. The website uses a Vercel subdomain; a personal domain and its registration are not included.",
     imageUrl: "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-1.webp",
     technologies: ["Next.js", "Responsive Web Design", "Digital Menu", "WhatsApp Ordering", "Dine-In Table QR"],
     status: "Live",
     availabilityStatus: "Online",
     templateAvailable: true,
+    templatePricingPackage: "ecommerce_business",
+    templateStartingPrice: 150000,
+    templateIncludedAddonIds: ["restaurant_qr_menu", "order_tracking"],
+    templateIncludedAddonPrices: { restaurant_qr_menu: 10000, order_tracking: 25000 },
     demoUrl: "https://student-burgers-and-shawarmas.vercel.app/",
     isPublic: true,
-    approvedPublicBudget: 65000,
-    budgetLabel: "Project Budget",
+    approvedPublicBudget: 185000,
+    budgetLabel: "Estimated Build Price",
     featured: true,
-    clientConsentForBudget: true,
+    clientConsentForBudget: false,
   },
 ];
 
@@ -95,6 +100,14 @@ const LEGACY_GRILLVI_PORTFOLIO_VALUES: Partial<PortfolioProject> = {
   includedAddonIds: ["supabase_db"],
   clientConsentForBudget: true,
 };
+const LEGACY_STUDENT_BURGERS_PORTFOLIO_VALUES: Partial<PortfolioProject> = {
+  title: "Student Burgers & Shawarmas - Restaurant Website",
+  shortDescription: "Restaurant website with a digital menu, WhatsApp ordering, and dine-in table QR access.",
+  fullDescription: "A live restaurant website for Student Burgers & Shawarmas in Ramgarh, Lahore. Customers can browse its menu and student deals, order directly through WhatsApp, or scan a table QR code for dine-in. The project budget is PKR 65,000. The website uses a Vercel subdomain; a personal domain and its registration are not included.",
+  approvedPublicBudget: 65000,
+  budgetLabel: "Project Budget",
+  clientConsentForBudget: true,
+};
 
 export function mergePortfolioSeedProjects(
   savedProjects: PortfolioProject[],
@@ -103,9 +116,14 @@ export function mergePortfolioSeedProjects(
   const updatedSavedProjects = savedProjects.map((savedProject) => {
     const seedProject = seedProjects.find((project) => project.id === savedProject.id);
     const isLegacyGrillvi = savedProject.id === "grillvi-gtroad";
+    const legacyValues = isLegacyGrillvi
+      ? LEGACY_GRILLVI_PORTFOLIO_VALUES
+      : savedProject.id === "student-burgers-shawarmas"
+        ? LEGACY_STUDENT_BURGERS_PORTFOLIO_VALUES
+        : undefined;
     const isUnchangedLegacyValue = (field: keyof PortfolioProject) =>
-      isLegacyGrillvi &&
-      JSON.stringify(savedProject[field]) === JSON.stringify(LEGACY_GRILLVI_PORTFOLIO_VALUES[field]);
+      legacyValues !== undefined &&
+      JSON.stringify(savedProject[field]) === JSON.stringify(legacyValues[field]);
     const migratedLegacyValue = <K extends keyof PortfolioProject>(field: K) =>
       isUnchangedLegacyValue(field) && seedProject ? seedProject[field] : savedProject[field];
     const imageUrl = seedProject && (
@@ -131,6 +149,10 @@ export function mergePortfolioSeedProjects(
       adminPanelIncluded: migratedLegacyValue("adminPanelIncluded"),
       includedAddonIds: migratedLegacyValue("includedAddonIds"),
       clientConsentForBudget: migratedLegacyValue("clientConsentForBudget"),
+      templatePricingPackage: savedProject.templatePricingPackage ?? seedProject?.templatePricingPackage,
+      templateStartingPrice: savedProject.templateStartingPrice ?? seedProject?.templateStartingPrice,
+      templateIncludedAddonIds: savedProject.templateIncludedAddonIds ?? seedProject?.templateIncludedAddonIds,
+      templateIncludedAddonPrices: savedProject.templateIncludedAddonPrices ?? seedProject?.templateIncludedAddonPrices,
       availabilityStatus: savedProject.availabilityStatus ?? seedProject?.availabilityStatus ?? "Online",
       templateAvailable: savedProject.templateAvailable ?? seedProject?.templateAvailable ?? true,
     };

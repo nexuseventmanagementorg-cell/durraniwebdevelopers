@@ -214,6 +214,11 @@ export default function PortfolioPage() {
                           Original Pakistan fee; foreign currency is direct FX conversion
                         </span>
                       )}
+                      {project.budgetLabel === "Estimated Build Price" && (
+                        <span className="block text-[9px] text-gray-500">
+                          New-build estimate based on visible features
+                        </span>
+                      )}
                     </div>
                   ) : (
                     <span className="text-xs text-gray-400 italic">Custom Enterprise Scope</span>
@@ -258,7 +263,7 @@ export default function PortfolioPage() {
           <div className="space-y-1">
             <h4 className="font-bold text-[#101216]">Client Privacy & Budget Estimates</h4>
             <p className="leading-relaxed text-[11px]">
-              Durrani Web Developers strictly protects client confidentiality. We never publish private client contact records, outstanding balances, or internal correspondence. Any amount labelled “Estimated Calculator Budget” is our estimate based on publicly visible features and current calculator rates; it is not the client&apos;s confirmed invoice or agreed project fee. Final pricing depends on verified scope.
+              Durrani Web Developers strictly protects client confidentiality. We never publish private client contact records, outstanding balances, or internal correspondence. Amounts labelled “Estimated Calculator Budget” or “Estimated Build Price” are estimates based on publicly visible features and current calculator rates; they are not the client&apos;s confirmed invoice or agreed project fee. Final pricing depends on verified scope.
             </p>
           </div>
         </div>
@@ -327,15 +332,19 @@ export default function PortfolioPage() {
                   <span className="text-[10px] text-gray-500 font-medium max-w-[200px] text-right">
                     {modalProject.clientConsentForBudget
                       ? "Approved by client for portfolio publication"
-                      : modalProject.budgetLabel === "Estimated Calculator Budget"
+                      : modalProject.budgetLabel === "Estimated Calculator Budget" ||
+                          modalProject.budgetLabel === "Estimated Build Price"
                         ? "Calculator-based estimate; final price depends on confirmed scope"
                         : "Budget not published"}
                   </span>
                 </div>
               )}
-              {modalProject.budgetLabel === "Estimated Calculator Budget" && (
+              {(modalProject.budgetLabel === "Estimated Calculator Budget" ||
+                modalProject.budgetLabel === "Estimated Build Price") && (
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Estimate assumes the PKR 45,000 client-admin package plus the PKR 10,000 Supabase database add-on. Vercel deployment work is included in the web-app budget. We do not provide payment gateway accounts or other third-party accounts/subscriptions; clients arrange and pay providers directly.
+                  {modalProject.budgetLabel === "Estimated Build Price"
+                    ? `Estimated new-build scope uses the ${modalProject.templatePricingPackage?.replaceAll("_", " ") || "matching published"} package starting at PKR ${modalProject.templateStartingPrice?.toLocaleString("en-PK") || "the published rate"}, plus the listed feature add-ons. Final scope and price require confirmation.`
+                    : "Estimate assumes the PKR 45,000 client-admin package plus the PKR 10,000 Supabase database add-on. Vercel deployment work is included in the web-app budget. We do not provide payment gateway accounts or other third-party accounts/subscriptions; clients arrange and pay providers directly."}
                 </p>
               )}
               {modalProject.budgetLabel === "Actual Project Fee" && (
