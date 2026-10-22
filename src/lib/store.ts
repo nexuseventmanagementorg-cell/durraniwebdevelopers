@@ -31,31 +31,47 @@ interface DatabaseSchema {
   auditLogs: AuditLog[];
 }
 
+export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
+  {
+    id: "grillvi-gtroad",
+    title: "GRILLVI - Restaurant Website & Online Ordering",
+    category: "Restaurant web applications",
+    shortDescription: "Live website for GRILLVI on Main GT Road, Lahore, featuring an online menu, ordering cart, and WhatsApp ordering.",
+    fullDescription: "A live restaurant website for GRILLVI, serving charcoal BBQ, rice thaals, and karahi in Baghbanpura, Lahore. Customers can browse the menu and food details, add items to a cart, place an order, and contact the restaurant through WhatsApp. The website also shares restaurant location, opening hours, and contact information.",
+    imageUrl: "https://grillvi-gtroad.vercel.app/images/restaurant-interior.jpg",
+    technologies: ["Next.js", "Responsive Web Design", "Online Menu", "Online Ordering", "WhatsApp Ordering"],
+    status: "Live",
+    demoUrl: "https://grillvi-gtroad.vercel.app/",
+    isPublic: true,
+    approvedPublicBudget: 55000,
+    budgetLabel: "Actual Project Fee",
+    adminPanelIncluded: true,
+    includedAddonIds: ["supabase_db"],
+    featured: true,
+    clientConsentForBudget: true,
+  },
+  {
+    id: "student-burgers-shawarmas",
+    title: "Student Burgers & Shawarmas - Restaurant Website",
+    category: "Restaurant web applications",
+    shortDescription: "Restaurant website with a digital menu, WhatsApp ordering, and dine-in table QR access.",
+    fullDescription: "A live restaurant website for Student Burgers & Shawarmas in Ramgarh, Lahore. Customers can browse its menu and student deals, order directly through WhatsApp, or scan a table QR code for dine-in. The project budget is PKR 65,000. The website uses a Vercel subdomain; a personal domain and its registration are not included.",
+    imageUrl: "https://student-burgers-and-shawarmas.vercel.app/images/hero/hero-shawarma.webp",
+    technologies: ["Next.js", "Responsive Web Design", "Digital Menu", "WhatsApp Ordering", "Dine-In Table QR"],
+    status: "Live",
+    demoUrl: "https://student-burgers-and-shawarmas.vercel.app/",
+    isPublic: true,
+    approvedPublicBudget: 65000,
+    budgetLabel: "Project Budget",
+    featured: true,
+    clientConsentForBudget: true,
+  },
+];
+
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 
 function getInitialData(): DatabaseSchema {
-  const initialPortfolio: PortfolioProject[] = [
-    {
-      id: "grillvi-gtroad",
-      title: "GRILLVI - Restaurant Website & Online Ordering",
-      category: "Restaurant web applications",
-      shortDescription: "Live website for GRILLVI on Main GT Road, Lahore, featuring an online menu, ordering cart, and WhatsApp ordering.",
-      fullDescription: "A live restaurant website for GRILLVI, serving charcoal BBQ, rice thaals, and karahi in Baghbanpura, Lahore. Customers can browse the menu and food details, add items to a cart, place an order, and contact the restaurant through WhatsApp. The website also shares restaurant location, opening hours, and contact information.",
-      imageUrl: "https://grillvi-gtroad.vercel.app/images/restaurant-interior.jpg",
-      technologies: ["Next.js", "Responsive Web Design", "Online Menu", "Online Ordering", "WhatsApp Ordering"],
-      status: "Live",
-      demoUrl: "https://grillvi-gtroad.vercel.app/",
-      isPublic: true,
-      approvedPublicBudget: 55000,
-      budgetLabel: "Actual Project Fee",
-      adminPanelIncluded: true,
-      includedAddonIds: ["supabase_db"],
-      featured: true,
-      clientConsentForBudget: true,
-    },
-  ];
-
   const initialClients: Client[] = [];
 
   const initialProjects: Project[] = [];
@@ -91,7 +107,7 @@ function getInitialData(): DatabaseSchema {
     invoices: initialInvoices,
     installments: [],
     reminders: initialReminders,
-    portfolio: initialPortfolio,
+    portfolio: INITIAL_PORTFOLIO_PROJECTS,
     pricingConfig: DEFAULT_PRICING_CONFIG,
     settings: initialSettings,
     auditLogs: initialAuditLogs,
@@ -485,8 +501,14 @@ export class DataStore {
   // Portfolio
   static getPortfolio(includePrivate: boolean = false): PortfolioProject[] {
     const data = this.ensureDataFile();
-    if (includePrivate) return data.portfolio;
-    return data.portfolio.filter((p) => p.isPublic);
+    const newSeedProjects = INITIAL_PORTFOLIO_PROJECTS.filter(
+      (project) =>
+        project.id === "student-burgers-shawarmas" &&
+        !data.portfolio.some((savedProject) => savedProject.id === project.id)
+    );
+    const portfolio = [...newSeedProjects, ...data.portfolio];
+    if (includePrivate) return portfolio;
+    return portfolio.filter((p) => p.isPublic);
   }
 
   static savePortfolioProject(project: PortfolioProject, actor: string = "Admin"): PortfolioProject {

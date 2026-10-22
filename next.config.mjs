@@ -11,6 +11,11 @@ const nextConfig = {
         hostname: "grillvi-gtroad.vercel.app",
         pathname: "/images/**",
       },
+      {
+        protocol: "https",
+        hostname: "student-burgers-and-shawarmas.vercel.app",
+        pathname: "/images/**",
+      },
     ],
   },
 };

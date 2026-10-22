@@ -1506,3 +1506,10 @@ This implementation supersedes the audit-only recommendation above. The user aut
 - Added a Personal Domain Setup add-on at PKR 10,000. When a custom domain such as `.com` or `.pk` is scanned, the URL estimator includes that signal and preselects the add-on for a new-build estimate; owners can unselect it. Registrar purchase and renewal charges are explicitly separate. Known hosted domains (including `.vercel.app`, `.netlify.app`, and test/example TLDs) are not treated as personal domains.
 - Existing e-commerce package inclusions remain included in the package price and are not charged again; each other selected feature add-on adds one PKR 10,000 unit. International pricing continues to use the existing 100-unit per-add-on conversion rule.
 - **Files changed for the flat add-on rule:** `src/lib/constants.ts`, `src/lib/website-estimator.ts`, `src/lib/website-estimate-review.ts`, `src/app/calculator/page.tsx`, `src/app/website-estimator/page.tsx`, `src/app/admin/pricing/page.tsx`, `src/app/pricing/page.tsx`, `src/app/page.tsx`, `tests/business-logic.test.ts`, `README.md`, and this handoff.
+
+### Student Burgers & Shawarmas portfolio entry (2026-10-22)
+
+- Added the live Student Burgers & Shawarmas restaurant website to the initial public portfolio with its own project-budget label of PKR 65,000.
+- The project description states that the site runs on a Vercel subdomain and excludes personal-domain registration. The portfolio image uses the site's public shawarma hero image.
+- Existing deployments with a saved portfolio list receive the new default project in the public/admin portfolio response without overwriting saved project records. Added a regression test for the project details and price.
+- Validation: **103 tests passed**, TypeScript passed, and the local public portfolio API returned the new project at PKR 65,000.

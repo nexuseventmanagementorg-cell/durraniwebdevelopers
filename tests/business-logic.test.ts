@@ -40,7 +40,7 @@ import {
   type TaskProposalReport,
   type TaskProposalScopeDraft,
 } from "../src/lib/task-proposal-client";
-import { DataStore } from "../src/lib/store";
+import { DataStore, INITIAL_PORTFOLIO_PROJECTS } from "../src/lib/store";
 import { buildInstallmentSchedule } from "../src/lib/client-finances";
 import {
   hashVisitorId,
@@ -471,6 +471,21 @@ test("DataStore Ledger Calculations & Isolation", () => {
   const pricingConfig = DataStore.getPricingConfig();
   assert.equal(pricingConfig.baseWithoutAdmin, 35000);
   assert.equal(pricingConfig.baseWithAdmin, 45000);
+});
+
+test("Student Burgers & Shawarmas appears in the public portfolio at PKR 65,000 without domain pricing", () => {
+  const project = INITIAL_PORTFOLIO_PROJECTS.find(
+    (item) => item.id === "student-burgers-shawarmas"
+  );
+
+  assert.ok(project);
+  assert.equal(project.isPublic, true);
+  assert.equal(project.demoUrl, "https://student-burgers-and-shawarmas.vercel.app/");
+  assert.equal(project.approvedPublicBudget, 65000);
+  assert.equal(project.budgetLabel, "Project Budget");
+  assert.match(project.fullDescription, /personal domain and its registration are not included/i);
+  assert.ok(project.technologies.includes("WhatsApp Ordering"));
+  assert.ok(project.technologies.includes("Dine-In Table QR"));
 });
 
 test("Client project installment schedule preserves the agreed total and clamps month ends", () => {
