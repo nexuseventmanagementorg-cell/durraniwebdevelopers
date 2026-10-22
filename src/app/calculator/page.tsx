@@ -7,6 +7,7 @@ import confetti from "canvas-confetti";
 import {
   ADDON_CATEGORY_LABELS,
   DEFAULT_PRICING_CONFIG,
+  FEATURE_ADDON_PRICE_PKR,
   calculateBudget,
   BUSINESS_INFO,
   buildWhatsAppLink,
@@ -23,7 +24,7 @@ import {
 import type { PricingPackageId } from "@/lib/constants";
 import type { AddonOption, InquiryScanFeature } from "@/lib/types";
 import { getBeginnerBudgetPlan } from "@/lib/calculator-guide";
-import type { BeginnerBudgetBand, BeginnerProjectGoal } from "@/lib/calculator-guide";
+import type { BeginnerBudgetBand, BeginnerProjectGoal, CalculatorGuideLanguage } from "@/lib/calculator-guide";
 import { CurrencyCode, formatCurrency, getRegionalPricingConfig, isCurrencyCode } from "@/lib/currency";
 import { useCurrency } from "@/components/CurrencyProvider";
 import CurrencySelector from "@/components/CurrencySelector";
@@ -128,13 +129,94 @@ function CalculatorContent() {
               : "not-sure";
   const [guideGoal, setGuideGoal] = useState<BeginnerProjectGoal>(initialGuideGoal);
   const [guideBudget, setGuideBudget] = useState<BeginnerBudgetBand>(initialGuideBudget);
+  const [guideLanguage, setGuideLanguage] = useState<CalculatorGuideLanguage>("roman-ur");
+  const [languageOverridden, setLanguageOverridden] = useState(false);
   const [plainLanguageNeed, setPlainLanguageNeed] = useState(
     initialSourceUrl ? `I like this kind of website: ${initialSourceUrl}` : ""
   );
+  const [leadContactName, setLeadContactName] = useState("");
+  const [leadContactEmail, setLeadContactEmail] = useState("");
+  const [leadContactPhone, setLeadContactPhone] = useState("");
+  const [leadContactConsent, setLeadContactConsent] = useState(false);
+  const [leadSaving, setLeadSaving] = useState(false);
+  const [leadSaveMessage, setLeadSaveMessage] = useState("");
+  const [calculatorLeadSession, setCalculatorLeadSession] = useState<{ id: string; token: string } | null>(null);
+  const guideCopy = guideLanguage === "roman-ur" ? {
+    start: "Apni zaroorat se shuru karein",
+    headline: "Website ke technical lafz jaanna zaroori nahi.",
+    intro: "Apne business ka maqsad aur apna budget batayein. Hum seedha batayenge ke is budget mein kya ban sakta hai.",
+    help: "Aapka budget aapki had hai, kharch karne ka target nahi.",
+    goalHeading: "Aap customers se online kya karwana chahte hain?",
+    goalHint: "Jo jawab sab se qareeb lage woh chun lein. Baqi apne alfaaz mein likh sakte hain.",
+    budgetHeading: "Project ke liye aapka total budget kya hai?",
+    needLabel: "Asaan alfaaz mein batayein website se kya madad chahiye",
+    needHint: "Misal: meri bakery hai, menu dikhana hai aur cake orders WhatsApp par lene hain.",
+    recommendation: "Aapke liye munasib shuruati plan",
+    confirm: "Final scope aur quote kaam shuru hone se pehle aapke saath confirm hoga.",
+    total: "Andazati total",
+    advance: "Shuruati advance",
+    included: "Is plan mein shamil",
+    excluded: "Is mein shamil nahi",
+    budgetNote: "Aapko poora budget kharch karne ki zaroorat nahi. Yeh sirf shuruati andaza hai.",
+    contactHeading: "Kya hum yeh plan aapke liye save karein?",
+    contactHint: "Email ya WhatsApp mein se kam az kam aik dein. Sirf aapki ijazat par hum behtar budget option discuss karne ke liye rabta karenge.",
+    name: "Aapka naam (optional)",
+    email: "Email (optional)",
+    phone: "WhatsApp number (optional, country code ke saath)",
+    consent: "Main razi hoon ke Durrani Web Developers mera budget plan dekh kar email ya WhatsApp par behtar option ke liye rabta karein.",
+    save: "Mera plan save karein",
+    saved: "Aapka plan follow-up ke liye save ho gaya.",
+    continue: "Is plan ke saath aage chalein",
+    skip: "Mujhe apni zaroorat pata hai; guide skip karein",
+  } : {
+    start: "Start with your needs",
+    headline: "You don’t need to know website terminology.",
+    intro: "Tell us what your business needs and your comfortable budget. We’ll explain what that budget can realistically include.",
+    help: "Your budget is a limit you choose, not a target we expect you to spend.",
+    goalHeading: "What would you like customers to do online?",
+    goalHint: "Choose the closest answer. You can explain the rest in your own words.",
+    budgetHeading: "What is your total project budget?",
+    needLabel: "In your own words, what should the website help with?",
+    needHint: "For example: I run a bakery. I want customers to see the menu and message me to order cakes.",
+    recommendation: "A practical starting plan",
+    confirm: "We’ll confirm the exact scope and quotation with you before work begins.",
+    total: "Estimated total",
+    advance: "Starting advance",
+    included: "Included in this plan",
+    excluded: "Not included unless agreed",
+    budgetNote: "You don’t have to use your full budget. This is only a starting estimate.",
+    contactHeading: "Would you like us to save this plan?",
+    contactHint: "Provide an email or WhatsApp number. We’ll only follow up about better-fit options if you agree.",
+    name: "Your name (optional)",
+    email: "Email (optional)",
+    phone: "WhatsApp number (optional, with country code)",
+    consent: "I agree that Durrani Web Developers may review this budget plan and contact me by email or WhatsApp about a suitable option.",
+    save: "Save my plan",
+    saved: "Your plan is saved for follow-up.",
+    continue: "Continue with this plan",
+    skip: "I know what I need; skip the guide",
+  };
 
   useEffect(() => {
     if (isCurrencyCode(initialCurrency)) setCurrency(initialCurrency);
   }, [initialCurrency, setCurrency]);
+
+  useEffect(() => {
+    if (!languageOverridden) setGuideLanguage(currency === "PKR" ? "roman-ur" : "en");
+  }, [currency, languageOverridden]);
+
+  useEffect(() => {
+    try {
+      const leadId = sessionStorage.getItem("dwd-calculator-lead-id");
+      const token = sessionStorage.getItem("dwd-calculator-lead-token");
+      if (leadId && token) {
+        setCalculatorLeadSession({ id: leadId, token });
+        setLeadContactConsent(true);
+      }
+    } catch {
+      // Session storage can be unavailable in privacy-restricted browsers.
+    }
+  }, []);
 
   // Step state: 1 to 8 (8 is confirmation/submit)
   const [currentStep, setCurrentStep] = useState(0);
@@ -266,24 +348,10 @@ function CalculatorContent() {
     [adminPanelType, selectedAddons, selectedPricingPackage, selectedPricingConfig]
   );
   const guidePlan = useMemo(
-    () => getBeginnerBudgetPlan(guideGoal, guideBudget),
-    [guideGoal, guideBudget]
+    () => getBeginnerBudgetPlan(guideGoal, guideBudget, currency, rates, guideLanguage),
+    [guideGoal, guideBudget, currency, rates, guideLanguage]
   );
-  const guidePricingConfig = guidePlan.pricingPackage
-    ? getPackagePricingConfig(guidePlan.pricingPackage)
-    : pricingConfig;
-  const guideCalculation = useMemo(
-    () => calculateBudget(
-      guidePlan.adminPanelType,
-      getChargeableAddonIds(
-        guidePlan.selectedAddons,
-        guidePlan.pricingPackage,
-        guidePlan.adminPanelType
-      ),
-      guidePricingConfig
-    ),
-    [guidePlan, guidePricingConfig]
-  );
+  const guideCalculation = guidePlan.calculation;
   const formatEstimate = useCallback(
     (amount: number) => currency === "PKR" || rates[currency]
       ? formatCurrency(amount, currency, locale)
@@ -336,6 +404,44 @@ function CalculatorContent() {
     { label: "Custom web application", icon: Briefcase },
     { label: "Other custom software", icon: Code2 },
   ];
+
+  const projectTypeRomanLabels: Record<string, string> = {
+    "Restaurant website or ordering app": "Restaurant ki website ya ordering app",
+    "E-commerce store": "Online products ki dukaan",
+    "Jewellery store": "Jewellery ki online dukaan",
+    "Cosmetics store": "Cosmetics ki online dukaan",
+    "Fashion store": "Fashion ki online dukaan",
+    "Grocery store": "Grocery ki online dukaan",
+    "SaaS application": "Online software ya customer portal",
+    "Client management system": "Customers ka record manage karne ka system",
+    "Booking system": "Appointment booking system",
+    "Inventory system": "Stock aur maal ka record",
+    "Custom web application": "Business ke liye khaas web application",
+    "Other custom software": "Doosra khaas software",
+  };
+  const adminFeatureRomanLabels: Record<string, string> = {
+    products: "Products aur categories sambhalna",
+    orders: "Orders aur unki halat manage karna",
+    stock: "Stock ka record rakhna",
+    customers: "Customers ka record dekhna",
+    payments: "Payments ka record",
+    reports: "Reports aur sales ka khulasa",
+    coupons: "Coupons aur discounts",
+    reviews: "Reviews aur testimonials approve karna",
+    content: "Website ka text aur banners badalna",
+    roles: "Staff ke alag access levels",
+    notifications: "Email / WhatsApp messages ka record",
+  };
+  const addonCategoryRomanLabels: Record<string, string> = {
+    "Database & Authentication": "Database aur login",
+    "E-commerce & Payments": "Online orders aur payments",
+    "Business Tools & Admin": "Business dashboard ke tools",
+    "AI & Automation": "AI aur automatic kaam",
+    "Website & Design": "Website ka design aur pages",
+    "SaaS & Multi-Vendor": "Online platform aur multiple sellers",
+    "Security & Reliability": "Security aur website ki bharosemandi",
+    "Industry-Specific": "Business ke khaas tools",
+  };
 
   const adminFeatureOptions = [
     { id: "products", label: "Product and category management" },
@@ -410,20 +516,235 @@ function CalculatorContent() {
     );
   };
 
+  const buildLeadQuestionnaire = useCallback(() => ({
+    customerName,
+    businessName,
+    email: email || leadContactEmail,
+    phone: phone || leadContactPhone,
+    cityCountry,
+    preferredContact,
+    customerIntro,
+    projectTypes: selectedProjectTypes,
+    problemToSolve: problemToSolve || plainLanguageNeed,
+    targetAudience,
+    productsServices,
+    inspirationUrl,
+    isNewOrUpgrade,
+    preferredLaunchDate,
+    expectedBudgetRange: budgetRangeOptions.find((option) => option.value === expectedBudgetRange)?.label || expectedBudgetRange,
+    displayFixedOnly,
+    needsProductCatalog,
+    productFeatures,
+    acceptOrdersOnline,
+    orderFeatures,
+    needsReviewsOrAccounts,
+    adminPanelType,
+    adminFeatures,
+    selectedAddons,
+    customFeatureNotes,
+    pricingPackage: selectedPricingPackage,
+    currency,
+    language: guideLanguage,
+    locale,
+    disclaimerAccepted,
+  }), [
+    customerName,
+    businessName,
+    email,
+    leadContactEmail,
+    phone,
+    leadContactPhone,
+    cityCountry,
+    preferredContact,
+    customerIntro,
+    selectedProjectTypes,
+    problemToSolve,
+    plainLanguageNeed,
+    targetAudience,
+    productsServices,
+    inspirationUrl,
+    isNewOrUpgrade,
+    preferredLaunchDate,
+    expectedBudgetRange,
+    budgetRangeOptions,
+    displayFixedOnly,
+    needsProductCatalog,
+    productFeatures,
+    acceptOrdersOnline,
+    orderFeatures,
+    needsReviewsOrAccounts,
+    adminPanelType,
+    adminFeatures,
+    selectedAddons,
+    customFeatureNotes,
+    selectedPricingPackage,
+    currency,
+    guideLanguage,
+    locale,
+    disclaimerAccepted,
+  ]);
+
+  const saveLeadProgress = useCallback(async (session = calculatorLeadSession): Promise<boolean> => {
+    if (!session) return true;
+    try {
+      const response = await fetch(`/api/public/calculator-leads/${encodeURIComponent(session.id)}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.token}`,
+        },
+        body: JSON.stringify({
+          profile: {
+            name: customerName || leadContactName,
+            email: email || leadContactEmail,
+            phone: phone || leadContactPhone,
+            goal: guideGoal,
+            budgetBand: guideBudget,
+            language: guideLanguage,
+            locale,
+            currency,
+            userDescription: plainLanguageNeed,
+            progressStep: currentStep,
+          },
+          questionnaire: buildLeadQuestionnaire(),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Lead answers could not be saved.");
+      return true;
+    } catch (error) {
+      setLeadSaveMessage(error instanceof Error ? error.message : "Lead answers could not be saved.");
+      return false;
+    }
+  }, [
+    calculatorLeadSession,
+    customerName,
+    leadContactName,
+    email,
+    leadContactEmail,
+    phone,
+    leadContactPhone,
+    guideGoal,
+    guideBudget,
+    guideLanguage,
+    locale,
+    currency,
+    plainLanguageNeed,
+    currentStep,
+    buildLeadQuestionnaire,
+  ]);
+
+  useEffect(() => {
+    if (!calculatorLeadSession || currentStep < 1 || currentStep > 7) return;
+    const timer = window.setTimeout(() => {
+      void saveLeadProgress();
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [
+    calculatorLeadSession,
+    saveLeadProgress,
+    currentStep,
+    customerName,
+    businessName,
+    email,
+    phone,
+    cityCountry,
+    preferredContact,
+    customerIntro,
+    selectedProjectTypes,
+    problemToSolve,
+    targetAudience,
+    productsServices,
+    inspirationUrl,
+    isNewOrUpgrade,
+    preferredLaunchDate,
+    expectedBudgetRange,
+    displayFixedOnly,
+    needsProductCatalog,
+    productFeatures,
+    acceptOrdersOnline,
+    orderFeatures,
+    needsReviewsOrAccounts,
+    adminPanelType,
+    adminFeatures,
+    selectedAddons,
+    customFeatureNotes,
+    selectedPricingPackage,
+    currency,
+    guideLanguage,
+    locale,
+    disclaimerAccepted,
+    guideGoal,
+    guideBudget,
+    plainLanguageNeed,
+  ]);
+
+  const handleSaveCalculatorLead = async (): Promise<{ id: string; token: string } | null> => {
+    setLeadSaving(true);
+    setLeadSaveMessage("");
+    try {
+      const existing = calculatorLeadSession;
+      if (existing) {
+        const saved = await saveLeadProgress();
+        if (!saved) throw new Error("Your plan could not be updated. Please try again.");
+        setLeadSaveMessage(guideCopy.saved);
+        return existing;
+      }
+
+      const response = await fetch("/api/public/calculator-leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: leadContactName,
+          email: leadContactEmail,
+          phone: leadContactPhone,
+          contactConsent: leadContactConsent,
+          goal: guideGoal,
+          budgetBand: guideBudget,
+          language: guideLanguage,
+          locale,
+          currency,
+          userDescription: plainLanguageNeed,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Your plan could not be saved.");
+      const session = { id: result.leadId as string, token: result.updateToken as string };
+      setCalculatorLeadSession(session);
+      try {
+        sessionStorage.setItem("dwd-calculator-lead-id", session.id);
+        sessionStorage.setItem("dwd-calculator-lead-token", session.token);
+      } catch {
+        // The lead is saved server-side even when session storage is blocked.
+      }
+      setLeadSaveMessage(guideLanguage === "roman-ur" ? "Aapka plan follow-up ke liye save ho gaya." : "Your plan is saved for follow-up.");
+      return session;
+    } catch (error) {
+      setLeadSaveMessage(error instanceof Error ? error.message : "Your plan could not be saved.");
+      return null;
+    } finally {
+      setLeadSaving(false);
+    }
+  };
+
   // Validation before proceeding
   const validateStep = (step: number): boolean => {
     setErrorMessage("");
     if (step === 1) {
-      if (!customerName.trim()) {
-        setErrorMessage("Please enter your full name.");
+      const hasEmail = Boolean(email.trim());
+      const hasPhone = Boolean(phone.trim());
+      if (!hasEmail && !hasPhone) {
+        setErrorMessage(guideLanguage === "roman-ur"
+          ? "Calculator aage chalane ke liye email ya WhatsApp number mein se aik dein."
+          : "Enter an email address or WhatsApp number to continue.");
         return false;
       }
-      if (!email.trim() || !email.includes("@")) {
-        setErrorMessage("Please enter a valid email address.");
+      if (hasEmail && (!email.includes("@") || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))) {
+        setErrorMessage(guideLanguage === "roman-ur" ? "Email address durust likhein." : "Please enter a valid email address.");
         return false;
       }
-      if (!phone.trim() || phone.trim().length < 8) {
-        setErrorMessage("Please enter a valid WhatsApp or contact phone number.");
+      if (hasPhone && phone.replace(/\D/g, "").length < 8) {
+        setErrorMessage(guideLanguage === "roman-ur" ? "WhatsApp number country code ke saath durust likhein." : "Please enter a valid WhatsApp number with country code.");
         return false;
       }
     }
@@ -434,6 +755,12 @@ function CalculatorContent() {
       }
     }
     if (step === 7) {
+      if (!customerName.trim() || !email.trim() || !phone.trim()) {
+        setErrorMessage(guideLanguage === "roman-ur"
+          ? "Formal inquiry bhejne ke liye naam, email aur WhatsApp number poora karein. Aapka saved incomplete lead mehfooz rahega."
+          : "To submit a formal inquiry, add your name, email and WhatsApp number. Your saved incomplete lead will remain available.");
+        return false;
+      }
       if (!disclaimerAccepted) {
         setErrorMessage("You must accept the estimate disclaimer to proceed.");
         return false;
@@ -446,8 +773,9 @@ function CalculatorContent() {
     return true;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (validateStep(currentStep)) {
+      if (calculatorLeadSession) await saveLeadProgress();
       setCurrentStep((prev) => Math.min(8, prev + 1));
       window.scrollTo({ top: 150, behavior: "smooth" });
     }
@@ -459,13 +787,24 @@ function CalculatorContent() {
     window.scrollTo({ top: 150, behavior: "smooth" });
   };
 
-  const handleStartWithGuidePlan = () => {
+  const handleStartWithGuidePlan = async () => {
+    if (leadContactConsent) {
+      if (!leadContactEmail.trim() && !leadContactPhone.trim() && !calculatorLeadSession) {
+        setLeadSaveMessage(guideLanguage === "roman-ur" ? "Lead save karne ke liye email ya WhatsApp number dein." : "Enter an email or WhatsApp number to save your lead.");
+        return;
+      }
+      const savedSession = await handleSaveCalculatorLead();
+      if (!savedSession) return;
+    }
     const isStore = guideGoal === "online-store" || guideGoal === "restaurant";
     const isFullStore = isStore && Boolean(guidePlan.pricingPackage?.startsWith("ecommerce_"));
     setSelectedProjectTypes([guidePlan.projectType]);
     setSelectedPricingPackage(guidePlan.pricingPackage);
     setAdminPanelType(guidePlan.adminPanelType);
     setSelectedAddons(guidePlan.selectedAddons);
+    setCustomerName(leadContactName);
+    setEmail(leadContactEmail);
+    setPhone(leadContactPhone);
     setExpectedBudgetRange(guidePlan.expectedBudgetRange);
     setProblemToSolve(plainLanguageNeed.trim() || guidePlan.problemToSolve);
     setNeedsProductCatalog(isStore);
@@ -478,6 +817,24 @@ function CalculatorContent() {
     setAdminFeatures(guidePlan.adminPanelType === "client_admin"
       ? isFullStore ? ["products", "orders", "stock", "customers"] : guideGoal === "business-tools" ? ["customers"] : ["content"]
       : []);
+    setCurrentStep(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSkipGuide = async () => {
+    if (leadContactConsent) {
+      if (!leadContactEmail.trim() && !leadContactPhone.trim() && !calculatorLeadSession) {
+        setLeadSaveMessage(guideLanguage === "roman-ur"
+          ? "Lead save karne ke liye email ya WhatsApp number dein."
+          : "Enter an email or WhatsApp number to save your lead.");
+        return;
+      }
+      const savedSession = await handleSaveCalculatorLead();
+      if (!savedSession) return;
+    }
+    setCustomerName(leadContactName);
+    setEmail(leadContactEmail);
+    setPhone(leadContactPhone);
     setCurrentStep(1);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -520,6 +877,8 @@ function CalculatorContent() {
         pricingPackage: selectedPricingPackage,
         customFeatureNotes,
         currency,
+        language: guideLanguage,
+        ...(calculatorLeadSession ? { calculatorLead: calculatorLeadSession } : {}),
         disclaimerAccepted,
       };
 
@@ -535,6 +894,7 @@ function CalculatorContent() {
       }
 
       setSubmittedInquiry({ ...data.inquiry, whatsappConfirmation: data.whatsappConfirmation });
+      if (calculatorLeadSession) await saveLeadProgress();
       setCurrentStep(8);
 
       // Trigger celebration confetti
@@ -564,30 +924,25 @@ function CalculatorContent() {
   };
 
   const stepsList = [
-    "Customer Info",
-    "Project Type",
-    "Scope & Problem",
-    "Products & Orders",
-    "Admin Panel",
-    "Advanced Add-ons",
-    "Estimated Budget",
-    "Confirmation",
+    ...(guideLanguage === "roman-ur"
+      ? ["Rabtay ki maloomat", "Project ki qisam", "Zaroorat aur masla", "Products aur orders", "Admin panel", "Mazeed options", "Andazati budget", "Tasdeeq"]
+      : ["Customer Info", "Project Type", "Scope & Problem", "Products & Orders", "Admin Panel", "Advanced Add-ons", "Estimated Budget", "Confirmation"]),
   ];
   const guideGoalOptions = [
-    { id: "business-site" as const, title: "Show my business and get enquiries", detail: "Tell people what you do and let them contact you.", icon: Briefcase },
-    { id: "restaurant" as const, title: "Show my menu and get food orders", detail: "Start with menu and WhatsApp orders, or choose full online ordering.", icon: Utensils },
-    { id: "online-store" as const, title: "Show products or take orders", detail: "Start with a catalog, or choose a full online store.", icon: ShoppingBag },
-    { id: "bookings" as const, title: "Let people request appointments", detail: "Share services and collect booking requests.", icon: Calendar },
-    { id: "business-tools" as const, title: "Manage customers or daily work", detail: "Keep one important business process in a dashboard.", icon: Users },
-    { id: "online-platform" as const, title: "Build an online tool customers sign into", detail: "Start a software product or customer portal.", icon: Cpu },
-    { id: "not-sure" as const, title: "I have an idea, but need help explaining it", detail: "Describe it in your own words; no technical terms needed.", icon: Sparkles },
+    { id: "business-site" as const, title: "Show my business and get enquiries", titleRoman: "Business dikhana aur customers se rabta lena", detail: "Tell people what you do and let them contact you.", detailRoman: "Logon ko apni services batayein aur rabtay ka rasta dein.", icon: Briefcase },
+    { id: "restaurant" as const, title: "Show my menu and get food orders", titleRoman: "Menu dikhana aur food orders lena", detail: "Start with menu and WhatsApp orders, or choose full online ordering.", detailRoman: "Menu aur WhatsApp orders se shuru karein, ya poori online ordering chunen.", icon: Utensils },
+    { id: "online-store" as const, title: "Show products or take orders", titleRoman: "Products dikhana ya orders lena", detail: "Start with a catalog, or choose a full online store.", detailRoman: "Product list se shuru karein ya mukammal online store chunen.", icon: ShoppingBag },
+    { id: "bookings" as const, title: "Let people request appointments", titleRoman: "Appointments ki requests lena", detail: "Share services and collect booking requests.", detailRoman: "Apni services dikhayein aur booking requests hasil karein.", icon: Calendar },
+    { id: "business-tools" as const, title: "Manage customers or daily work", titleRoman: "Customers ya roz ka kaam manage karna", detail: "Keep one important business process in a dashboard.", detailRoman: "Aik zaroori business process dashboard mein sambhalein.", icon: Users },
+    { id: "online-platform" as const, title: "Build an online tool customers sign into", titleRoman: "Login wala online tool banana", detail: "Start a software product or customer portal.", detailRoman: "Software product ya customer portal se shuru karein.", icon: Cpu },
+    { id: "not-sure" as const, title: "I have an idea, but need help explaining it", titleRoman: "Idea hai, magar samjhana mushkil lagta hai", detail: "Describe it in your own words; no technical terms needed.", detailRoman: "Apne alfaaz mein batayein; technical lafz zaroori nahi.", icon: Sparkles },
   ];
   const guideBudgetOptions = [
-    { id: "under-50k" as const, label: `Up to ${formatPrice(50000)}`, detail: "A useful first version" },
-    { id: "50-150k" as const, label: `${formatPrice(50000)} - ${formatPrice(150000)}`, detail: "Room for a dashboard or more features" },
-    { id: "150-300k" as const, label: `${formatPrice(150000)} - ${formatPrice(300000)}`, detail: "Full store or an online platform starter" },
-    { id: "300k-plus" as const, label: `${formatPrice(300000)}+`, detail: "Advanced or larger custom scope" },
-    { id: "not-sure" as const, label: "I'm not sure yet", detail: "Show me a sensible starting point" },
+    { id: "under-50k" as const, label: `Up to ${formatPrice(50000)}`, detail: "A useful first version", detailRoman: "Kaam ki pehli website" },
+    { id: "50-150k" as const, label: `${formatPrice(50000)} - ${formatPrice(150000)}`, detail: "Room for a dashboard or more features", detailRoman: "Dashboard ya mazeed features ki gunjaish" },
+    { id: "150-300k" as const, label: `${formatPrice(150000)} - ${formatPrice(300000)}`, detail: "Full store or an online platform starter", detailRoman: "Mukammal store ya online platform ka starter" },
+    { id: "300k-plus" as const, label: `${formatPrice(300000)}+`, detail: "Advanced or larger custom scope", detailRoman: "Advanced ya bara custom project" },
+    { id: "not-sure" as const, label: "I'm not sure yet", detail: "Show me a sensible starting point", detailRoman: "Mujhe munasib shuruati option dikhayein" },
   ];
   const submittedCalculation =
     submittedInquiry?.internationalCalculation || submittedInquiry?.calculation;
@@ -610,22 +965,23 @@ function CalculatorContent() {
         <section className="border-b border-[#242830] bg-[#101216] py-10 text-white sm:py-14">
           <div className="mx-auto max-w-5xl space-y-4 px-4 text-center sm:px-6 lg:px-8">
             <span className="inline-flex rounded-md border border-[#E31E36]/40 bg-[#242830] px-3 py-1 text-[11px] font-bold uppercase text-red-300">
-              Start with your idea
+              {guideCopy.start}
             </span>
-            <h1 className="text-3xl font-black sm:text-4xl">You don&apos;t need to know website terminology.</h1>
+            <h1 className="text-3xl font-black sm:text-4xl">{guideCopy.headline}</h1>
             <p className="mx-auto max-w-2xl text-sm leading-relaxed text-gray-300">
-              Tell us what you want your business to do online and the total budget you&apos;re comfortable with. We&apos;ll suggest a practical first version, not a list of extras to buy.
+              {guideCopy.intro}
             </p>
-            <p className="mx-auto max-w-2xl text-xs leading-relaxed text-gray-400">
-              Aapko technical lafz jaan&apos;ne ki zaroorat nahi. Apni zaroorat aur budget bata dein, hum pehla munasib plan samjha denge.
-            </p>
+            <div role="group" aria-label="Guide language" className="inline-flex overflow-hidden rounded-md border border-gray-600">
+              <button type="button" aria-pressed={guideLanguage === "roman-ur"} onClick={() => { setGuideLanguage("roman-ur"); setLanguageOverridden(true); }} className={`px-3 py-1.5 text-[11px] font-bold ${guideLanguage === "roman-ur" ? "bg-white text-[#101216]" : "text-gray-300 hover:bg-white/10"}`}>Roman Urdu</button>
+              <button type="button" aria-pressed={guideLanguage === "en"} onClick={() => { setGuideLanguage("en"); setLanguageOverridden(true); }} className={`border-l border-gray-600 px-3 py-1.5 text-[11px] font-bold ${guideLanguage === "en" ? "bg-white text-[#101216]" : "text-gray-300 hover:bg-white/10"}`}>English</button>
+            </div>
           </div>
         </section>
 
         <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
           <section>
-            <h2 className="text-lg font-extrabold">What would you like customers to do?</h2>
-            <p className="mt-1 text-xs text-gray-600">Choose the closest answer. You can explain the rest in your own words.</p>
+            <h2 className="text-lg font-extrabold">{guideCopy.goalHeading}</h2>
+            <p className="mt-1 text-xs text-gray-600">{guideCopy.goalHint}</p>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {guideGoalOptions.map((option) => {
                 const Icon = option.icon;
@@ -642,8 +998,8 @@ function CalculatorContent() {
                       <Icon className="h-4 w-4" />
                     </span>
                     <span>
-                      <strong className="block text-sm">{option.title}</strong>
-                      <span className="mt-1 block text-xs leading-relaxed text-gray-600">{option.detail}</span>
+                      <strong className="block text-sm">{guideLanguage === "roman-ur" ? option.titleRoman : option.title}</strong>
+                      <span className="mt-1 block text-xs leading-relaxed text-gray-600">{guideLanguage === "roman-ur" ? option.detailRoman : option.detail}</span>
                     </span>
                   </button>
                 );
@@ -652,8 +1008,8 @@ function CalculatorContent() {
           </section>
 
           <section>
-            <h2 className="text-lg font-extrabold">What is your total project budget?</h2>
-            <p className="mt-1 text-xs text-gray-600">This is your comfortable limit, not a target we expect you to spend.</p>
+            <h2 className="text-lg font-extrabold">{guideCopy.budgetHeading}</h2>
+            <p className="mt-1 text-xs text-gray-600">{guideCopy.help}</p>
             <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {guideBudgetOptions.map((option) => {
                 const selected = guideBudget === option.id;
@@ -669,7 +1025,7 @@ function CalculatorContent() {
                     />
                     <span>
                       <strong className="block text-xs">{option.label}</strong>
-                      <span className="mt-1 block text-[11px] text-gray-600">{option.detail}</span>
+                      <span className="mt-1 block text-[11px] text-gray-600">{guideLanguage === "roman-ur" ? option.detailRoman : option.detail}</span>
                     </span>
                   </label>
                 );
@@ -678,13 +1034,13 @@ function CalculatorContent() {
           </section>
 
           <section>
-            <label htmlFor="plain-language-need" className="text-sm font-extrabold">In your own words, what should the website help with? <span className="font-normal text-gray-500">Optional</span></label>
+            <label htmlFor="plain-language-need" className="text-sm font-extrabold">{guideCopy.needLabel} <span className="font-normal text-gray-500">{guideLanguage === "roman-ur" ? "(ikhtiyari)" : "(optional)"}</span></label>
             <textarea
               id="plain-language-need"
               rows={3}
               value={plainLanguageNeed}
               onChange={(event) => setPlainLanguageNeed(event.target.value)}
-              placeholder="For example: I run a bakery. I want people to see the menu and message me to order cakes."
+              placeholder={guideCopy.needHint}
               className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3.5 py-3 text-sm text-[#101216] placeholder:text-gray-400 focus:border-[#E31E36] focus:outline-none focus:ring-1 focus:ring-[#E31E36]"
             />
           </section>
@@ -692,19 +1048,19 @@ function CalculatorContent() {
           <section className="border-y border-gray-200 py-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <span className="text-[11px] font-bold uppercase text-gray-500">Recommended starting scope</span>
+                <span className="text-[11px] font-bold uppercase text-gray-500">{guideCopy.recommendation}</span>
                 <h2 className="mt-1 text-xl font-black">{guidePlan.title}</h2>
-                <p className="mt-1 text-xs text-gray-600">A practical first phase. The final scope and quote are confirmed with you before work begins.</p>
+                <p className="mt-1 text-xs text-gray-600">{guideCopy.confirm}</p>
               </div>
               <div className="min-w-44 rounded-lg bg-[#101216] px-4 py-3 text-white">
-                <span className="block text-[10px] font-bold uppercase text-gray-300">One-time estimate</span>
+                <span className="block text-[10px] font-bold uppercase text-gray-300">{guideCopy.total}</span>
                 <strong className="mt-1 block text-2xl font-black">{formatEstimate(guideCalculation.estimatedTotal)}</strong>
-                <span className="mt-1 block text-[11px] text-gray-300">Advance: {formatEstimate(guideCalculation.advanceAmount)}</span>
+                <span className="mt-1 block text-[11px] text-gray-300">{guideCopy.advance}: {formatEstimate(guideCalculation.advanceAmount)}</span>
               </div>
             </div>
             <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
-                <h3 className="text-xs font-extrabold text-emerald-800">Included in this starting plan</h3>
+                <h3 className="text-xs font-extrabold text-emerald-800">{guideCopy.included}</h3>
                 <ul className="mt-2 space-y-2">
                   {guidePlan.included.map((item) => (
                     <li key={item} className="flex items-start gap-2 text-xs leading-relaxed text-gray-700">
@@ -714,7 +1070,7 @@ function CalculatorContent() {
                 </ul>
               </div>
               <div>
-                <h3 className="text-xs font-extrabold text-gray-700">Not included unless we agree it</h3>
+                <h3 className="text-xs font-extrabold text-gray-700">{guideCopy.excluded}</h3>
                 <ul className="mt-2 space-y-2">
                   {guidePlan.notIncluded.map((item) => (
                     <li key={item} className="text-xs leading-relaxed text-gray-600">{item}</li>
@@ -723,16 +1079,42 @@ function CalculatorContent() {
               </div>
             </div>
             <p className="mt-5 border-t border-gray-200 pt-3 text-[11px] leading-relaxed text-gray-500">
-              You don&apos;t have to use your full budget. This estimate is a starting point; we&apos;ll review your needs and confirm the exact scope and total before any project starts.
+              {guideCopy.budgetNote}
             </p>
           </section>
 
+          <section className="border-b border-gray-200 pb-6">
+            <h2 className="text-base font-extrabold">{guideCopy.contactHeading}</h2>
+            <p className="mt-1 text-xs leading-relaxed text-gray-600">{guideCopy.contactHint}</p>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <label className="text-[11px] font-semibold text-gray-700">{guideCopy.name}
+                <input value={leadContactName} onChange={(event) => setLeadContactName(event.target.value)} maxLength={120} autoComplete="name" className="mt-1.5 w-full rounded-md border border-gray-300 px-3 py-2.5 text-xs" />
+              </label>
+              <label className="text-[11px] font-semibold text-gray-700">{guideCopy.email}
+                <input type="email" value={leadContactEmail} onChange={(event) => setLeadContactEmail(event.target.value)} maxLength={254} autoComplete="email" className="mt-1.5 w-full rounded-md border border-gray-300 px-3 py-2.5 text-xs" />
+              </label>
+              <label className="text-[11px] font-semibold text-gray-700">{guideCopy.phone}
+                <input type="tel" value={leadContactPhone} onChange={(event) => setLeadContactPhone(event.target.value)} maxLength={32} autoComplete="tel" className="mt-1.5 w-full rounded-md border border-gray-300 px-3 py-2.5 text-xs" />
+              </label>
+            </div>
+            <label className="mt-4 flex items-start gap-2.5 rounded-lg border border-gray-200 bg-gray-50 p-3 text-[11px] leading-relaxed text-gray-700">
+              <input type="checkbox" checked={leadContactConsent} onChange={(event) => setLeadContactConsent(event.target.checked)} className="mt-0.5 accent-[#E31E36]" />
+              <span>{guideCopy.consent}</span>
+            </label>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button type="button" disabled={leadSaving || !leadContactConsent || (!leadContactEmail.trim() && !leadContactPhone.trim() && !calculatorLeadSession)} onClick={() => void handleSaveCalculatorLead()} className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2.5 text-xs font-bold text-[#101216] disabled:cursor-not-allowed disabled:opacity-50">
+                {leadSaving ? (guideLanguage === "roman-ur" ? "Save ho raha hai…" : "Saving…") : calculatorLeadSession ? (guideLanguage === "roman-ur" ? "Plan update karein" : "Update saved plan") : guideCopy.save}
+              </button>
+              <span role="status" className="text-[11px] text-gray-600">{leadSaveMessage}</span>
+            </div>
+          </section>
+
           <div className="flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-            <button type="button" onClick={() => setCurrentStep(1)} className="px-2 py-3 text-xs font-bold text-gray-600 underline decoration-gray-300 underline-offset-4 hover:text-[#101216]">
-              I already know what I need; skip this guide
+            <button type="button" onClick={() => void handleSkipGuide()} className="px-2 py-3 text-xs font-bold text-gray-600 underline decoration-gray-300 underline-offset-4 hover:text-[#101216]">
+              {guideCopy.skip}
             </button>
             <button type="button" onClick={handleStartWithGuidePlan} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#E31E36] px-6 py-3.5 text-sm font-extrabold text-white transition hover:bg-[#C8162D]">
-              Continue with this plan <ArrowRight className="h-4 w-4" />
+              {guideCopy.continue} <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         </main>
@@ -746,22 +1128,29 @@ function CalculatorContent() {
       <section className="bg-[#101216] text-white py-12 border-b border-[#242830]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-3">
           <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest bg-[#242830] px-3.5 py-1 rounded-full border border-[#E31E36]/30">
-            Multi-Step Requirements Questionnaire
+            {guideLanguage === "roman-ur" ? "Aapki project zaroorat" : "Multi-Step Requirements Questionnaire"}
           </span>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
-            Interactive Web App Budget Calculator
+            {guideLanguage === "roman-ur" ? "Website ka budget aur zaroorat" : "Interactive Web App Budget Calculator"}
           </h1>
           <p className="text-xs sm:text-sm text-gray-300 max-w-xl mx-auto">
-            Answer a few quick questions about your project to instantly calculate an exact, transparent development budget and installment schedule.
+            {guideLanguage === "roman-ur"
+              ? "Chand sawalon ke jawab dein. Andazati total, advance aur mahana qist saamne aa jayegi."
+              : "Answer a few quick questions to see a transparent project estimate and payment schedule."}
           </p>
         </div>
       </section>
 
       {/* Main Questionnaire Container */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        {guideLanguage === "roman-ur" && (
+          <p className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-950">
+            Jawab Roman Urdu mein likh sakte hain. Technical lafz samajh na aaye to us sawal ko chhor dein; DWD team aapki zaroorat review karegi.
+          </p>
+        )}
         <section className="mb-8 rounded-2xl border border-[#E31E36]/30 bg-red-50 p-5 sm:p-6">
           <label htmlFor="project-currency" className="block text-sm font-extrabold text-[#101216]">
-            First: Which currency should we use for your project budget?
+            {guideLanguage === "roman-ur" ? "Pehle: budget kis currency mein dekhna hai?" : "First: Which currency should we use for your project budget?"}
           </label>
           <div className="mt-3 max-w-md">
             <CurrencySelector
@@ -770,7 +1159,9 @@ function CalculatorContent() {
             />
           </div>
           <p className="mt-2 text-xs leading-relaxed text-gray-600">
-            PKR uses Pakistan rates. Choosing another currency marks this as an international project: base packages are doubled and converted using the latest available exchange rate; each add-on is a flat 100 units in the selected currency. Translation can be enabled with your browser&apos;s built-in translate feature.
+            {guideLanguage === "roman-ur"
+              ? "Pakistan ke liye PKR rates hain. Doosri currency chunne par international rates apply honge; final amount quote se pehle confirm kiya jayega."
+              : "PKR uses Pakistan rates. Choosing another currency marks this as an international project; the latest regional price is shown and confirmed in the final quote."}
           </p>
           {currency !== "PKR" && rates[currency] && (
             <p className="mt-2 text-[11px] font-semibold text-gray-700">
@@ -859,20 +1250,22 @@ function CalculatorContent() {
           <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
             <div>
               <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
-                Step 1 of 8
+                {guideLanguage === "roman-ur" ? "Qadam 1 / 8" : "Step 1 of 8"}
               </span>
               <h2 className="text-2xl font-black text-[#101216] mt-1">
-                Your Contact & Business Details
+                {guideLanguage === "roman-ur" ? "Aap aur aapke business ki maloomat" : "Your Contact & Business Details"}
               </h2>
               <p className="text-xs text-gray-600 mt-1">
-                Let us know who we are communicating with so our senior developers can review your scope.
+                {guideLanguage === "roman-ur"
+                  ? "Formal project inquiry bhejne ke liye naam, email aur WhatsApp number dein. Sirf lead save karne ke liye upar aik contact kafi hai."
+                  : "Share your contact details so our team can review your project request. One contact method is enough to save a lead."}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Full Name <span className="text-[#E31E36]">*</span>
+                  {guideLanguage === "roman-ur" ? "Poora naam" : "Full Name"} <span className="text-[#E31E36]">*</span>
                 </label>
                 <input
                   type="text"
@@ -886,7 +1279,7 @@ function CalculatorContent() {
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Business / Company Name (Optional)
+                  {guideLanguage === "roman-ur" ? "Business ya company ka naam (ikhtiyari)" : "Business / Company Name (Optional)"}
                 </label>
                 <input
                   type="text"
@@ -899,7 +1292,7 @@ function CalculatorContent() {
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Email Address <span className="text-[#E31E36]">*</span>
+                  {guideLanguage === "roman-ur" ? "Email address" : "Email Address"} <span className="text-[#E31E36]">*</span>
                 </label>
                 <input
                   type="email"
@@ -913,11 +1306,11 @@ function CalculatorContent() {
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  WhatsApp / Contact Phone <span className="text-[#E31E36]">*</span>
+                  {guideLanguage === "roman-ur" ? "WhatsApp ya rabtay ka number" : "WhatsApp / Contact Phone"} <span className="text-[#E31E36]">*</span>
                 </label>
                 <input
                   type="tel"
-                  placeholder="e.g. 03299669565 or 03001234567"
+                  placeholder="e.g. 03001234567"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
@@ -927,7 +1320,7 @@ function CalculatorContent() {
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  City / Country (Optional)
+                  {guideLanguage === "roman-ur" ? "Shehar / Mulk (ikhtiyari)" : "City / Country (Optional)"}
                 </label>
                 <input
                   type="text"
@@ -940,16 +1333,16 @@ function CalculatorContent() {
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Preferred Contact Method
+                  {guideLanguage === "roman-ur" ? "Rabta karne ka pasandeeda tareeqa" : "Preferred Contact Method"}
                 </label>
                 <select
                   value={preferredContact}
                   onChange={(e: any) => setPreferredContact(e.target.value)}
                   className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
                 >
-                  <option value="whatsapp">WhatsApp (Recommended)</option>
+                  <option value="whatsapp">{guideLanguage === "roman-ur" ? "WhatsApp (behtar)" : "WhatsApp (Recommended)"}</option>
                   <option value="email">Email</option>
-                  <option value="phone">Direct Phone Call</option>
+                  <option value="phone">{guideLanguage === "roman-ur" ? "Seedha phone call" : "Direct Phone Call"}</option>
                 </select>
               </div>
             </div>
@@ -961,12 +1354,12 @@ function CalculatorContent() {
                 onChange={(event) => setWhatsappConfirmationConsent(event.target.checked)}
                 className="mt-0.5 accent-[#E31E36]"
               />
-              <span>I agree to receive one WhatsApp message with my inquiry reference and submission confirmation.</span>
+              <span>{guideLanguage === "roman-ur" ? "Main apne inquiry reference aur tasdeeq ke liye aik WhatsApp message lene par razi hoon." : "I agree to receive one WhatsApp message with my inquiry reference and submission confirmation."}</span>
             </label>
 
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
-                Short Introduction About You or Your Business (Optional)
+                {guideLanguage === "roman-ur" ? "Apne ya business ke bare mein chand alfaaz (ikhtiyari)" : "Short Introduction About You or Your Business (Optional)"}
               </label>
               <textarea
                 rows={3}
@@ -986,13 +1379,13 @@ function CalculatorContent() {
           <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
             <div>
               <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
-                Step 2 of 8
+                {guideLanguage === "roman-ur" ? "Qadam 2 / 8" : "Step 2 of 8"}
               </span>
               <h2 className="text-2xl font-black text-[#101216] mt-1">
-                Select Your Project Category
+                {guideLanguage === "roman-ur" ? "Aap kis qisam ki website chahte hain?" : "Select Your Project Category"}
               </h2>
               <p className="text-xs text-gray-600 mt-1">
-                Select one or more categories that reflect the web application you want to build.
+                {guideLanguage === "roman-ur" ? "Jo option aapki zaroorat ke qareeb ho usay chun lein." : "Select one or more categories that reflect the web application you want to build."}
               </p>
             </div>
 
@@ -1019,11 +1412,11 @@ function CalculatorContent() {
                     </div>
                     <div>
                       <span className="text-xs font-bold text-[#101216] block leading-snug">
-                        {opt.label}
+                        {guideLanguage === "roman-ur" ? projectTypeRomanLabels[opt.label] || opt.label : opt.label}
                       </span>
                       {isSelected && (
                         <span className="text-[10px] text-[#E31E36] font-bold inline-flex items-center gap-0.5 mt-1">
-                          <Check className="w-3 h-3" /> Selected
+                          <Check className="w-3 h-3" /> {guideLanguage === "roman-ur" ? "Chuna gaya" : "Selected"}
                         </span>
                       )}
                     </div>
@@ -1041,20 +1434,20 @@ function CalculatorContent() {
           <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
             <div>
               <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
-                Step 3 of 8
+                {guideLanguage === "roman-ur" ? "Qadam 3 / 8" : "Step 3 of 8"}
               </span>
               <h2 className="text-2xl font-black text-[#101216] mt-1">
-                Project Scope & Business Goals
+                {guideLanguage === "roman-ur" ? "Aapki zaroorat aur business ka maqsad" : "Project Scope & Business Goals"}
               </h2>
               <p className="text-xs text-gray-600 mt-1">
-                Help us understand the commercial objectives and functional requirements of the web application.
+                {guideLanguage === "roman-ur" ? "Aap apne alfaaz mein batayein ke website se kya kaam lena hai. Technical tafseel na pata ho to khaali chhor dein." : "Help us understand the business goals and requirements for your website or application."}
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  What specific problem should the application solve?
+                    {guideLanguage === "roman-ur" ? "Website se aapka kaunsa masla hal hona chahiye?" : "What specific problem should the application solve?"}
                 </label>
                 <textarea
                   rows={3}
@@ -1068,7 +1461,7 @@ function CalculatorContent() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Who will use this application? (Target Audience)
+                    {guideLanguage === "roman-ur" ? "Aapke customers kaun honge? (ikhtiyari)" : "Who will use this application? (Target Audience)"}
                   </label>
                   <input
                     type="text"
@@ -1081,7 +1474,7 @@ function CalculatorContent() {
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    What products or services will it offer?
+                    {guideLanguage === "roman-ur" ? "Aap kya products ya services offer karte hain?" : "What products or services will it offer?"}
                   </label>
                   <input
                     type="text"
@@ -1094,7 +1487,7 @@ function CalculatorContent() {
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Is a similar website available as inspiration? (URL)
+                    {guideLanguage === "roman-ur" ? "Koi pasand ki website hai? Uska link dein (ikhtiyari)." : "Is a similar website available as inspiration? (URL)"}
                   </label>
                   <input
                     type="url"
@@ -1107,7 +1500,7 @@ function CalculatorContent() {
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Is this a brand new build or an upgrade?
+                    {guideLanguage === "roman-ur" ? "Nayi website chahiye ya purani ko behtar banana hai?" : "Is this a brand new build or an upgrade?"}
                   </label>
                   <select
                     value={isNewOrUpgrade}
@@ -1121,7 +1514,7 @@ function CalculatorContent() {
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Preferred Launch Date
+                    {guideLanguage === "roman-ur" ? "Website kab tak chahiye? (ikhtiyari)" : "Preferred Launch Date"}
                   </label>
                   <input
                     type="text"
@@ -1134,7 +1527,7 @@ function CalculatorContent() {
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Expected Budget Range
+                    {guideLanguage === "roman-ur" ? "Aapka andazati budget" : "Expected Budget Range"}
                   </label>
                   <select
                     value={expectedBudgetRange}
@@ -1481,7 +1874,7 @@ function CalculatorContent() {
                 Optional Advanced Features & Add-ons
               </h2>
               <p className="text-xs text-gray-600 mt-1">
-                Select the modules you need. Prices vary by module; international add-ons use the published regional starting price. Monthly maintenance is shown separately from one-time development.
+                Every selected one-time feature add-on is PKR 10,000. A personal domain (.com, .pk, etc.) is a separate PKR 10,000 setup add-on; registrar purchase and renewal fees are separate. Monthly maintenance is shown separately.
               </p>
             </div>
 
@@ -1527,7 +1920,9 @@ function CalculatorContent() {
                           {addon.category}
                         </span>
                         <strong className={`text-xs font-black ${isIncluded ? "text-emerald-700" : "text-[#E31E36]"}`}>
-                          {isIncluded ? "Included" : `+${formatEstimate(addon.price)}${addon.billingPeriod === "monthly" ? " / month" : ""}`}
+                          {isIncluded
+                            ? "Included"
+                            : `+${formatEstimate(addon.billingPeriod === "monthly" ? addon.price : FEATURE_ADDON_PRICE_PKR)}${addon.billingPeriod === "monthly" ? " / month" : ""}`}
                         </strong>
                       </div>
                       <h4 className="font-extrabold text-xs text-[#101216] mb-1">
@@ -1615,7 +2010,10 @@ function CalculatorContent() {
                   {calculation.selectedAddonDetails.map((item) => (
                     <div key={item.id} className="flex justify-between items-center text-gray-700">
                       <span>• {item.label}</span>
-                      <strong className="text-gray-900 font-bold">+{formatEstimate(item.price)}{item.billingPeriod === "monthly" ? " / month" : ""}</strong>
+                      <strong className="text-gray-900 font-bold">
+                        +{formatEstimate(item.billingPeriod === "monthly" ? item.price : FEATURE_ADDON_PRICE_PKR)}
+                        {item.billingPeriod === "monthly" ? " / month" : ""}
+                      </strong>
                     </div>
                   ))}
                 </div>
@@ -1812,18 +2210,15 @@ function CalculatorContent() {
               </a>
 
               <Link
-                href={`/track-order?ref=${submittedInquiry.id}&email=${encodeURIComponent(submittedInquiry.email)}`}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#101216] hover:bg-black text-white px-6 py-3.5 rounded-xl font-bold text-xs transition"
-              >
-                Track Inquiry Status Live
-              </Link>
-              <Link
                 href={`/payment?reference=${submittedInquiry.id}`}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-[#101216] px-6 py-3.5 rounded-xl font-bold text-xs border border-gray-300 transition"
               >
                 View Payment Options
               </Link>
             </div>
+            <p role="status" className="text-center text-xs text-gray-500">
+              Customer tracking is currently unavailable. Contact DWD directly for status updates.
+            </p>
           </div>
         )}
 

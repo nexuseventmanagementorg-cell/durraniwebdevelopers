@@ -7,9 +7,9 @@ export const BUSINESS_INFO = {
   headline: "We Turn Your Ideas Into Powerful Web Applications",
   subHeadline: "Your Vision, Our Development",
   email: "durraniwebdevelopers@gmail.com",
-  phone: "+923299669565",
-  phoneDisplay: "+923299669565",
-  whatsappInternational: "923299669565",
+  phone: "+923054359098",
+  phoneDisplay: "+923054359098",
+  whatsappInternational: "923054359098",
   website: "www.durraniwebdevelopers.com",
   currency: "PKR",
   currencySymbol: "Rs.",
@@ -42,6 +42,8 @@ export function formatPKR(amount: number): string {
   })}`;
 }
 
+export const FEATURE_ADDON_PRICE_PKR = 10000;
+
 function defineAddon(
   id: string,
   label: string,
@@ -50,10 +52,19 @@ function defineAddon(
   description: string,
   billingPeriod: AddonOption["billingPeriod"] = "one_time"
 ): AddonOption {
-  return { id, label, category, price, description, enabled: true, billingPeriod };
+  return {
+    id,
+    label,
+    category,
+    price: billingPeriod === "monthly" ? price : FEATURE_ADDON_PRICE_PKR,
+    description,
+    enabled: true,
+    billingPeriod,
+  };
 }
 
 export const EXTENDED_ADDONS: AddonOption[] = [
+  defineAddon("personal_domain", "Personal Domain Setup (.com, .pk, etc.)", "website", FEATURE_ADDON_PRICE_PKR, "Configure a personal domain for the website. Domain registration and renewal fees charged by the registrar are separate."),
   defineAddon("responsive_design", "Responsive Design Enhancement", "website", 10000, "Additional mobile, tablet, and desktop layout optimization."),
   defineAddon("cms", "Content Management System (CMS)", "website", 15000, "Edit website pages, text, banners, and images without code."),
   defineAddon("advanced_seo", "Advanced SEO Setup", "website", 10000, "Page metadata, sitemap, canonical URLs, and applicable structured data."),
@@ -226,13 +237,21 @@ export const DEFAULT_PRICING_CONFIG: PricingRuleConfig = {
 export function mergePricingConfigWithDefaults(
   config?: Partial<PricingRuleConfig> | null
 ): PricingRuleConfig {
+  const addons = {
+    ...DEFAULT_PRICING_CONFIG.addons,
+    ...(config?.addons || {}),
+  };
   return {
     ...DEFAULT_PRICING_CONFIG,
     ...config,
-    addons: {
-      ...DEFAULT_PRICING_CONFIG.addons,
-      ...(config?.addons || {}),
-    },
+    addons: Object.fromEntries(
+      Object.entries(addons).map(([id, addon]) => [
+        id,
+        addon.billingPeriod === "monthly"
+          ? addon
+          : { ...addon, price: FEATURE_ADDON_PRICE_PKR },
+      ])
+    ),
   };
 }
 

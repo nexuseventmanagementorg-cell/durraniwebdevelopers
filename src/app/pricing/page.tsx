@@ -4,7 +4,9 @@ import Image from "next/image";
 import {
   ADDON_CATEGORY_LABELS,
   DEFAULT_PRICING_CONFIG,
+  ECOMMERCE_PACKAGES,
   EXTENDED_ADDONS,
+  SAAS_PACKAGES,
   buildWhatsAppLink,
 } from "@/lib/constants";
 import RegionalPrice from "@/components/RegionalPrice";
@@ -51,7 +53,7 @@ export default function PricingPage() {
       summary: "Professional online store with client admin panel support.",
       image: "/Professional%20E-Commerce%20Store%20Solutions.png",
       imageAlt: "E-Commerce Business package with a PKR 150,000 price and included store features",
-      price: 150000,
+      price: ECOMMERCE_PACKAGES.ecommerce_business.basePrice,
       priceLabel: "Package price",
     },
     {
@@ -60,8 +62,8 @@ export default function PricingPage() {
       summary: "Feature-rich online store built for growth and advanced workflows.",
       image: "/Advanced%20E-Commerce%20Web%20Development%20Package.png",
       imageAlt: "E-Commerce Advanced package with a PKR 200,000 to 300,000 price range and included features",
-      price: 200000,
-      maxPrice: 300000,
+      price: ECOMMERCE_PACKAGES.ecommerce_advanced.basePrice,
+      maxPrice: ECOMMERCE_PACKAGES.ecommerce_advanced.maximumPrice,
       priceLabel: "Estimated package range",
     },
   ];
@@ -72,8 +74,8 @@ export default function PricingPage() {
       summary: "Multi-vendor marketplace platform for startups and small businesses.",
       image: "/SaaS%20Starter%20Marketplace%20Package%20(1).png",
       imageAlt: "SaaS Starter marketplace package, PKR 250,000 with PKR 100,000 advance",
-      price: 250000,
-      advance: 100000,
+      price: SAAS_PACKAGES.saas_starter.basePrice,
+      advance: SAAS_PACKAGES.saas_starter.advance,
     },
     {
       id: "saas_business",
@@ -81,8 +83,8 @@ export default function PricingPage() {
       summary: "Scalable marketplace with vendor dashboards, commissions, and advanced analytics.",
       image: "/SaaS%20Business%20Platform%20Marketing%20Poster%20(1).png",
       imageAlt: "SaaS Business marketplace package, PKR 500,000 with PKR 200,000 advance",
-      price: 500000,
-      advance: 200000,
+      price: SAAS_PACKAGES.saas_business.basePrice,
+      advance: SAAS_PACKAGES.saas_business.advance,
     },
     {
       id: "saas_enterprise",
@@ -90,9 +92,9 @@ export default function PricingPage() {
       summary: "Multi-tenant enterprise platform with advanced architecture and dedicated support.",
       image: "/SaaS%20Enterprise%20Platform%20Showcase.png",
       imageAlt: "SaaS Enterprise package starting at PKR 1,000,000 with PKR 400,000 advance",
-      price: 1000000,
-      advance: 400000,
-      startingAt: true,
+      price: SAAS_PACKAGES.saas_enterprise.basePrice,
+      advance: SAAS_PACKAGES.saas_enterprise.advance,
+      startingAt: SAAS_PACKAGES.saas_enterprise.startingAt,
     },
   ];
   const addonDetails: Record<
@@ -202,14 +204,14 @@ export default function PricingPage() {
                 </p>
 
                 <div className="mt-6 flex items-baseline gap-2">
-                  <RegionalPrice pkrAmount={35000} className="text-4xl font-black text-[#101216]" />
+                  <RegionalPrice pkrAmount={DEFAULT_PRICING_CONFIG.baseWithoutAdmin} className="text-4xl font-black text-[#101216]" />
                   <span className="text-xs text-gray-500 font-medium">starting price</span>
                 </div>
 
                 {/* Daily Cost */}
                 <div className="mt-3 bg-gray-50 p-3 rounded-lg border border-gray-200 text-xs flex justify-between items-center text-gray-600">
                   <span>Daily Cost:</span>
-                  <strong className="text-[#101216] font-bold"><RegionalPrice pkrAmount={35000 / 365} /> (per day)</strong>
+                  <strong className="text-[#101216] font-bold"><RegionalPrice pkrAmount={DEFAULT_PRICING_CONFIG.baseWithoutAdmin / 365} /> (per day)</strong>
                 </div>
 
                 {/* 12-Month Installment Schedule Card */}
@@ -298,14 +300,14 @@ export default function PricingPage() {
                 </p>
 
                 <div className="mt-6 flex items-baseline gap-2">
-                  <RegionalPrice pkrAmount={45000} className="text-4xl font-black text-[#E31E36]" />
+                  <RegionalPrice pkrAmount={DEFAULT_PRICING_CONFIG.baseWithAdmin} className="text-4xl font-black text-[#E31E36]" />
                   <span className="text-xs text-gray-500 font-medium">starting price</span>
                 </div>
 
                 {/* Daily Cost */}
                 <div className="mt-3 bg-red-50/60 p-3 rounded-lg border border-red-200 text-xs flex justify-between items-center text-gray-700">
                   <span>Daily Cost:</span>
-                  <strong className="text-[#E31E36] font-bold"><RegionalPrice pkrAmount={45000 / 365} /> (per day)</strong>
+                  <strong className="text-[#E31E36] font-bold"><RegionalPrice pkrAmount={DEFAULT_PRICING_CONFIG.baseWithAdmin / 365} /> (per day)</strong>
                 </div>
 
                 {/* 12-Month Installment Schedule Card */}
@@ -515,7 +517,7 @@ export default function PricingPage() {
               Apni Zaroorat Ke Mutabiq Optional Features
             </h2>
             <p className="text-xs text-gray-600 mt-2">
-              Har add-on optional hai. Starting prices scope ke mutabiq alag hain; monthly maintenance ki recurring fee one-time development price se alag hai.
+              Har selected one-time feature add-on PKR 10,000 hai, personal domain setup bhi. Registrar ke domain purchase/renewal charges alag hain; monthly maintenance ki recurring fee separate hai.
             </p>
           </div>
 
@@ -543,7 +545,7 @@ export default function PricingPage() {
                           {addon.category}
                         </span>
                         <strong className="text-xs font-black text-[#E31E36] whitespace-nowrap">
-                          Starting +<RegionalPrice pkrAmount={addon.price} conversion="international-addon" />
+                          +<RegionalPrice pkrAmount={addon.price} conversion="international-addon" /> per add-on
                         </strong>
                       </div>
                       <h3 className="font-bold text-sm text-[#101216] mb-2">
@@ -637,7 +639,7 @@ export default function PricingPage() {
                       </div>
                       <div className="flex shrink-0 items-center justify-between sm:justify-end gap-4">
                         <strong className="text-xs font-black text-[#E31E36]">
-                          <RegionalPrice pkrAmount={addon.price} conversion="international-addon" />{addon.billingPeriod === "monthly" ? " / month" : " starting"}
+                          <RegionalPrice pkrAmount={addon.price} conversion="international-addon" />{addon.billingPeriod === "monthly" ? " / month" : " per add-on"}
                         </strong>
                         <Link
                           href={`/calculator?addon=${addon.id}`}

@@ -88,6 +88,100 @@ export interface InquiryScanFeature {
   evidence: string;
 }
 
+export interface InquiryScopeReview {
+  reviewedAt: string;
+  status: "needs_follow_up" | "ready_for_admin_review";
+  missingDetails: string[];
+  riskFlags: string[];
+  recommendedNextAction: string;
+}
+
+export type CalculatorLeadStatus = "New" | "Contacted" | "Qualified" | "Converted" | "Closed";
+
+export interface CalculatorLead {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  language: "roman-ur" | "en";
+  locale: string;
+  currency: string;
+  goal: string;
+  budgetBand: string;
+  userDescription: string;
+  progressStep: number;
+  recommendation: {
+    title: string;
+    projectType: string;
+    calculation: CalculationBreakdown;
+    included: string[];
+    notIncluded: string[];
+  };
+  questionnaire: Record<string, unknown>;
+  convertedInquiryId?: string;
+  contactConsentAt: string;
+  status: CalculatorLeadStatus;
+  adminNotes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectReadinessChecklistItem {
+  id: string;
+  label: string;
+  completed: boolean;
+}
+
+export interface ProjectBuildBriefRecord {
+  generatedAt: string;
+  content: string;
+  checklist: ProjectReadinessChecklistItem[];
+}
+
+export type ProjectWorkflowTaskStatus = "blocked" | "ready" | "in_progress" | "completed" | "awaiting_admin";
+
+export interface ProjectWorkflowTask {
+  id: string;
+  role: string;
+  title: string;
+  status: ProjectWorkflowTaskStatus;
+  dependsOn: string[];
+  adminApprovalRequired?: boolean;
+  approvedAt?: string;
+  approvedBy?: string;
+}
+
+export interface ProjectAutomationWorkflow {
+  createdAt: string;
+  sourceInquiryId: string;
+  mode: "admin_assisted";
+  status: "ready" | "in_progress" | "awaiting_admin" | "completed";
+  tasks: ProjectWorkflowTask[];
+}
+
+export interface WebsiteDraft {
+  generatedAt: string;
+  generator: "template-v1";
+  html: string;
+}
+
+export type PublicProjectMilestoneStatus = "waiting" | "ready" | "active" | "awaiting_admin" | "completed";
+
+export interface PublicProjectMilestone {
+  id: string;
+  label: string;
+  status: PublicProjectMilestoneStatus;
+}
+
+export interface PublicProjectProgress {
+  projectName: string;
+  milestones: PublicProjectMilestone[];
+  percentComplete: number;
+  updatedAt: string;
+  previewUrl?: string;
+  previewHtml?: string;
+}
+
 export interface Inquiry {
   id: string; // e.g. "DW-849201"
   createdAt: string;
@@ -101,6 +195,7 @@ export interface Inquiry {
   phone: string;
   cityCountry: string;
   preferredContact: "whatsapp" | "email" | "phone";
+  language?: "roman-ur" | "en";
   whatsappConfirmationConsent?: boolean;
   whatsappConfirmationStatus?: "sent" | "failed" | "not_configured" | "not_requested";
   customerIntro: string;
@@ -132,6 +227,7 @@ export interface Inquiry {
   // Step 6: Advanced Features
   selectedAddons: string[];
   scanFeatures?: InquiryScanFeature[];
+  scopeReview?: InquiryScopeReview;
   customFeatureNotes?: string;
   pricingPackage?: "ecommerce_business" | "ecommerce_advanced" | "saas_starter" | "saas_business" | "saas_enterprise";
   manualAdvanceVerification?: {
@@ -142,6 +238,7 @@ export interface Inquiry {
     verifiedAt: string;
     verifiedBy: string;
   };
+  projectBuildBrief?: ProjectBuildBriefRecord;
 
   // Step 7 & 8: Pricing breakdown snapshot
   calculation: CalculationBreakdown;
@@ -176,6 +273,9 @@ export interface Client {
 export interface Project {
   id: string;
   inquiryId?: string;
+  projectBuildBrief?: ProjectBuildBriefRecord;
+  automationWorkflow?: ProjectAutomationWorkflow;
+  websiteDraft?: WebsiteDraft;
   clientId: string;
   clientName: string;
   clientEmail: string;
@@ -300,7 +400,7 @@ export interface AuditLog {
   id: string;
   action: string;
   actor: string;
-  targetType: "inquiry" | "project" | "client" | "payment" | "invoice" | "pricing" | "reminder" | "auth";
+  targetType: "inquiry" | "project" | "client" | "payment" | "invoice" | "pricing" | "reminder" | "calculator-lead" | "auth";
   targetId: string;
   details: string;
   timestamp: string;

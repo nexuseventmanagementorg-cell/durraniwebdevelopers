@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/auth";
 import { DataStore } from "@/lib/store";
+import { BUSINESS_INFO } from "@/lib/constants";
 import { PaymentReminder } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
       channel: channel || "whatsapp",
       scheduledDate: new Date().toISOString().split("T")[0],
       status: "Scheduled",
-      messageText: `Dear ${project.clientName}, this is a friendly reminder regarding your installment payment of PKR ${amount} for project "${project.name}" due on ${dueDate}. Thank you, Durrani Web Developers (03299669565).`,
+      messageText: `Dear ${project.clientName}, this is a friendly reminder regarding your installment payment of PKR ${amount} for project "${project.name}" due on ${dueDate}. Thank you, Durrani Web Developers (${BUSINESS_INFO.phoneDisplay}).`,
     };
 
     DataStore.saveReminder(newReminder, "Admin");

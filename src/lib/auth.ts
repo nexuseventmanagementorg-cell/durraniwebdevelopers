@@ -100,9 +100,13 @@ export function getAdminFromCookies(): { email: string } | null {
   }
 }
 
-export function verifyAdminRequest(request: NextRequest): boolean {
+export function getAdminFromRequest(request: NextRequest): { email: string } | null {
   const cookie = request.cookies.get(SESSION_COOKIE_NAME);
-  if (!cookie || !cookie.value) return false;
+  if (!cookie || !cookie.value) return null;
   const payload = verifyToken(cookie.value);
-  return Boolean(payload);
+  return payload ? { email: payload.email } : null;
+}
+
+export function verifyAdminRequest(request: NextRequest): boolean {
+  return Boolean(getAdminFromRequest(request));
 }

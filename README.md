@@ -11,7 +11,7 @@ Developed with **Google Antigravity** and **Visual Studio Code**, built on **Nex
 - **Tagline:** Ideas | Code | Real Solutions
 - **Headline:** *We Turn Your Ideas Into Powerful Web Applications*
 - **Official Email:** `durraniwebdevelopers@gmail.com`
-- **Phone / WhatsApp:** `03299669565` (International: `+92 329 9669565`)
+- **Phone / WhatsApp:** `03054359098` (International: `+92 305 4359098`)
 - **Default Currency:** Pakistani Rupees (PKR)
 - **Deployment Platform:** Vercel
 
@@ -32,9 +32,11 @@ Developed with **Google Antigravity** and **Visual Studio Code**, built on **Nex
 - **Home Page (`/`)**: Hero section with official branding, flyer visual showcase, trust badges, packages overview, industries served, portfolio highlights, ordering workflow, FAQs, and WhatsApp CTAs.
 - **Services Page (`/services`)**: In-depth service breakdowns for Restaurant Ordering, E-Commerce, Jewellery Showrooms, Cosmetics, Fashion, Grocery, SaaS, CRM, Booking, and Inventory systems with direct calculator links.
 - **Portfolio Archive (`/portfolio`)**: Interactive category filtering, live search by project name or technology, project detail modals, live demo links, and strictly privacy-compliant public budget badges (with client consent checks).
-- **Pricing & Rates (`/pricing`)**: Transparent breakdown of Package 1 (Without Client Admin - PKR 35,000) and Package 2 (With Client Admin - PKR 45,000) with exact 11-month installment schedules, daily cost rates (PKR 95.89 vs PKR 123.29), and modular add-on rules.
-- **Interactive Budget Calculator (`/calculator`)**: Multi-step questionnaire (8 steps) featuring real-time budget calculations, add-on feature selection (+PKR 10,000 rules), installment projections, inquiry submission, unique reference code generation (`DW-XXXXXX`), confetti celebration, and direct pre-filled WhatsApp links.
-- **Inquiry Status Tracker (`/track-order`)**: Sanitized milestone tracker requiring reference ID + matching email, isolating client data while displaying the live pipeline (*New Inquiry* → *Under Review* → *Contacted* → *Quotation Sent* → *Awaiting Advance* → *Approved* → *In Development* → *Delivered*).
+- **Pricing & Rates (`/pricing`)**: Transparent breakdown of Package 1 (Without Client Admin - PKR 35,000) and Package 2 (With Client Admin - PKR 45,000) with exact 11-month installment schedules, daily cost rates (PKR 95.89 vs PKR 123.29), and a flat PKR 10,000 per one-time feature add-on, including personal domain setup. Domain registrar purchase and renewal fees are separate.
+- **Interactive Budget Calculator (`/calculator`)**: Multi-step questionnaire (8 steps) featuring real-time budget calculations, a flat PKR 10,000 per selected one-time feature add-on (including personal domain setup), separate recurring maintenance, installment projections, inquiry submission, unique reference code generation (`DW-XXXXXX`), confetti celebration, and direct pre-filled WhatsApp links.
+- **URL Budget Estimator (`/website-estimator`)**: Scans a bounded set of same-origin public HTML pages and reports attributed feature signals. New builds can select any published plan: Package 1 (PKR 35,000), Package 2 (PKR 45,000), E-Commerce Business (PKR 150,000), E-Commerce Advanced (PKR 200,000–300,000), or SaaS Starter/Business/Enterprise (PKR 250,000/500,000/1,000,000). A product/menu catalog plus cart and checkout, online-ordering, or WhatsApp-ordering evidence recommends an E-Commerce package. Detected, priced feature add-ons start selected and appear in the breakdown and total; uncheck items outside scope. Package-included features are labeled and not charged again. Custom-domain setup is preselected when detected; registrar purchase/renewal fees are separate. Existing-site mode excludes the new-build base package and only prices owner-confirmed new work. Signals do not prove private or operational functionality, and JavaScript-rendered behavior and database state cannot be verified by this public scan.
+- **Inquiry Status Tracker (`/track-order`)**: Customer tracking is currently disabled. The page displays no inquiry or project details; tracking remains unavailable pending separately approved and verified session authorization. OTP and verified-session tracking are not implemented.
+- **Illustrative Agency City**: A game-inspired, branded DWD office district with 50 distinct supplied role portraits across 10 departments. Its clickable office simulation animates agent travel and task handoffs. The demo is explicitly illustrative; a verified inquiry sees saved project milestone statuses, not a claim of connected autonomous workers.
 - **Contact (`/contact`)**: Form submissions, direct click-to-call, click-to-email, and one-click WhatsApp chat.
 
 ### 2. Secure Private Admin Panel
@@ -48,7 +50,7 @@ Developed with **Google Antigravity** and **Visual Studio Code**, built on **Nex
 - **Receipt Reviews (`/admin/payment-proofs`)**: Admin-only short-lived links to private customer receipts, with pending/verified/rejected review actions.
 - **Payment Instructions (`/admin/settings`)**: Admin-editable wallet and bank-transfer details; no CNIC/identity number is requested or displayed.
 - **Project Invoices (`/admin/invoices`)**: Commercial invoice generator with itemized deliverables, payment terms, advance deductions, and print-to-PDF formatting (`window.print()`).
-- **Dynamic Pricing Rules (`/admin/pricing`)**: Change base rates (35k / 45k), advance amounts, installment counts, and modular add-on prices in real time without modifying source code.
+- **Pricing Rules (`/admin/pricing`)**: Change base rates (35k / 45k), advance amounts, installment counts, and add-on availability. One-time feature add-ons use a fixed PKR 10,000 rate; monthly maintenance retains its separate recurring price.
 - **Portfolio & Privacy (`/admin/portfolio`)**: Add/edit portfolio projects, toggle public/private visibility, approve consented public budgets, and manage demo URLs.
 - **Automated Monthly Reminders (`/admin/reminders`)**: Automated installment reminder engine supporting 7-day, 3-day, on-due-date, and overdue triggers, with manual WhatsApp dispatch and Vercel Cron worker integration.
 - **Settings & Audit Logs (`/admin/settings`)**: System settings, technical runtime statuses, and tamper-evident audit history.
@@ -82,7 +84,7 @@ The Settings dashboard includes an admin password-change form. To persist passwo
 
 ### Automatic admin notifications
 
-New calculator inquiries, contact messages, payment orders/receipts, and confirmed Safepay payments trigger independent email and WhatsApp alerts. A provider failure is logged and does not discard a successfully saved submission.
+New calculator inquiries, consented incomplete calculator leads, contact messages, payment orders/receipts, and confirmed Safepay payments trigger independent email and WhatsApp alerts to the administrator. Incomplete-lead alerts notify the business only; they do not send an automatic follow-up to the visitor. A provider failure is logged and does not discard a successfully saved submission.
 
 - **Email:** Configure `RESEND_API_KEY` and `RESEND_FROM_EMAIL` with a sender verified in Resend. Set `ADMIN_NOTIFICATION_EMAIL` to override the default DWD business email.
 - **WhatsApp:** Configure `WHATSAPP_API_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and `WHATSAPP_ADMIN_PHONE` in international digits. Create and get Meta approval for the WhatsApp message template named by `WHATSAPP_ADMIN_TEMPLATE_NAME`, then set its language. The template body must contain four placeholders, in order: alert type, reference, customer name/phone, and details.
@@ -111,7 +113,7 @@ Runs the automated unit test suite verifying:
 
 ## 🗄 Database & Supabase Deployment
 
-The application uses Supabase PostgreSQL for calculator/contact inquiry submissions and payment workflows. Other legacy client, project, invoice, and financial-ledger records still use `DataStore` and `data/db.json`.
+The application uses Supabase PostgreSQL for calculator/contact inquiry submissions, payment workflows, and active project workspaces when configured. Legacy client directories, invoices, and financial-ledger records still use `DataStore` and `data/db.json`.
 
 To deploy to Supabase:
 1. Create a new project at [supabase.com](https://supabase.com).
@@ -138,7 +140,39 @@ Calculator and contact inquiries are saved in the private Supabase `inquiries` t
 1. Run [`supabase/website-inquiries.sql`](./supabase/website-inquiries.sql) in the dedicated DWD Supabase SQL Editor.
 2. Confirm `NEXT_PUBLIC_SUPABASE_URL` and the server-only `SUPABASE_SERVICE_ROLE_KEY` are configured in Vercel.
 3. A customer can optionally consent to an automatic WhatsApp reference confirmation. Create and approve a WhatsApp message template whose body includes `Hello {{1}}, your inquiry was received. Your reference is {{2}}. We will follow up shortly.` Then set `WHATSAPP_CUSTOMER_TEMPLATE_NAME` and optionally `WHATSAPP_CUSTOMER_TEMPLATE_LANGUAGE` in Vercel. The existing `WHATSAPP_API_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and `WHATSAPP_GRAPH_API_VERSION` are reused. Without an approved template, the saved reference still appears and the customer can send it to DWD using the WhatsApp button.
-4. Redeploy after applying the migration and environment variables. Verify a test submission appears in `/admin/inquiries` and its reference works on `/track-order`.
+4. Redeploy after applying the migration and environment variables. Verify a test submission appears in `/admin/inquiries`. Customer tracking remains disabled and must not be treated as operational.
+
+### Durable project workspaces
+
+Project conversion and the role-assigned delivery workflow use Supabase-backed project snapshots in production. Apply [`supabase/project-workspaces.sql`](./supabase/project-workspaces.sql) after the inquiry migration and configure `NEXT_PUBLIC_SUPABASE_URL` plus the server-only `SUPABASE_SERVICE_ROLE_KEY`. The migration uses text project IDs to match the app's existing `proj-*` identifiers without altering the legacy UUID-based `projects` table.
+
+Each advance-verified inquiry creates a gated work queue for requirements, client assets, planning, implementation, QA, preview, and release. The current queue is admin-assisted; code-writing and deployment agents are not connected yet. Production release remains behind explicit admin confirmation.
+
+When the implementation task is in progress, an admin can copy a privacy-filtered local agent handoff from the project workspace into Antigravity or VS Code. Review the copied text before pasting it into an AI tool. This is a manual handoff: the website does not control the local editor, manage AI quotas/accounts, or deploy client code. If provider usage runs out, preserve the local repository changes and resume from the reported checkpoint when usage is available again. Keep the production deployment behind the existing admin approval step.
+
+### First operational AI workforce milestone
+
+The initial team is intentionally one server-side Gemini Requirements Analyst, not 50 simulated workers. It can draft structured requirements, acceptance criteria, and open questions using one allowlisted read-only capability lookup. It cannot create or modify customer files, run a shell, install dependencies, access customer databases, or deploy software. Treat its output as an untrusted draft requiring admin review.
+
+Before enabling it, review and apply [`supabase/agent-workforce.sql`](./supabase/agent-workforce.sql) to the dedicated DWD Supabase project and set `NEXUS_GEMINI_API_KEY` as a server-only environment variable. Runs are persisted with an admin owner, idempotency key, agent version, status, single-attempt count, result, and safe error code. The migration is not applied automatically. Do not test with customer or confidential information. No external provider call or database write is part of local unit tests.
+
+This is a foundation, not a customer website factory: code generation, isolated workspaces, builds, tests, repair loops, previews, and deployment are not implemented by this milestone. The public activity view exposes run status only; prompts and result details remain available only through the authenticated admin route.
+
+### Project task execution foundation
+
+For current implementation status, migration review findings, validation, and the next handoff step, start with [`PROJECT_HANDOFF.md`](./PROJECT_HANDOFF.md).
+
+`project_task_executions` adds project-scoped, idempotent execution records for an explicitly admin-approved implementation task. Review `supabase/project-task-executions.sql` and apply it manually only after `supabase/project-workspaces.sql`; the application never runs migrations. The admin API creates and lists records only after authentication; all database access uses the server-side Supabase service role, and no customer-facing route exposes these records.
+
+This does not start an AI coder or execute project code. There is no isolated per-project filesystem, artifact store, or sandboxed build/test runner in this repository, so new implementation records remain pending until a separately reviewed executor is implemented. The application rejects implementation and QA workflow completion unless a succeeded execution for that specific task includes artifact references and passing test evidence. QA execution is not yet creatable. Track Order still derives its milestones from the workflow; its future minimum integration is to derive development/quality completion from these persisted succeeded execution records rather than admin status alone.
+
+Customer access to `/track-order` is disabled. The page does not display inquiry, estimate, payment, or project-progress data. Tracking must remain unavailable pending separately approved and verified session authorization; no OTP or verified-session flow is implemented. The broader DWD agency-city workforce showcase is illustrative and is not live customer work activity or proof of connected autonomous agents.
+
+### Consented calculator leads
+
+The beginner calculator guide defaults to Roman Urdu for Pakistan visitors and English for other regions; visitors can switch languages. Calculator prices use the selected regional currency and exchange-rate snapshot. After a visitor provides an email or WhatsApp number and explicitly agrees to follow-up, the lead is created when they start the calculator and updated as they answer each step, even if no final inquiry is submitted. The record stores the selected goal, budget, recommendation, language, currency, and last saved step. Incomplete leads remain available for admin follow-up at `/admin/leads`; admins can update status and private notes and open prefilled email/WhatsApp follow-up links. Once a final inquiry is successfully submitted, its lead is linked to that inquiry and disappears from `/admin/leads`; the completed submission is handled by the existing `/admin/inquiries` inbox.
+
+Before production lead capture is enabled, run [`supabase/calculator-leads.sql`](./supabase/calculator-leads.sql) in the dedicated DWD Supabase SQL Editor and keep `NEXT_PUBLIC_SUPABASE_URL` plus `SUPABASE_SERVICE_ROLE_KEY` configured server-side. The table is private under RLS; only server-side service-role APIs can list or change leads. If the migration is missing, saving a lead returns an error but visitors can still continue the calculator without saving.
 
 ### Free quotation-to-project gate
 
@@ -146,7 +180,7 @@ The project-start gate does not require an AI subscription or payment API. Move 
 
 If a client paid outside the receipt workflow, use **Verify Advance Manually** in the inquiry detail. The authenticated admin must enter the received amount, payment method, transaction reference, verification note, and confirm that funds were checked directly. This is an auditable human override, not an AI or bank verification. The system blocks project creation until that confirmation or an equivalent verified receipt exists.
 
-The current free milestone gates quoting and advance verification. It does not yet generate or deploy client websites automatically. A later build-brief and preview workflow can be added without a paid AI API; fully automated AI generation would need a local model or a separately funded API and a worker that remains available.
+The free milestone gate handles quoting and advance verification. After project conversion, clients can see admin-updated build milestones and a preview link when the admin marks the preview as shared. The local Antigravity/VS Code task handoff is still manual: it does not stream code changes, control the editor, or deploy client websites automatically. A persistent local worker and preview-deployment pipeline remain future work; production still requires admin approval.
 
 ### Private payment receipt setup
 
@@ -193,5 +227,5 @@ Card checkout remains unavailable if required configuration or the database migr
 
 ## 🔒 Security Best Practices
 - **No Secret Leaks**: No credentials, private tokens, or Supabase service keys are included in public frontend bundles.
-- **Client Data Isolation**: Public order tracking requires both reference code and matching email. Private notes and other client financial ledgers are strictly filtered out on the server.
+- **Customer Tracking**: The public tracking API fails closed with a generic unavailable response before inquiry or project storage access. Tracking remains disabled pending separately approved and verified session authorization; do not treat reference and email matching as authorization. No OTP or verified-session flow is implemented.
 - **Verification Before Paid**: Payments submitted manually (JazzCash / EasyPaisa) require an administrator's verification action before advancing project balance or status.

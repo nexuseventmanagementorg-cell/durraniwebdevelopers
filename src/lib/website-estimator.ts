@@ -3,6 +3,7 @@ import { LookupAddress, LookupOptions } from "node:dns";
 import { lookup as dnsLookup } from "node:dns/promises";
 import http from "node:http";
 import https from "node:https";
+import type { PricingRuleConfig } from "./types";
 import {
   calculateBudget,
   DEFAULT_PRICING_CONFIG,
@@ -21,6 +22,22 @@ const MAX_HTML_BYTES = 1_000_000;
 const MAX_REDIRECTS = 3;
 const MAX_PAGES = 3;
 const REQUEST_TIMEOUT_MS = 5000;
+const HOSTED_DOMAIN_SUFFIXES = [
+  "vercel.app",
+  "netlify.app",
+  "github.io",
+  "pages.dev",
+  "web.app",
+  "firebaseapp.com",
+  "onrender.com",
+  "fly.dev",
+  "herokuapp.com",
+  "azurewebsites.net",
+  "example",
+  "test",
+  "invalid",
+  "localhost",
+];
 
 interface PublicAddress {
   address: string;
@@ -44,15 +61,25 @@ interface HttpResult {
   body: string;
 }
 
-interface ScannedPage {
+export interface ScannedPage {
   url: string;
   html: string;
 }
 
+export type WebsiteEvidenceStatus =
+  | "public_signal"
+  | "owner_confirmed"
+  | "unknown"
+  | "not_detected";
+
 export interface WebsiteEstimateFeature {
+  id: string;
   title: string;
   explanation: string;
   evidence: string;
+  evidenceStatus: WebsiteEvidenceStatus;
+  sourcePages: string[];
+  addonId?: string;
 }
 
 export interface WebsiteEstimateResult {
@@ -61,6 +88,8 @@ export interface WebsiteEstimateResult {
   internationalPricing: boolean;
   adminPanel: boolean;
   pricingPackage?: PricingPackageId;
+  pricingOptions: WebsitePricingOption[];
+  suggestedPricingOptionId: string;
   exchangeRate?: number;
   exchangeRateDate?: string;
   historicalProjectReference?: {
@@ -72,9 +101,18 @@ export interface WebsiteEstimateResult {
   siteTitle: string;
   siteDescription: string;
   pagesScanned: number;
+  scannedPages: string[];
   features: WebsiteEstimateFeature[];
+  addonCatalog: {
+    id: string;
+    title: string;
+    description: string;
+    price: number;
+    billingPeriod?: "one_time" | "monthly";
+  }[];
   basePackage: string;
   basePrice: number;
+  basePriceWithAdmin: number;
   addons: {
     id: string;
     title: string;
@@ -86,6 +124,19 @@ export interface WebsiteEstimateResult {
   assumptions: string[];
   warnings: string[];
 }
+
+export interface WebsitePricingOption {
+  id: string;
+  label: string;
+  basePrice: number;
+  basePriceWithAdmin: number;
+  adminPanelType: "none" | "client_admin";
+  pricingPackage?: PricingPackageId;
+  maximumPrice?: number;
+}
+
+export type WebsiteScopeMode = "new_build" | "existing_site";
+export type ExistingFeatureScope = "unknown" | "existing" | "new" | "repair";
 
 function isPublicAddress(address: string): boolean {
   const family = isIP(address);
@@ -125,6 +176,17 @@ function isPublicAddress(address: string): boolean {
   }
 
   return false;
+}
+
+function isPersonalDomainHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  if (isIP(host) || HOSTED_DOMAIN_SUFFIXES.some((suffix) =>
+    host === suffix || host.endsWith(`.${suffix}`)
+  )) {
+    return false;
+  }
+  const labels = host.split(".");
+  return labels.length >= 2 && /^[a-z]{2,24}$/.test(labels[labels.length - 1]);
 }
 
 async function validateAndResolveUrl(input: string): Promise<{ url: URL; addresses: PublicAddress[] }> {
@@ -179,7 +241,11 @@ async function validateAndResolveUrl(input: string): Promise<{ url: URL; address
   return { url, addresses };
 }
 
-function requestOnce(url: URL, addresses: PublicAddress[]): Promise<HttpResult> {
+function requestOnce(
+  url: URL,
+  addresses: PublicAddress[],
+  allowXml = false
+): Promise<HttpResult> {
   return new Promise((resolve, reject) => {
     const client = url.protocol === "https:" ? https : http;
     const pinnedAddress = addresses[0];
@@ -219,7 +285,9 @@ function requestOnce(url: URL, addresses: PublicAddress[]): Promise<HttpResult> 
           return;
         }
 
-        if (!/^(text\/html|application\/xhtml\+xml)(;|$)/i.test(contentType)) {
+        const isHtml = /^(text\/html|application\/xhtml\+xml)(;|$)/i.test(contentType);
+        const isXml = allowXml && /^(application\/xml|text\/xml)(;|$)/i.test(contentType);
+        if (!isHtml && !isXml) {
           response.resume();
           reject(new Error("Yeh URL HTML website page nahi hai."));
           return;
@@ -257,14 +325,24 @@ function requestOnce(url: URL, addresses: PublicAddress[]): Promise<HttpResult> 
   });
 }
 
-async function fetchPublicHtml(input: string): Promise<ScannedPage> {
+async function fetchPublicDocument(input: string, allowXml: boolean): Promise<ScannedPage> {
   let currentInput = input;
+  const initialUrl = new URL(input);
 
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
     const { url, addresses } = await validateAndResolveUrl(currentInput);
-    const result = await requestOnce(url, addresses);
+    if (url.origin !== initialUrl.origin) {
+      throw new Error("Cross-origin redirects are not scanned.");
+    }
+    const result = await requestOnce(url, addresses, allowXml);
 
     if (!result.location) {
+      if (
+        !allowXml &&
+        !/^(text\/html|application\/xhtml\+xml)(;|$)/i.test(result.contentType)
+      ) {
+        throw new Error("Yeh URL HTML website page nahi hai.");
+      }
       return { url: url.toString(), html: result.body };
     }
     if (redirects === MAX_REDIRECTS) {
@@ -344,11 +422,13 @@ function getCandidateLinks(html: string, baseUrl: string): string[] {
       url.hash = "";
       if (url.pathname === base.pathname && !url.search) continue;
 
-      const relevance = /product|shop|store|menu|order|booking|reservation|pricing|service|feature|about|account|login|dashboard|contact|cart|checkout/i
-        .test(`${url.pathname} ${url.search}`)
-        ? 1
+      const anchorText = stripHtml(match[0]);
+      const relevance = /product|shop|store|menu|category|order|booking|reservation|pricing|service|feature|about|account|login|dashboard|contact|cart|checkout|track|status|blog|faq/i
+        .test(`${url.pathname} ${url.search} ${anchorText}`)
+        ? 2
         : 0;
-      if (!scored.has(url.toString())) scored.set(url.toString(), relevance);
+      const key = url.toString();
+      scored.set(key, Math.max(scored.get(key) ?? -1, relevance));
     } catch {
       continue;
     }
@@ -358,6 +438,43 @@ function getCandidateLinks(html: string, baseUrl: string): string[] {
     .sort((a, b) => b[1] - a[1])
     .slice(0, MAX_PAGES - 1)
     .map(([url]) => url);
+}
+
+async function getSitemapCandidates(
+  origin: string,
+  fetchDocument: (input: string, allowXml?: boolean) => Promise<ScannedPage>
+): Promise<string[]> {
+  try {
+    const sitemap = await fetchDocument(new URL("/sitemap.xml", origin).toString(), true);
+    const urls = Array.from(sitemap.html.matchAll(/<loc\b[^>]*>\s*([\s\S]*?)\s*<\/loc>/gi))
+      .map((match) => decodeHtml(match[1]).trim())
+      .filter((candidate) => {
+        try {
+          const parsed = new URL(candidate);
+          return (
+            parsed.origin === origin &&
+            (parsed.protocol === "https:" || parsed.protocol === "http:") &&
+            /product|shop|store|menu|category|order|booking|reservation|pricing|service|about|account|login|dashboard|contact|cart|checkout|track|status|blog|faq/i
+              .test(`${parsed.pathname} ${parsed.search}`)
+          );
+        } catch {
+          return false;
+        }
+      });
+    return Array.from(new Set(urls)).slice(0, 20);
+  } catch {
+    return [];
+  }
+}
+
+function getPageSignalText(page: ScannedPage): string {
+  const linkedEvidence = Array.from(
+    page.html.matchAll(/<a\b[^>]*href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a\s*>/gi)
+  ).map((match) => `${match[1] || match[2] || match[3] || ""} ${stripHtml(match[4] || "")}`);
+  const controlEvidence = Array.from(
+    page.html.matchAll(/<(button|input|form|select|textarea|img)\b[^>]*>/gi)
+  ).map((match) => match[0].replace(/<|>/g, " "));
+  return `${stripHtml(page.html)} ${decodeHtml([...linkedEvidence, ...controlEvidence].join(" "))}`;
 }
 
 const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
@@ -370,7 +487,7 @@ const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
   { id: "email_notifications", pattern: /\b(email notifications?|confirmation emails?|contact form emails?)\b/i },
   { id: "theme_switcher", pattern: /\b(dark mode|light mode|theme switcher|switch themes?)\b/i },
   { id: "admin_dashboard", pattern: /\b(admin|staff)\s+(dashboard|panel|portal)\b/i },
-  { id: "user_accounts", pattern: /\b(customer accounts?|user registration|create account|customer login|sign[ -]?in|log[ -]?in)\b/i },
+  { id: "user_accounts", pattern: /\b(customer accounts?|customer registration|register as a customer|create (a )?customer account|customer login|customer sign[ -]?in)\b/i },
   { id: "role_permissions", pattern: /\b(role[- ]based (access|permissions?)|custom (staff )?roles?|staff permissions?|user permissions?)\b/i },
   { id: "media_uploads", pattern: /\b(file uploads?|media uploads?|upload (images|videos|pdfs|documents))\b/i },
   { id: "search_filter_sort", pattern: /\b(search and filters?|filter and sort|sorting and filtering|advanced search)\b/i },
@@ -455,25 +572,36 @@ const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
   { id: "event_ticketing", pattern: /\b(digital event tickets?|qr check[- ]in|event ticketing)\b/i },
 ];
 
-export function detectWebsiteFeatures(text: string): {
+export function detectWebsiteFeatures(
+  text: string,
+  sourcePages: string[] = [],
+  pricingConfig: PricingRuleConfig = DEFAULT_PRICING_CONFIG
+): {
   features: WebsiteEstimateFeature[];
   adminPanel: boolean;
   pricingPackage: PricingPackageId | null;
   addonIds: string[];
   assumptions: string[];
 } {
-  const features: WebsiteEstimateFeature[] = [];
+  const features: Omit<
+    WebsiteEstimateFeature,
+    "id" | "evidenceStatus" | "sourcePages"
+  >[] = [];
   const addonIds: string[] = [];
   const assumptions: string[] = [];
   const has = (pattern: RegExp) => pattern.test(text);
-  const adminPanel = has(/\b(admin|staff)\s+(dashboard|panel|portal|login|sign[ -]?in)\b|\bmanage products\b|\bproduct management\b/);
+  const adminAreaSignal = has(/\b(admin|staff)\s+(dashboard|panel|portal|login|sign[ -]?in)\b|\bmanage products\b|\bproduct management\b|\/admin(?:\/|\b)/i);
+  const adminPanel = false;
 
   const productCatalog = has(/\b(products?|catalog|shop|store|menu|items for sale)\b/);
-  const ordering = has(/\b(add to cart|shopping cart|cart|checkout|place (an )?order|order online|online ordering|whatsapp order)\b/);
-  const ecommerceCatalog = has(/\b(products?|catalog|shop|store|items for sale)\b/);
-  const ecommerceStore = ecommerceCatalog && (
-    ordering || has(/\b(e[ -]?commerce|online store|online shop|shop online)\b/)
-  );
+  const cartSignal = has(/\b(add to cart|shopping cart|view cart|cart page|\/cart(?:\/|\b))/i);
+  const checkoutSignal = has(/\b(checkout|\/checkout(?:\/|\b)|complete (your )?order|place (an )?order)\b/i);
+  const whatsappSignal = has(/\bwhatsapp\b|wa\.me\/|api\.whatsapp\.com\/send|whatsapp:\/\/send/i);
+  const onlineOrderingSignal = has(/\b(order online|online ordering)\b/);
+  const ordering = cartSignal || checkoutSignal || has(/\b(order online|online ordering)\b/);
+  const ecommerceCatalog = has(/\b(products?|catalog|shop|store|menu|items for sale)\b/);
+  const ecommerceStore = ecommerceCatalog && cartSignal &&
+    (checkoutSignal || onlineOrderingSignal || whatsappSignal);
   const explicitSaas = has(/\b(saas|software as a service|subscription software|cloud[ -]based software)\b/i);
   const saasPlatform = has(
     /\b(?:software|crm|erp|project management|team collaboration|invoicing|accounting|hr management)\s+(?:as a )?(?:platform|system|software|tool)\b|\b(?:cloud|online|web)[ -]based platform\b/i
@@ -483,7 +611,7 @@ export function detectWebsiteFeatures(text: string): {
   );
   const saasApplication = explicitSaas || (saasPlatform && saasCommercialSignals);
   const booking = has(/\b(book(ing)?|reservation|appointment|reserve a table|schedule a visit)\b/);
-  const accounts = has(/\b(sign[ -]?in|log[ -]?in|create account|register|my account|customer portal)\b/);
+  const accounts = has(/\b(customer registration|register as a customer|create (a )?customer account|customer login|customer sign[ -]?in|my customer account)\b/);
   const payment = has(/\b(stripe|paypal|razorpay|paystack|authorize\.net|credit card|debit card|pay online|online payment gateway|payment gateway|online payment integration)\b/);
   const analytics = has(/\b(analytics dashboard|sales report|financial report|business analytics|revenue chart)\b/);
   const chatbot = has(
@@ -516,11 +644,34 @@ export function detectWebsiteFeatures(text: string): {
       evidence: "Page text mein product/catalog/shop/menu se mutaliq alfaaz mile.",
     });
   }
+  if (has(/\b(search (products?|menu)|filter by categor(y|ies)|menu categor(y|ies)|category filter|filter and sort)\b/i)) {
+    features.push({
+      title: "Catalog search or category filtering signal",
+      explanation: "Public text suggests catalog search or category filtering; the interaction has not been exercised.",
+      evidence: "Search/filter wording appeared in the public page content.",
+    });
+  }
+  if (checkoutSignal) {
+    features.push({
+      title: "Checkout or order-submission signal",
+      explanation: "A public checkout/order-submission phrase or route was found; server-side validation and order handling are not verified.",
+      evidence: "Checkout/order-submission wording or route matched.",
+    });
+  }
   if (ordering) {
     features.push({
-      title: "Online order aur cart",
-      explanation: "Website par cart, checkout, online order, ya WhatsApp order ka ishara mila.",
-      evidence: "Page text mein cart/checkout/order action ka zikr mila.",
+      title: cartSignal ? "Cart interaction signal" : "Online order-submission wording",
+      explanation: cartSignal
+        ? "A public cart action or route was found; cart state, totals, and persistence are not verified."
+        : "Public wording suggests online ordering, but it does not establish a cart or checkout workflow.",
+      evidence: `Cart signal: ${cartSignal ? "yes" : "no"}; checkout/order signal: ${checkoutSignal ? "yes" : "no"}.`,
+    });
+  }
+  if (whatsappSignal) {
+    features.push({
+      title: "WhatsApp click-to-chat signal",
+      explanation: "A public WhatsApp contact/order link or reference was found. The customer may need to send the prepared message manually.",
+      evidence: "WhatsApp text or a public click-to-chat URL was found; automated messaging is not verified.",
     });
   }
   if (ecommerceStore) {
@@ -545,15 +696,19 @@ export function detectWebsiteFeatures(text: string): {
       title: "Booking ya appointment",
       explanation: "Customer booking, table reservation, ya appointment request kar sakta hai.",
       evidence: "Page text mein booking, reservation, ya appointment ka zikr mila.",
+      addonId: "booking_calendar",
     });
   }
-  if (accounts || adminPanel) {
+  if (accounts || adminAreaSignal) {
     features.push({
-      title: adminPanel ? "Admin ya staff area ka link" : "Customer login/account",
-      explanation: adminPanel
-        ? "Public website par admin/staff area ka link mila; is se admin access ki poori functionality confirm nahi hoti."
-        : "Public page par account banane ya login karne ka option nazar aaya.",
-      evidence: "Page text mein admin/staff ya customer account/login ka zikr mila.",
+      title: adminAreaSignal ? "Admin/staff route or reference" : "Customer registration/login signal",
+      explanation: adminAreaSignal
+        ? "A public page references an admin/staff area. This does not prove a working dashboard or its capabilities."
+        : "A customer-specific registration/login signal was found; authentication and account workflows are not verified.",
+      evidence: adminAreaSignal
+        ? "A public label, route, or management phrase matched an admin/staff signal."
+        : "Customer-specific account wording appeared in public page text.",
+      ...(adminAreaSignal ? { addonId: "admin_dashboard" } : {}),
     });
   }
   if (payment) {
@@ -561,6 +716,7 @@ export function detectWebsiteFeatures(text: string): {
       title: "Online payment ka ishara",
       explanation: "Gateway ya card-based online payment ka public page par ishara mila.",
       evidence: "Page text mein online payment ya payment provider ka naam mila.",
+      addonId: "payment_gateway",
     });
     addonIds.push("payment_gateway");
   }
@@ -569,14 +725,29 @@ export function detectWebsiteFeatures(text: string): {
       title: "Analytics ya reports",
       explanation: "Business performance charts, sales, ya financial reports ka zikr mila.",
       evidence: "Page text mein analytics/reporting dashboard ka ishara mila.",
+      addonId: "advanced_dashboard",
     });
     addonIds.push("advanced_dashboard");
+  }
+  if (has(/\b(qr|qr code|qr-code)\b/i)) {
+    const tableOrderingSignal = has(/\b(table|dine[- ]in|scan (to )?order|order from (your )?table)\b/i);
+    features.push({
+      title: tableOrderingSignal ? "Table QR ordering signal" : "QR code reference",
+      explanation: tableOrderingSignal
+        ? "Public text associates a QR code with table/dine-in ordering; QR operation and staff management are not verified."
+        : "A QR reference or image may be present, but it does not establish table ordering.",
+      evidence: tableOrderingSignal
+        ? "QR signal and table/dine-in/order context appeared together."
+        : "A QR reference appeared without corroborating table-ordering context.",
+      ...(tableOrderingSignal ? { addonId: "restaurant_qr_menu" } : {}),
+    });
   }
   if (chatbot) {
     features.push({
       title: "Chatbot ya AI assistant",
       explanation: "Website par chatbot ya AI assistant ka public ishara mila.",
       evidence: "Page text mein chatbot/AI assistant ka zikr mila.",
+      addonId: "ai_chatbot",
     });
     addonIds.push("ai_chatbot");
   }
@@ -585,15 +756,11 @@ export function detectWebsiteFeatures(text: string): {
       title: "Custom API ya system integration",
       explanation: "Kisi external service ya doosray software ke saath integration ka ishara mila.",
       evidence: "Page text mein API, webhook, ya system sync ka zikr mila.",
+      addonId: "api_integration",
     });
     addonIds.push("api_integration");
   }
 
-  const needsPersistentData = productCatalog || ordering || booking || accounts;
-  if (needsPersistentData && !ecommerceStore) {
-    addonIds.push("supabase_db");
-    assumptions.push("Listings, orders, bookings, ya accounts ke liye persistent database add-on farz kiya gaya hai; asal backend public page se verify nahi ho sakta.");
-  }
   if (ecommerceStore) {
     assumptions.push(
       advancedEcommerce
@@ -610,8 +777,8 @@ export function detectWebsiteFeatures(text: string): {
       `${saasPackage.label} package use hua; is package ki listed base price ${priceText} hai.`
     );
     assumptions.push("SaaS package mein persistent database aur package ke mutabiq authentication, payment, aur analytics shamil hain; included features dobara charge nahi kiye gaye.");
-  } else if (adminPanel) {
-    assumptions.push("Public page par admin/staff area ka link mila, is liye Package 2 estimate kiya gaya hai; link se dashboard ka exact scope confirm nahi hota.");
+  } else if (adminAreaSignal) {
+    assumptions.push("A public admin/staff route or label is only a signal; it does not select the client-admin package or prove dashboard functionality.");
   } else {
     assumptions.push("Client admin panel public page se confirm nahi hua, is liye Package 1 (Durrani-managed) use kiya gaya hai.");
   }
@@ -622,7 +789,7 @@ export function detectWebsiteFeatures(text: string): {
   const detectedAddonIds = new Set(addonIds);
   for (const rule of ADDON_SCAN_RULES) {
     if (!has(rule.pattern)) continue;
-    const addon = DEFAULT_PRICING_CONFIG.addons[rule.id];
+    const addon = pricingConfig.addons[rule.id];
     if (!addon) continue;
     if (!features.some((feature) => feature.title === addon.label)) {
       features.push({
@@ -637,18 +804,39 @@ export function detectWebsiteFeatures(text: string): {
   if (features.length === 0) {
     features.push({
       title: "Public informational website",
-      explanation: "Sirf public text aur pages dekhe gaye; koi advanced feature yaqini taur par detect nahi hua.",
+      explanation: "No supported advanced feature signal was found in the scanned public pages; this does not establish that the feature is absent.",
       evidence: "Public page content mein supported feature signals nahi mile.",
     });
   }
 
   assumptions.push("Yeh visible public pages par mabni rough development estimate hai, asal invoice ya confirmed project price nahi.");
-  assumptions.push("Login ke peechay ke features, private admin panels, source code, database, aur hidden integrations scan nahi kiye ja sakte.");
-  assumptions.push("Hum third-party subscriptions, paid domains, payment gateway accounts, ya external API accounts provide nahi karte; client zaroorat par provider se khud arrange aur pay karta hai. Hamara Vercel deployment kaam web-app budget mein included hai, lekin Vercel ka paid hosting plan nahi.");
+  assumptions.push("Scanner reads returned HTML only; JavaScript-rendered behavior, forms after submission, private routes, source code, and backend state are not verified.");
+  assumptions.push("A feature not detected in the scanned pages may still exist on other pages, behind login, or in JavaScript; it is not proof that the feature is absent.");
+  assumptions.push("Detected priced add-ons are included in the starting new-build estimate; uncheck any item that is not needed. Public signals are not proof that the feature is fully implemented.");
+  assumptions.push("Login ke peechay ke features, private admin panels, source code, database, aur hidden integrations scan nahi kiye ja sakte. Unknown backend state is not treated as a Supabase integration.");
+  assumptions.push("Personal domain setup is a PKR 10,000 one-time add-on; domain registration and renewal fees charged by the registrar are separate. Third-party subscriptions, payment gateway accounts, and external API accounts are arranged and paid for by the client.");
+
+  const featuresWithEvidence = features.map((feature) => {
+    const matchingAddon = Object.values(pricingConfig.addons)
+      .find((addon) => addon.label.toLowerCase() === feature.title.toLowerCase());
+    const id = matchingAddon?.id || feature.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    return {
+      ...feature,
+      id,
+      evidenceStatus: "public_signal" as const,
+      sourcePages: sourcePages.slice(0, 3),
+      ...(feature.addonId || matchingAddon
+        ? { addonId: feature.addonId || matchingAddon?.id }
+        : {}),
+    };
+  });
 
   return {
-    features,
-    adminPanel: ecommerceStore || saasApplication || adminPanel,
+    features: featuresWithEvidence,
+    adminPanel,
     pricingPackage,
     addonIds: Array.from(getChargeableAddonIds(
       Array.from(detectedAddonIds),
@@ -663,16 +851,31 @@ export async function estimateWebsite(
   input: string,
   currency: CurrencyCode = "PKR",
   rates: ExchangeRates = { PKR: 1 },
-  exchangeRateDate?: string
+  exchangeRateDate?: string,
+  fetchDocument: (
+    input: string,
+    allowXml?: boolean
+  ) => Promise<ScannedPage> = (input, allowXml = false) =>
+    fetchPublicDocument(input, allowXml),
+  configuredPricing: PricingRuleConfig = DEFAULT_PRICING_CONFIG
 ): Promise<WebsiteEstimateResult> {
-  const firstPage = await fetchPublicHtml(input);
+  const firstPage = await fetchDocument(input, false);
   const pages: ScannedPage[] = [firstPage];
   const warnings: string[] = [];
+  const visited = new Set([new URL(firstPage.url).toString()]);
+  const sitemapCandidates = await getSitemapCandidates(new URL(firstPage.url).origin, fetchDocument);
 
-  for (const candidate of getCandidateLinks(firstPage.html, firstPage.url)) {
+  const candidates = [
+    ...sitemapCandidates,
+    ...getCandidateLinks(firstPage.html, firstPage.url),
+  ];
+  for (const candidate of candidates) {
     if (pages.length >= MAX_PAGES) break;
+    const normalizedCandidate = new URL(candidate).toString();
+    if (visited.has(normalizedCandidate)) continue;
+    visited.add(normalizedCandidate);
     try {
-      const page = await fetchPublicHtml(candidate);
+      const page = await fetchDocument(candidate, false);
       if (new URL(page.url).origin === new URL(firstPage.url).origin) {
         pages.push(page);
       }
@@ -681,28 +884,127 @@ export async function estimateWebsite(
     }
   }
 
-  const combinedHtml = pages
-    .map((page) => {
-      const controls = (page.html.match(/<(a|button|input|form)\b[^>]*>/gi) || []).join(" ");
-      return `${page.html} ${controls}`;
-    })
-    .join(" ");
-  const text = stripHtml(combinedHtml);
-  const detected = detectWebsiteFeatures(text);
+  const text = pages.map(getPageSignalText).join(" ");
+  const detected = detectWebsiteFeatures(text, [], configuredPricing);
+  const featuresByPage = pages.map((page) => ({
+    url: page.url,
+    ids: new Set(
+      detectWebsiteFeatures(getPageSignalText(page), [], configuredPricing)
+        .features.map((feature) => feature.id)
+    ),
+  }));
+  detected.features = detected.features.map((feature) => ({
+    ...feature,
+    sourcePages: featuresByPage
+      .filter((page) => page.ids.has(feature.id))
+      .map((page) => page.url),
+  }));
+  if (isPersonalDomainHost(new URL(firstPage.url).hostname)) {
+    detected.features.push({
+      id: "personal_domain",
+      title: "Personal domain setup signal",
+      explanation: "The scanned site uses a personal/custom domain. Select this one-time setup add-on for a new build; registrar purchase and renewal fees are separate.",
+      evidence: `The public website uses the custom domain ${new URL(firstPage.url).hostname}.`,
+      evidenceStatus: "public_signal",
+      sourcePages: [firstPage.url],
+      addonId: "personal_domain",
+    });
+  }
+  const standardPricingConfig = {
+    ...configuredPricing,
+    baseWithoutAdmin: DEFAULT_PRICING_CONFIG.baseWithoutAdmin,
+    baseWithAdmin: DEFAULT_PRICING_CONFIG.baseWithAdmin,
+  };
   const basePricingConfig = detected.pricingPackage
-    ? getPricingPackageConfig(DEFAULT_PRICING_CONFIG, detected.pricingPackage)
-    : DEFAULT_PRICING_CONFIG;
+    ? getPricingPackageConfig(configuredPricing, detected.pricingPackage)
+    : standardPricingConfig;
   const pricingConfig = getRegionalPricingConfig(basePricingConfig, currency, rates);
+  const standardPricing = getRegionalPricingConfig(standardPricingConfig, currency, rates);
+  const pricingOptions: WebsitePricingOption[] = [
+    {
+      id: "package_1",
+      label: "Package 1: Durrani-Managed",
+      basePrice: standardPricing.baseWithoutAdmin,
+      basePriceWithAdmin: standardPricing.baseWithAdmin,
+      adminPanelType: "none",
+    },
+    {
+      id: "package_2",
+      label: "Package 2: Client Admin Panel",
+      basePrice: standardPricing.baseWithoutAdmin,
+      basePriceWithAdmin: standardPricing.baseWithAdmin,
+      adminPanelType: "client_admin",
+    },
+    ...Object.entries(ECOMMERCE_PACKAGES).map(([id, packageDetails]) => {
+      const packageConfig = getRegionalPricingConfig(
+        getPricingPackageConfig(configuredPricing, id as PricingPackageId),
+        currency,
+        rates
+      );
+      const maximumPrice = "maximumPrice" in packageDetails
+        ? getRegionalPricingConfig(
+            {
+              ...getPricingPackageConfig(configuredPricing, id as PricingPackageId),
+              baseWithoutAdmin: packageDetails.maximumPrice,
+              baseWithAdmin: packageDetails.maximumPrice,
+            },
+            currency,
+            rates
+          ).baseWithoutAdmin
+        : undefined;
+      return {
+        id,
+        label: packageDetails.label,
+        basePrice: packageConfig.baseWithoutAdmin,
+        basePriceWithAdmin: packageConfig.baseWithAdmin,
+        adminPanelType: "client_admin" as const,
+        pricingPackage: id as PricingPackageId,
+        ...(maximumPrice !== undefined ? { maximumPrice } : {}),
+      };
+    }),
+    ...Object.entries(SAAS_PACKAGES).map(([id, packageDetails]) => {
+      const packageConfig = getRegionalPricingConfig(
+        getPricingPackageConfig(configuredPricing, id as PricingPackageId),
+        currency,
+        rates
+      );
+      return {
+        id,
+        label: packageDetails.label,
+        basePrice: packageConfig.baseWithoutAdmin,
+        basePriceWithAdmin: packageConfig.baseWithAdmin,
+        adminPanelType: "none" as const,
+        pricingPackage: id as PricingPackageId,
+      };
+    }),
+  ];
+  const suggestedPricingOptionId = detected.pricingPackage ||
+    (detected.adminPanel ? "package_2" : "package_1");
   if (currency !== "PKR") {
     detected.assumptions.unshift(
-      "International base packages use 2x Pakistan rates converted with the latest available exchange rate; each detected add-on is a flat 100 units in the selected currency."
+      "International base packages use 2x Pakistan rates converted with the latest available exchange rate; each selected one-time add-on is a flat 100 units in the selected currency."
     );
   }
+  const selectedPricingOption = pricingOptions.find(
+    (option) => option.id === suggestedPricingOptionId
+  );
+  const selectedPackageId = selectedPricingOption?.pricingPackage;
+  const requestedAddonIds = Array.from(new Set([
+    ...detected.addonIds,
+    ...detected.features.flatMap((feature) => feature.addonId ? [feature.addonId] : []),
+    ...(isPersonalDomainHost(new URL(firstPage.url).hostname) ? ["personal_domain"] : []),
+  ]));
+  const chargeableAddonIds = getChargeableAddonIds(
+    requestedAddonIds,
+    selectedPackageId,
+    selectedPricingOption?.adminPanelType
+  );
   const calculation = calculateBudget(
-    detected.adminPanel ? "client_admin" : "none",
-    detected.addonIds,
+    selectedPricingOption?.adminPanelType || "none",
+    chargeableAddonIds,
     pricingConfig
   );
+  const adminPanelCalculation = calculateBudget("client_admin", [], pricingConfig);
   const siteTitle = getPageTitle(firstPage.html) || new URL(firstPage.url).hostname;
   const siteDescription =
     getMetaContent(firstPage.html, "description", "name") ||
@@ -714,17 +1016,30 @@ export async function estimateWebsite(
     internationalPricing: currency !== "PKR",
     adminPanel: detected.adminPanel,
     ...(detected.pricingPackage ? { pricingPackage: detected.pricingPackage } : {}),
+    pricingOptions,
+    suggestedPricingOptionId,
     ...(currency !== "PKR" ? { exchangeRate: rates[currency], exchangeRateDate } : {}),
     siteTitle,
     siteDescription,
     pagesScanned: pages.length,
+    scannedPages: pages.map((page) => page.url),
     features: detected.features,
+    addonCatalog: Object.values(pricingConfig.addons)
+      .filter((addon) => addon.enabled)
+      .map((addon) => ({
+        id: addon.id,
+        title: addon.label,
+        description: addon.description,
+        price: addon.price,
+        billingPeriod: addon.billingPeriod || "one_time",
+      })),
     basePackage: detected.pricingPackage
       ? isEcommercePackageId(detected.pricingPackage)
         ? ECOMMERCE_PACKAGES[detected.pricingPackage].label
         : SAAS_PACKAGES[detected.pricingPackage].label
       : detected.adminPanel ? "Package 2: Client Admin Panel" : "Package 1: Durrani-Managed",
     basePrice: calculation.basePrice,
+    basePriceWithAdmin: adminPanelCalculation.basePrice,
     addons: calculation.selectedAddonDetails.map((addon) => ({
       id: addon.id,
       title: addon.label,

@@ -1,7 +1,7 @@
 import { BUSINESS_INFO } from "@/lib/constants";
 
 export interface AdminSubmissionAlert {
-  type: "Project inquiry" | "Contact inquiry" | "Payment order" | "Payment received";
+  type: "Project inquiry" | "Incomplete calculator lead" | "Contact inquiry" | "Payment order" | "Payment received";
   reference: string;
   customerName: string;
   customerEmail: string;

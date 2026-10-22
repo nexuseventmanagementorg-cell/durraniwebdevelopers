@@ -19,6 +19,7 @@ import {
   LogOut,
   ExternalLink,
   ShieldCheck,
+  UserRoundPlus,
 } from "lucide-react";
 
 export default function AdminSidebar() {
@@ -28,6 +29,7 @@ export default function AdminSidebar() {
   const navItems = [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Inquiries Inbox", href: "/admin/inquiries", icon: Inbox },
+    { name: "Incomplete Inquiries", href: "/admin/leads", icon: UserRoundPlus },
     { name: "Active Projects", href: "/admin/projects", icon: Briefcase },
     { name: "Clients Directory", href: "/admin/clients", icon: Users },
     { name: "Payments & Verification", href: "/admin/payments", icon: CreditCard },

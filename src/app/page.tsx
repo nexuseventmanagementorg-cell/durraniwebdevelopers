@@ -7,6 +7,7 @@ import {
 } from "@/lib/constants";
 import { DataStore } from "@/lib/store";
 import RegionalPrice from "@/components/RegionalPrice";
+import { DWD_WORKFORCE_AGENTS, DWD_WORKFORCE_DEPARTMENTS } from "@/lib/workforce-agents";
 import {
   Calculator,
   ArrowRight,
@@ -27,7 +28,11 @@ import {
   PhoneCall,
   Check,
   ChevronRight,
+  Download,
   ExternalLink,
+  Users,
+  Bot,
+  Workflow,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -132,11 +137,11 @@ export default function HomePage() {
     },
     {
       q: "Are domains, third-party accounts, and Vercel deployment included?",
-      a: "Vercel par web app deploy karne ka hamara kaam agreed web-app budget mein included hai; alag deployment fee nahi. Iska matlab Vercel ka paid plan ya hosting subscription included hona nahi hai. Hum custom domains, paid third-party subscriptions, payment gateway accounts ya external API accounts provide, purchase ya manage nahi karte. Agar project ko inki zaroorat ho to client account/plan seedha provider se arrange aur uski fees provider ko ada karta hai. Agreed scope mein integration development ho sakti hai, lekin third-party account ya usage charges hamare budget mein shamil nahi.",
+      a: "Vercel par web app deploy karne ka hamara kaam agreed web-app budget mein included hai; alag deployment fee nahi. Personal domain setup (for example .com) optional PKR 10,000 add-on hai, lekin domain registrar se purchase aur renewal ki fees alag hain aur client provider ko ada karta hai. Iska matlab Vercel ka paid plan ya hosting subscription included hona nahi hai. Payment gateway accounts ya external API accounts bhi client provider se arrange karta hai; agreed scope mein integration development ho sakti hai, lekin third-party usage charges hamare budget mein shamil nahi.",
     },
     {
       q: "Can I customize the features and add special integrations?",
-      a: "Yes! The budget calculator lets you select optional add-ons like Google OAuth, Supabase PostgreSQL, payment integration, AI chatbots, and bespoke workflows. Pakistan add-ons start at PKR 10,000 each; each international add-on is a flat 100 units in the selected currency.",
+      a: "Yes! The budget calculator lets you select optional add-ons like Google OAuth, Supabase PostgreSQL, payment integration, AI chatbots, personal domain setup, and bespoke workflows. Every selected one-time Pakistan feature add-on is PKR 10,000; each international add-on is a flat 100 units in the selected currency. Monthly maintenance is priced separately.",
     },
     {
       q: "How quickly can my web application be delivered?",
@@ -236,9 +241,18 @@ export default function HomePage() {
                   <source src="/logoanimation2.mp4" type="video/mp4" />
                   Your browser does not support HTML video.
                 </video>
-                <div className="mt-3 flex items-center justify-between text-xs px-2 text-gray-400">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 px-2 text-xs text-gray-400">
                   <span className="font-semibold text-white">Durrani Web Developers</span>
-                  <span>Ideas • Code • Real Solutions</span>
+                  <span className="sm:ml-auto">Ideas • Code • Real Solutions</span>
+                  <a
+                    href="/logoanimation2.mp4"
+                    download="durrani-web-developers-intro.mp4"
+                    className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-2 font-semibold text-white transition hover:border-[#E31E36]/60 hover:bg-[#E31E36]/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E31E36]"
+                    aria-label="Download the Durrani Web Developers introduction video"
+                  >
+                    <Download className="h-4 w-4 text-[#E31E36]" />
+                    Download video
+                  </a>
                 </div>
               </div>
             </div>
@@ -475,7 +489,243 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. INDUSTRIES WE SERVE */}
+      {/* 3. AI AGENCY WORKFORCE STANDOUT SECTION */}
+      <section className="py-24 bg-[#101216] text-white border-b border-[#242830] relative overflow-hidden">
+        {/* Subtle background tech grid */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f242d_1px,transparent_1px),linear-gradient(to_bottom,#1f242d_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-35" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
+            <div className="max-w-3xl">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#E31E36]/30 bg-[#242830] px-3.5 py-1 text-xs font-semibold text-gray-200">
+                <span className="h-2 w-2 rounded-full bg-[#E31E36] animate-ping" />
+                <span className="text-[#E31E36] font-bold">First-Class Product Experience</span>
+                <span className="text-gray-400">• 50 Roles across 10 Departments</span>
+              </span>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white mt-4">
+                Powered by the DWD{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#E31E36] via-red-500 to-rose-400">
+                  AI Agency Workforce
+                </span>
+              </h2>
+              <p className="text-gray-300 text-sm sm:text-base mt-3 leading-relaxed">
+                Durrani Web Developers organizes every web application project across 50 specialized digital profiles. We pair active model-assisted brief drafting with strict, fail-closed human engineering oversight at every step.
+              </p>
+            </div>
+
+            <div className="flex-shrink-0">
+              <Link
+                href="/workforce"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#E31E36] hover:bg-[#C8162D] px-6 py-3.5 text-xs font-bold text-white shadow-glow transition transform hover:-translate-y-0.5"
+              >
+                <Users className="h-4 w-4" />
+                Explore All 50 Specialist Profiles &rarr;
+              </Link>
+            </div>
+          </div>
+
+          {/* Capability Transparency Banner */}
+          <div className="mb-12 rounded-2xl border border-blue-500/20 bg-blue-950/20 p-5 text-xs text-gray-300">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-blue-500/20">
+              <div className="flex items-center gap-2 font-bold text-blue-300">
+                <ShieldCheck className="h-4 w-4 text-blue-400" />
+                <span>Capability Transparency &amp; Human Governance</span>
+              </div>
+              <span className="text-[11px] text-gray-400">
+                Verified repository architecture &bull; Zero autonomous shell/production execution
+              </span>
+            </div>
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px] text-gray-400 leading-relaxed">
+              <div>
+                <strong className="text-white block mb-0.5 flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Active Model Pipeline
+                </strong>
+                Requirements Analyst uses an admin-triggered Google Gemini pipeline to convert client briefs into structured user stories and technical scope.
+              </div>
+              <div>
+                <strong className="text-white block mb-0.5 flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-sky-400" />
+                  50 Specialist Role Profiles
+                </strong>
+                The 50 digital avatars represent our dedicated operational taxonomy and division of labor across 10 agile departments.
+              </div>
+              <div>
+                <strong className="text-white block mb-0.5 flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-amber-400" />
+                  Strict Human Sign-off
+                </strong>
+                Every task transition, code review, test verification, and deployment is manually authorized and verified by human agency engineers.
+              </div>
+            </div>
+          </div>
+
+          {/* Featured Specialist Roles Grid */}
+          <div className="mb-14">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Bot className="h-5 w-5 text-[#E31E36]" />
+                Featured Specialist Profiles
+              </h3>
+              <Link href="/workforce" className="text-xs font-bold text-[#E31E36] hover:underline inline-flex items-center gap-1">
+                View all 10 departments <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                {
+                  role: "Business Analyst",
+                  task: "Translating needs into scope & user stories",
+                  department: "Executive & Project Delivery",
+                  avatar: "business-analyst",
+                  isModel: true,
+                  milestone: "Requirements",
+                },
+                {
+                  role: "Project Manager",
+                  task: "Coordinating project delivery & milestone schedules",
+                  department: "Executive & Project Delivery",
+                  avatar: "project-manager",
+                  isModel: false,
+                  milestone: "Requirements",
+                },
+                {
+                  role: "Frontend UI Designer",
+                  task: "Designing responsive interface screens & UX journeys",
+                  department: "Product & Brand Design",
+                  avatar: "frontend-ui-designer",
+                  isModel: false,
+                  milestone: "Planning",
+                },
+                {
+                  role: "Backend Architect",
+                  task: "Designing application services & database schemas",
+                  department: "Apps & Systems Engineering",
+                  avatar: "backend-architect",
+                  isModel: false,
+                  milestone: "Development",
+                },
+                {
+                  role: "Web Development Coder",
+                  task: "Building modern Next.js & TypeScript applications",
+                  department: "Web, CMS & Knowledge",
+                  avatar: "web-development-coder",
+                  isModel: false,
+                  milestone: "Development",
+                },
+                {
+                  role: "Ecommerce Specialist",
+                  task: "Building product catalog, cart, and checkout flows",
+                  department: "Commerce & Operations",
+                  avatar: "ecommerce-specialist",
+                  isModel: false,
+                  milestone: "Development",
+                },
+                {
+                  role: "QA Testing Bot",
+                  task: "Testing key website flows & responsive behavior",
+                  department: "Cloud, Quality & Knowledge",
+                  avatar: "qa-testing-bot",
+                  isModel: false,
+                  milestone: "Quality",
+                },
+                {
+                  role: "Cybersecurity Guardian",
+                  task: "Checking security controls & input sanitation",
+                  department: "Cloud, Quality & Knowledge",
+                  avatar: "cybersecurity-guardian",
+                  isModel: false,
+                  milestone: "Quality",
+                },
+              ].map((spec) => (
+                <div
+                  key={spec.role}
+                  className="rounded-2xl border border-white/10 bg-[#171a20] p-4 flex flex-col justify-between hover:border-[#E31E36]/40 hover:bg-[#1B1F27] transition-all"
+                >
+                  <div>
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-white/15 bg-black">
+                        <Image
+                          src={`/agency/avatars/${spec.avatar}.webp`}
+                          alt={`${spec.role} avatar`}
+                          fill
+                          sizes="48px"
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-extrabold text-sm text-white line-clamp-1">{spec.role}</h4>
+                        <span className="text-[10px] text-gray-400 block line-clamp-1 mt-0.5">{spec.department}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-300 leading-relaxed line-clamp-2">{spec.task}</p>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[10px]">
+                    <span className="text-gray-400">{spec.milestone}</span>
+                    {spec.isModel ? (
+                      <span className="font-bold text-emerald-400 flex items-center gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Gemini Model Pipeline
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">Specialist Profile</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 6-Stage Human Gates Summary */}
+          <div className="rounded-2xl border border-white/10 bg-[#171a20] p-6 sm:p-8">
+            <div className="text-center max-w-2xl mx-auto mb-8">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#E31E36]">Project Governance</span>
+              <h3 className="text-xl sm:text-2xl font-black text-white mt-1">
+                6-Stage Human-Gated Delivery Lifecycle
+              </h3>
+              <p className="text-xs text-gray-400 mt-1">
+                Every technical milestone requires verified human developer or client sign-off before advancing.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
+              {[
+                { stage: "01. Scope", name: "Requirements", gate: "Admin Scope Sign-off" },
+                { stage: "02. Design", name: "Architecture", gate: "Lead Tech Review" },
+                { stage: "03. Build", name: "Development", gate: "Code Task Approval" },
+                { stage: "04. Test", name: "QA & Security", gate: "Gatekeeper Sign-off" },
+                { stage: "05. Review", name: "Client Preview", gate: "Client Acceptance" },
+                { stage: "06. Ship", name: "Launch", gate: "Release Authorization" },
+              ].map((item) => (
+                <div key={item.stage} className="rounded-xl border border-white/10 bg-black/30 p-3.5 space-y-1">
+                  <span className="block font-mono text-[10px] text-gray-500 font-bold">{item.stage}</span>
+                  <strong className="block text-xs font-bold text-white">{item.name}</strong>
+                  <div className="pt-1 flex items-center justify-center gap-1 text-[10px] text-amber-300 font-semibold">
+                    <ShieldCheck className="h-3 w-3 text-amber-400" />
+                    <span>{item.gate}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="text-xs text-gray-400 text-center sm:text-left">
+                Discover all 50 roles, department compositions, and lifecycle mappings in our comprehensive workforce directory.
+              </p>
+              <Link
+                href="/workforce"
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-700 bg-[#242830] hover:bg-[#2E3440] px-5 py-2.5 text-xs font-bold text-white transition shrink-0"
+              >
+                View Full Workforce Directory <ArrowRight className="h-3.5 w-3.5 text-[#E31E36]" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. INDUSTRIES WE SERVE */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
@@ -712,7 +962,7 @@ export default function HomePage() {
 
           <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-white p-5 sm:flex-row sm:px-7">
             <p className="max-w-3xl text-xs leading-relaxed text-gray-600">
-              Note: Hum custom domains, paid third-party subscriptions, payment gateway accounts ya external API accounts provide nahi karte; zaroorat par client inhein provider se khud arrange aur pay karta hai. Vercel par app deploy karne ka hamara kaam web-app budget mein included hai, alag deployment fee nahi; Vercel ka paid plan/hosting subscription ismein shamil nahi. Payment verify hone ke baad hi received mark hoti hai.
+              Note: Personal domain setup (jese .com) optional PKR 10,000 add-on hai; domain purchase/renewal registrar fees client alag pay karta hai. Hum paid third-party subscriptions, payment gateway accounts ya external API accounts provide nahi karte. Vercel par app deploy karne ka hamara kaam web-app budget mein included hai, alag deployment fee nahi; Vercel ka paid plan/hosting subscription ismein shamil nahi. Payment verify hone ke baad hi received mark hoti hai.
             </p>
             <Link
               href="/calculator"

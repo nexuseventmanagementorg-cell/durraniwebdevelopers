@@ -4,7 +4,11 @@ import React, { useState, useEffect } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { PricingRuleConfig } from "@/lib/types";
-import { formatPKR, DEFAULT_PRICING_CONFIG } from "@/lib/constants";
+import {
+  formatPKR,
+  DEFAULT_PRICING_CONFIG,
+  FEATURE_ADDON_PRICE_PKR,
+} from "@/lib/constants";
 import {
   Sliders,
   Save,
@@ -100,8 +104,8 @@ export default function AdminPricingPage() {
 
       <main className="flex-1 ml-64 min-h-screen flex flex-col">
         <AdminHeader
-          title="Dynamic Pricing Rules & Calculator Engine"
-          subtitle="Adjust base rates, add-on features, advance amounts, and installments without modifying code"
+          title="Pricing Rules & Calculator Engine"
+          subtitle="Adjust base packages and payment terms, manage add-on availability, and keep the PKR 10,000 one-time feature add-on rate consistent"
         />
 
         <div className="p-6 space-y-6 flex-1">
@@ -209,7 +213,7 @@ export default function AdminPricingPage() {
                     Modular Add-on Feature Pricing (Step 6 Additions)
                   </h3>
                   <p className="text-xs text-gray-500">
-                    Configure the starting price for each add-on module or toggle availability.
+                    Every one-time feature add-on is fixed at PKR 10,000. Monthly maintenance retains its separate recurring rate; you can still toggle add-on availability.
                   </p>
                 </div>
 
@@ -239,18 +243,31 @@ export default function AdminPricingPage() {
                       </strong>
 
                       <div>
-                        <label className="block text-[11px] font-bold text-gray-600 mb-1">
-                          Add-on Price (PKR)
-                        </label>
-                        <input
-                          type="number"
-                          value={addon.price}
-                          onChange={(e) =>
-                            handleUpdateAddonPrice(addon.id, Number(e.target.value))
-                          }
-                          className="w-full bg-white px-3 py-2 rounded-xl border border-gray-300 font-bold text-[#E31E36]"
-                          required
-                        />
+                        {addon.billingPeriod === "monthly" ? (
+                          <>
+                            <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                              Monthly Add-on Price (PKR)
+                            </label>
+                            <input
+                              type="number"
+                              value={addon.price}
+                              onChange={(e) =>
+                                handleUpdateAddonPrice(addon.id, Number(e.target.value))
+                              }
+                              className="w-full bg-white px-3 py-2 rounded-xl border border-gray-300 font-bold text-[#E31E36]"
+                              required
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                              One-time Feature Add-on Price
+                            </label>
+                            <p className="w-full bg-white px-3 py-2 rounded-xl border border-gray-300 font-bold text-[#E31E36]">
+                              {formatPKR(FEATURE_ADDON_PRICE_PKR)}
+                            </p>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}

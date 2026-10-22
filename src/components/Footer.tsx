@@ -182,6 +182,11 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2 text-xs text-gray-400">
               <li>
+                <Link href="/workforce" className="hover:text-white transition">
+                  AI Agency Workforce (50 Specialists)
+                </Link>
+              </li>
+              <li>
                 <Link href="/portfolio" className="hover:text-white transition">
                   Completed Projects & Demos
                 </Link>

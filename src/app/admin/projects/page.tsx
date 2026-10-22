@@ -15,7 +15,10 @@ import {
   MessageSquare,
   Plus,
   X,
+  ClipboardCopy,
 } from "lucide-react";
+import { buildLocalAgentHandoff } from "@/lib/project-brief";
+import SyntheticTaskProposalPanel from "@/components/admin/SyntheticTaskProposalPanel";
 
 export default function AdminProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -26,6 +29,10 @@ export default function AdminProjectsPage() {
   const [editUrl, setEditUrl] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingChecklist, setSavingChecklist] = useState(false);
+  const [savingWorkflow, setSavingWorkflow] = useState(false);
+  const [generatingDraft, setGeneratingDraft] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
   const statusList: OrderStatus[] = [
@@ -48,9 +55,12 @@ export default function AdminProjectsPage() {
       const data = await res.json();
       if (data.success) {
         setProjects(data.projects);
+      } else {
+        setLoadError(data.error || "Projects could not be loaded.");
       }
     } catch (e) {
       console.error(e);
+      setLoadError("Projects could not be loaded. Check the project storage configuration.");
     } finally {
       setLoading(false);
     }
@@ -99,6 +109,90 @@ export default function AdminProjectsPage() {
     }
   };
 
+  const handleProjectChecklistChange = async (itemId: string, completed: boolean) => {
+    if (!selectedProject?.projectBuildBrief) return;
+    const checklist = selectedProject.projectBuildBrief.checklist.map((item) =>
+      item.id === itemId ? { ...item, completed } : item
+    );
+    setSavingChecklist(true);
+
+    try {
+      const response = await fetch("/api/admin/projects", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedProject.id, projectBuildBrief: { checklist } }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not save checklist progress.");
+      setSelectedProject(result.project);
+      setProjects((previous) => previous.map((project) => project.id === result.project.id ? result.project : project));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Could not save checklist progress.");
+    } finally {
+      setSavingChecklist(false);
+    }
+  };
+
+  const handleWorkflowTaskChange = async (taskId: string, status: "in_progress" | "completed") => {
+    if (!selectedProject?.automationWorkflow) return;
+    setSavingWorkflow(true);
+    try {
+      const response = await fetch("/api/admin/projects", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedProject.id, automationTask: { taskId, status } }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not update the workflow task.");
+      setSelectedProject(result.project);
+      setProjects((previous) => previous.map((project) => project.id === result.project.id ? result.project : project));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Could not update the workflow task.");
+    } finally {
+      setSavingWorkflow(false);
+    }
+  };
+
+  const handleGenerateWebsiteDraft = async () => {
+    if (!selectedProject) return;
+    setGeneratingDraft(true);
+    try {
+      const response = await fetch("/api/admin/projects", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedProject.id, generateWebsiteDraft: true }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || "Could not generate the website concept.");
+      setSelectedProject(result.project);
+      setProjects((previous) => previous.map((project) => project.id === result.project.id ? result.project : project));
+      setSuccessMsg("Template-based website concept generated for review.");
+      setTimeout(() => setSuccessMsg(""), 4000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Could not generate the website concept.");
+    } finally {
+      setGeneratingDraft(false);
+    }
+  };
+
+  const handleCopyAgentHandoff = async () => {
+    if (!selectedProject?.projectBuildBrief) return;
+    try {
+      await navigator.clipboard.writeText(
+        buildLocalAgentHandoff(
+          selectedProject.name,
+          selectedProject.category,
+          selectedProject.projectBuildBrief.content
+        )
+      );
+      setSuccessMsg("Local agent task copied. Review it for sensitive details before pasting.");
+      setTimeout(() => setSuccessMsg(""), 5000);
+    } catch (error) {
+      console.error("Could not copy local agent handoff", error);
+      alert("Could not copy the task. Check browser clipboard permission and try again.");
+    }
+  };
+
   const filteredProjects = projects.filter((p) => {
     return (
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -124,6 +218,13 @@ export default function AdminProjectsPage() {
               <span>{successMsg}</span>
             </div>
           )}
+          {loadError && (
+            <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-800">
+              {loadError}
+            </div>
+          )}
+
+          <SyntheticTaskProposalPanel />
 
           {/* Search bar */}
           <div className="bg-white p-4 rounded-2xl border border-gray-200 flex justify-between items-center shadow-sm">
@@ -296,6 +397,106 @@ export default function AdminProjectsPage() {
                   className="w-full bg-[#F4F5F7] px-3.5 py-2.5 rounded-xl border border-gray-300 text-[#101216]"
                 />
               </div>
+
+              {selectedProject.projectBuildBrief && (
+                <section className="border-t border-gray-200 pt-4">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <h4 className="font-bold text-gray-700">Build readiness</h4>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] text-gray-500">
+                        {selectedProject.projectBuildBrief.checklist.filter((item) => item.completed).length} / {selectedProject.projectBuildBrief.checklist.length} complete
+                      </span>
+                      {selectedProject.automationWorkflow?.tasks.some((task) => task.id === "implementation" && task.status === "in_progress") && (
+                        <button
+                          type="button"
+                          onClick={() => void handleCopyAgentHandoff()}
+                          className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-1 text-[10px] font-bold text-gray-700 hover:bg-gray-50"
+                        >
+                          <ClipboardCopy className="h-3 w-3" /> Copy local agent task
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-48 divide-y divide-gray-100 overflow-y-auto rounded-lg border border-gray-200">
+                    {selectedProject.projectBuildBrief.checklist.map((item) => (
+                      <label key={item.id} className="flex items-start gap-2.5 px-3 py-2 text-[11px] leading-relaxed text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={item.completed}
+                          disabled={savingChecklist}
+                          onChange={(event) => void handleProjectChecklistChange(item.id, event.target.checked)}
+                          className="mt-0.5 accent-[#E31E36]"
+                        />
+                        <span className={item.completed ? "text-gray-400 line-through" : ""}>{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <details className="mt-2 text-[11px] text-gray-600">
+                    <summary className="cursor-pointer font-semibold">View saved project brief</summary>
+                    <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-3 font-mono text-[10px] leading-relaxed">{selectedProject.projectBuildBrief.content}</pre>
+                  </details>
+                </section>
+              )}
+
+              {selectedProject.automationWorkflow && (
+                <section className="border-t border-gray-200 pt-4">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <h4 className="font-bold text-gray-700">Project workflow</h4>
+                    <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase text-amber-900">
+                      Admin assisted
+                    </span>
+                  </div>
+                  <p className="mb-3 text-[10px] text-gray-500">
+                    Starting Implementation generates a template-based concept from the project scope. Copy the reviewed handoff separately to build functional features in your local Antigravity/VS Code session; this app does not control the editor or deploy code automatically.
+                  </p>
+                  {selectedProject.automationWorkflow.tasks.some((task) => task.id === "implementation" && (task.status === "in_progress" || task.status === "completed")) && (
+                    <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] font-bold text-gray-800">Website concept draft</p>
+                          <p className="text-[10px] text-gray-500">Rule-based responsive template; no paid AI service or client contact details.</p>
+                        </div>
+                        <button type="button" disabled={generatingDraft} onClick={() => void handleGenerateWebsiteDraft()} className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[10px] font-bold text-gray-700 disabled:opacity-50">
+                          {generatingDraft ? "Generating..." : selectedProject.websiteDraft ? "Regenerate concept" : "Generate concept"}
+                        </button>
+                      </div>
+                      {selectedProject.websiteDraft && (
+                        <iframe
+                          title={`${selectedProject.name} website concept preview`}
+                          srcDoc={selectedProject.websiteDraft.html}
+                          sandbox=""
+                          className="mt-3 h-[420px] w-full rounded-md border border-gray-300 bg-white"
+                        />
+                      )}
+                    </div>
+                  )}
+                  <div className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                    {selectedProject.automationWorkflow.tasks.map((task) => (
+                      <div key={task.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5">
+                        <div>
+                          <p className="text-[11px] font-bold text-gray-800">{task.title}</p>
+                          <p className="text-[10px] text-gray-500">{task.role} · {task.status.replaceAll("_", " ")}</p>
+                        </div>
+                        {task.status === "ready" && (
+                          <button type="button" disabled={savingWorkflow} onClick={() => void handleWorkflowTaskChange(task.id, "in_progress")} className="rounded-md border border-gray-300 px-2.5 py-1.5 text-[10px] font-bold text-gray-700 disabled:opacity-50">
+                            Start
+                          </button>
+                        )}
+                        {task.status === "in_progress" && (
+                          <button type="button" disabled={savingWorkflow} onClick={() => void handleWorkflowTaskChange(task.id, "completed")} className="rounded-md bg-[#101216] px-2.5 py-1.5 text-[10px] font-bold text-white disabled:opacity-50">
+                            Complete
+                          </button>
+                        )}
+                        {task.status === "awaiting_admin" && (
+                          <button type="button" disabled={savingWorkflow} onClick={() => void handleWorkflowTaskChange(task.id, "completed")} className="rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[10px] font-bold text-amber-950 disabled:opacity-50">
+                            Confirm deployment
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
 
             <div className="pt-3 border-t border-gray-200 flex justify-end gap-2">

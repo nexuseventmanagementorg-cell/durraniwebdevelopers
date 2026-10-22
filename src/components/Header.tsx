@@ -20,6 +20,7 @@ import {
   Sparkles,
   Globe,
   CreditCard,
+  Users,
 } from "lucide-react";
 
 export default function Header() {
@@ -33,6 +34,7 @@ export default function Header() {
 
   const navLinks = [
     { name: "Services", href: "/services", icon: Layers },
+    { name: "AI Workforce", href: "/workforce", icon: Users },
     { name: "Portfolio", href: "/portfolio", icon: Briefcase },
     { name: "Pricing & Rates", href: "/pricing", icon: Sparkles },
     { name: "Budget Calculator", href: "/calculator", icon: Calculator },

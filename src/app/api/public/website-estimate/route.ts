@@ -62,7 +62,9 @@ export async function POST(request: NextRequest) {
       url.trim(),
       requestedCurrency,
       snapshot?.rates || { PKR: 1 },
-      snapshot?.updatedAt
+      snapshot?.updatedAt,
+      undefined,
+      DataStore.getPricingConfig()
     );
     const sourceHost = new URL(estimate.url).hostname.toLowerCase();
     const historicalProject = DataStore.getPortfolio(false).find((project) => {
@@ -91,6 +93,9 @@ export async function POST(request: NextRequest) {
           pricingConfig
         );
         estimate.adminPanel = historicalProject.adminPanelIncluded === true;
+        if (estimate.adminPanel) {
+          estimate.suggestedPricingOptionId = "package_2";
+        }
         estimate.basePackage = estimate.adminPanel
           ? "Package 2: Client Admin Panel"
           : "Package 1: Durrani-Managed";
@@ -109,12 +114,23 @@ export async function POST(request: NextRequest) {
         estimate.assumptions.unshift(
           "This website matches a published Durrani Web Developers project record. The new-build estimate uses that project's documented client-admin and add-on scope; the original fee shown separately is the historical Pakistan price."
         );
-        if (historicalProject.adminPanelIncluded && !estimate.features.some((feature) => feature.title.includes("Admin"))) {
-          estimate.features.push({
-            title: "Client admin panel (confirmed project scope)",
-            explanation: "The original completed project included client-admin panel support, used here for the comparable new-build estimate.",
-            evidence: "Verified project scope record; not detected from the public pages.",
-          });
+        if (historicalProject.adminPanelIncluded) {
+          const adminFeature = estimate.features.find((feature) => feature.addonId === "admin_dashboard");
+          if (adminFeature) {
+            adminFeature.evidenceStatus = "owner_confirmed";
+            adminFeature.explanation = "The original completed project included client-admin panel support, used here for the comparable new-build estimate.";
+            adminFeature.evidence = "Verified project scope record; not detected from the public pages.";
+          } else {
+            estimate.features.push({
+              id: "confirmed-admin-panel",
+              title: "Client admin panel (confirmed project scope)",
+              explanation: "The original completed project included client-admin panel support, used here for the comparable new-build estimate.",
+              evidence: "Verified project scope record; not detected from the public pages.",
+              evidenceStatus: "owner_confirmed",
+              sourcePages: [],
+              addonId: "admin_dashboard",
+            });
+          }
         }
       }
       const rate = requestedCurrency === "PKR" ? 1 : snapshot?.rates[requestedCurrency];
