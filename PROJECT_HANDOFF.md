@@ -18,6 +18,13 @@ Relevant architecture:
 
 ## Work completed
 
+### Public ready-made website templates and availability controls
+
+- Portfolio records have a separate owner-managed website availability status (`Online`/`Offline`) and template availability flag; project lifecycle status remains unchanged. Offline demos stay labeled Offline and may no longer load, while the project can still be offered as a template.
+- The public `/templates` catalog lists public projects unless the owner explicitly marks a template unavailable. Existing saved projects missing the new fields default to Online and available; explicit Offline or unavailable settings are preserved.
+- Template requests use the existing public contact inquiry flow; there is no checkout or automatic booking. The catalog shows Package 1 at PKR 35,000 without a client admin panel, Package 2 at PKR 45,000 with a client admin panel, published e-commerce/SaaS starting plans, and a categorized add-on checklist with current configured prices. Selected add-ons update the preliminary one-time and monthly totals; package-included features are not charged twice. `/api/public/addons` exposes enabled add-on prices and billing periods from the current pricing configuration.
+- Customer requests are finalized and quoted first. Work is booked only after scope is finalized and payment is received; delivery timing/date is calculated and confirmed after booking.
+
 ### Project-linked task execution foundation
 
 Implemented typed project execution records with project ID, task ID and approved description, agent role, idempotency key, lifecycle status, attempts, timestamps, sanitized error code, artifact references, and verification metadata. Added project-scoped storage reads, duplicate handling, and conditional status transitions with a three-attempt bound.

@@ -27,6 +27,8 @@ export async function POST(request: NextRequest) {
       imageUrl,
       technologies,
       status,
+      availabilityStatus,
+      templateAvailable,
       demoUrl,
       isPublic,
       approvedPublicBudget,
@@ -41,6 +43,16 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (
+      availabilityStatus !== undefined &&
+      availabilityStatus !== "Online" &&
+      availabilityStatus !== "Offline"
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Availability status must be Online or Offline." },
+        { status: 400 }
+      );
+    }
 
     const projectId = id || `port-${Date.now().toString().slice(-6)}`;
     const project: PortfolioProject = {
@@ -52,6 +64,8 @@ export async function POST(request: NextRequest) {
       imageUrl: imageUrl || "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80",
       technologies: Array.isArray(technologies) ? technologies : ["Next.js", "TypeScript", "Tailwind CSS"],
       status: status || "Live",
+      availabilityStatus: availabilityStatus || "Online",
+      templateAvailable: templateAvailable !== false,
       demoUrl: demoUrl || "",
       isPublic: isPublic !== undefined ? Boolean(isPublic) : true,
       approvedPublicBudget: approvedPublicBudget ? Number(approvedPublicBudget) : undefined,

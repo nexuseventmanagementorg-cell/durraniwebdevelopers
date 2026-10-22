@@ -7,6 +7,7 @@ import {
   ECOMMERCE_PACKAGES,
   EXTENDED_ADDONS,
   SAAS_PACKAGES,
+  getAddonPriceForPackage,
   buildWhatsAppLink,
 } from "@/lib/constants";
 import RegionalPrice from "@/components/RegionalPrice";
@@ -47,6 +48,15 @@ export default function PricingPage() {
     {}
   );
   const ecommercePackages = [
+    {
+      title: ECOMMERCE_PACKAGES.ecommerce_starter.label,
+      id: "ecommerce_starter",
+      summary: "Focused online store with the essential catalog, cart, checkout, and order workflow.",
+      image: "/Professional%20E-Commerce%20Store%20Solutions.png",
+      imageAlt: "E-Commerce Starter package with a PKR 100,000 starting price",
+      price: ECOMMERCE_PACKAGES.ecommerce_starter.basePrice,
+      priceLabel: "Starting price",
+    },
     {
       title: "E-Commerce Business",
       id: "ecommerce_business",
@@ -185,7 +195,7 @@ export default function PricingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             {/* Package 1: Without Admin Panel */}
             <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 shadow-sm flex flex-col justify-between">
               <div>
@@ -392,7 +402,7 @@ export default function PricingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             {ecommercePackages.map((packageDetails) => (
               <article
                 key={packageDetails.title}
@@ -517,7 +527,7 @@ export default function PricingPage() {
               Apni Zaroorat Ke Mutabiq Optional Features
             </h2>
             <p className="text-xs text-gray-600 mt-2">
-              Har selected one-time feature add-on PKR 10,000 hai, personal domain setup bhi. Registrar ke domain purchase/renewal charges alag hain; monthly maintenance ki recurring fee separate hai.
+              Add-on rates vary by feature complexity and selected e-commerce or SaaS plan. E-commerce add-ons start at PKR 20,000; advanced SaaS modules are priced for larger platform scope. Personal domain setup is PKR 10,000; registrar purchase and renewal charges are separate. Monthly maintenance is priced separately.
             </p>
           </div>
 
@@ -544,8 +554,22 @@ export default function PricingPage() {
                         <span className="text-[10px] uppercase font-bold text-gray-500 bg-white px-2 py-0.5 rounded">
                           {addon.category}
                         </span>
-                        <strong className="text-xs font-black text-[#E31E36] whitespace-nowrap">
-                          +<RegionalPrice pkrAmount={addon.price} conversion="international-addon" /> per add-on
+                        <strong className="text-xs font-black text-[#E31E36]">
+                          {addon.category === "ecommerce" ? (
+                            <span className="flex flex-wrap gap-x-2">
+                              <span>Starter <RegionalPrice pkrAmount={getAddonPriceForPackage(addon, "ecommerce_starter")} conversion="international-addon" /></span>
+                              <span>Business <RegionalPrice pkrAmount={getAddonPriceForPackage(addon, "ecommerce_business")} conversion="international-addon" /></span>
+                              <span>Advanced <RegionalPrice pkrAmount={getAddonPriceForPackage(addon, "ecommerce_advanced")} conversion="international-addon" /></span>
+                            </span>
+                          ) : addon.category === "saas" ? (
+                            <span className="flex flex-wrap gap-x-2">
+                              <span>Starter <RegionalPrice pkrAmount={getAddonPriceForPackage(addon, "saas_starter")} conversion="international-addon" /></span>
+                              <span>Business <RegionalPrice pkrAmount={getAddonPriceForPackage(addon, "saas_business")} conversion="international-addon" /></span>
+                              <span>Enterprise <RegionalPrice pkrAmount={getAddonPriceForPackage(addon, "saas_enterprise")} conversion="international-addon" /></span>
+                            </span>
+                          ) : (
+                            <>+<RegionalPrice pkrAmount={addon.price} conversion="international-addon" /> per add-on</>
+                          )}
                         </strong>
                       </div>
                       <h3 className="font-bold text-sm text-[#101216] mb-2">
@@ -639,7 +663,21 @@ export default function PricingPage() {
                       </div>
                       <div className="flex shrink-0 items-center justify-between sm:justify-end gap-4">
                         <strong className="text-xs font-black text-[#E31E36]">
-                          <RegionalPrice pkrAmount={addon.price} conversion="international-addon" />{addon.billingPeriod === "monthly" ? " / month" : " per add-on"}
+                          {addon.category === "ecommerce" ? (
+                            <span className="flex flex-wrap gap-x-2">
+                              <span>Starter <RegionalPrice pkrAmount={getAddonPriceForPackage(addon, "ecommerce_starter")} conversion="international-addon" /></span>
+                              <span>Business <RegionalPrice pkrAmount={getAddonPriceForPackage(addon, "ecommerce_business")} conversion="international-addon" /></span>
+                              <span>Advanced <RegionalPrice pkrAmount={getAddonPriceForPackage(addon, "ecommerce_advanced")} conversion="international-addon" /></span>
+                            </span>
+                          ) : addon.category === "saas" ? (
+                            <span className="flex flex-wrap gap-x-2">
+                              <span>Starter <RegionalPrice pkrAmount={getAddonPriceForPackage(addon, "saas_starter")} conversion="international-addon" /></span>
+                              <span>Business <RegionalPrice pkrAmount={getAddonPriceForPackage(addon, "saas_business")} conversion="international-addon" /></span>
+                              <span>Enterprise <RegionalPrice pkrAmount={getAddonPriceForPackage(addon, "saas_enterprise")} conversion="international-addon" /></span>
+                            </span>
+                          ) : (
+                            <><RegionalPrice pkrAmount={addon.price} conversion="international-addon" />{addon.billingPeriod === "monthly" ? " / month" : " per add-on"}</>
+                          )}
                         </strong>
                         <Link
                           href={`/calculator?addon=${addon.id}`}

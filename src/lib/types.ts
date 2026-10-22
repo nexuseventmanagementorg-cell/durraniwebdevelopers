@@ -229,7 +229,7 @@ export interface Inquiry {
   scanFeatures?: InquiryScanFeature[];
   scopeReview?: InquiryScopeReview;
   customFeatureNotes?: string;
-  pricingPackage?: "ecommerce_business" | "ecommerce_advanced" | "saas_starter" | "saas_business" | "saas_enterprise";
+  pricingPackage?: "ecommerce_starter" | "ecommerce_business" | "ecommerce_advanced" | "saas_starter" | "saas_business" | "saas_enterprise";
   manualAdvanceVerification?: {
     amount: number;
     method: PaymentMethod;
@@ -386,6 +386,9 @@ export interface PortfolioProject {
   imageUrl: string;
   technologies: string[];
   status: "Completed" | "Live" | "Delivered";
+  availabilityStatus?: "Online" | "Offline";
+  templateAvailable?: boolean;
+  templatePricingPackage?: "ecommerce_starter" | "ecommerce_business" | "ecommerce_advanced" | "saas_starter" | "saas_business" | "saas_enterprise";
   demoUrl?: string;
   isPublic: boolean;
   approvedPublicBudget?: number;

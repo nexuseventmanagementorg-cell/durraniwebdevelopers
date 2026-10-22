@@ -3,7 +3,7 @@ import { LookupAddress, LookupOptions } from "node:dns";
 import { lookup as dnsLookup } from "node:dns/promises";
 import http from "node:http";
 import https from "node:https";
-import type { PricingRuleConfig } from "./types";
+import type { PortfolioProject, PricingRuleConfig } from "./types";
 import {
   calculateBudget,
   DEFAULT_PRICING_CONFIG,
@@ -90,6 +90,7 @@ export interface WebsiteEstimateResult {
   pricingPackage?: PricingPackageId;
   pricingOptions: WebsitePricingOption[];
   suggestedPricingOptionId: string;
+  matchedTemplateId?: string;
   exchangeRate?: number;
   exchangeRateDate?: string;
   historicalProjectReference?: {
@@ -108,6 +109,7 @@ export interface WebsiteEstimateResult {
     title: string;
     description: string;
     price: number;
+    basePrice?: number;
     billingPeriod?: "one_time" | "monthly";
   }[];
   basePackage: string;
@@ -133,6 +135,57 @@ export interface WebsitePricingOption {
   adminPanelType: "none" | "client_admin";
   pricingPackage?: PricingPackageId;
   maximumPrice?: number;
+}
+
+export function applyPortfolioTemplateStartingPrice(
+  estimate: WebsiteEstimateResult,
+  template: PortfolioProject,
+  startingPrice: number
+): WebsiteEstimateResult {
+  const packageId = template.templatePricingPackage || estimate.pricingPackage;
+  const selectedPackage = packageId
+    ? estimate.pricingOptions.find((option) => option.id === packageId)
+    : undefined;
+  const templateOption: WebsitePricingOption = {
+    id: `template_${template.id}`,
+    label: `${template.title} — template starting plan`,
+    basePrice: startingPrice,
+    basePriceWithAdmin: startingPrice,
+    adminPanelType: selectedPackage?.adminPanelType || (packageId ? "client_admin" : "none"),
+    ...(packageId ? { pricingPackage: packageId } : {}),
+  };
+  const higherPricedOptions = estimate.pricingOptions.filter((option) => {
+    if (option.id === packageId) return false;
+    const price = option.adminPanelType === "client_admin"
+      ? option.basePriceWithAdmin
+      : option.basePrice;
+    return price >= startingPrice;
+  });
+
+  return {
+    ...estimate,
+    pricingPackage: packageId,
+    pricingOptions: [
+      templateOption,
+      ...higherPricedOptions.sort((left, right) => {
+        const leftPrice = left.adminPanelType === "client_admin" ? left.basePriceWithAdmin : left.basePrice;
+        const rightPrice = right.adminPanelType === "client_admin" ? right.basePriceWithAdmin : right.basePrice;
+        return leftPrice - rightPrice;
+      }),
+    ],
+    suggestedPricingOptionId: templateOption.id,
+    matchedTemplateId: template.id,
+    basePackage: templateOption.label,
+    basePrice: startingPrice,
+    basePriceWithAdmin: startingPrice,
+    addons: [],
+    monthlyAddonTotal: 0,
+    estimatedTotal: startingPrice,
+    assumptions: [
+      `This URL matches the published ${template.title}. Its visible template features are included in the fixed ${estimate.currency} ${startingPrice.toLocaleString()} starting price; detected feature signals do not add inconsistent charges.`,
+      ...estimate.assumptions,
+    ],
+  };
 }
 
 export type WebsiteScopeMode = "new_build" | "existing_site";
@@ -1031,6 +1084,9 @@ export async function estimateWebsite(
         title: addon.label,
         description: addon.description,
         price: addon.price,
+        ...(currency === "PKR"
+          ? { basePrice: configuredPricing.addons[addon.id]?.price ?? addon.price }
+          : {}),
         billingPeriod: addon.billingPeriod || "one_time",
       })),
     basePackage: detected.pricingPackage

@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   X,
   CheckCircle2,
+  ShoppingBag,
 } from "lucide-react";
 
 export default function PortfolioPage() {
@@ -165,9 +166,11 @@ export default function PortfolioPage() {
                     <div className="absolute top-3 left-3 bg-[#101216]/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-white border border-gray-700">
                       {project.category}
                     </div>
-                    {project.status && (
-                      <div className="absolute top-3 right-3 bg-emerald-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow">
-                        {project.status}
+                    {(project.availabilityStatus || project.status) && (
+                      <div className={`absolute top-3 right-3 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow ${
+                        project.availabilityStatus === "Offline" ? "bg-red-700" : "bg-emerald-600"
+                      }`}>
+                        {project.availabilityStatus || project.status}
                       </div>
                     )}
                   </div>
@@ -197,7 +200,7 @@ export default function PortfolioPage() {
                   </div>
                 </div>
 
-                <div className="px-6 pb-6 pt-3 border-t border-gray-100 flex items-center justify-between">
+                <div className="px-6 pb-6 pt-3 border-t border-gray-100 flex flex-col gap-3">
                   {project.approvedPublicBudget ? (
                     <div>
                       <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider">
@@ -216,13 +219,22 @@ export default function PortfolioPage() {
                     <span className="text-xs text-gray-400 italic">Custom Enterprise Scope</span>
                   )}
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
                     <button
                       onClick={() => setModalProject(project)}
                       className="text-xs font-bold text-gray-600 hover:text-[#101216] bg-gray-100 hover:bg-gray-200 px-2.5 py-1.5 rounded-lg transition"
                     >
                       Details
                     </button>
+                    {project.templateAvailable !== false && (
+                      <Link
+                        href={`/templates?template=${encodeURIComponent(project.id)}`}
+                        className="text-xs font-bold text-white bg-[#E31E36] hover:bg-[#C8162D] px-3 py-1.5 rounded-lg inline-flex items-center gap-1 transition"
+                      >
+                        <ShoppingBag className="w-3 h-3" />
+                        Make it yours
+                      </Link>
+                    )}
                     {project.demoUrl && (
                       <a
                         href={project.demoUrl}
@@ -230,7 +242,7 @@ export default function PortfolioPage() {
                         rel="noopener noreferrer"
                         className="text-xs font-bold text-white bg-[#101216] hover:bg-[#E31E36] px-3 py-1.5 rounded-lg inline-flex items-center gap-1 transition"
                       >
-                        Live Website <ExternalLink className="w-3 h-3" />
+                        {project.availabilityStatus === "Offline" ? "Website Offline" : "Live Website"} <ExternalLink className="w-3 h-3" />
                       </a>
                     )}
                   </div>
@@ -333,26 +345,36 @@ export default function PortfolioPage() {
               )}
 
               <div className="pt-4 border-t border-gray-200 flex items-center justify-between">
-                {modalProject.demoUrl ? (
-                  <a
-                    href={modalProject.demoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-[#101216] hover:bg-black text-white px-5 py-2.5 rounded-xl font-bold text-xs"
+                <div className="flex flex-wrap items-center gap-2">
+                  {modalProject.demoUrl ? (
+                    <a
+                      href={modalProject.demoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 bg-[#101216] hover:bg-black text-white px-4 py-2.5 rounded-xl font-bold text-xs"
+                    >
+                      Visit Live Website <ExternalLink className="w-3.5 h-3.5 text-[#E31E36]" />
+                    </a>
+                  ) : (
+                    <span className="text-xs text-gray-400">Private Client Deployment</span>
+                  )}
+                  {modalProject.templateAvailable !== false && (
+                    <Link
+                      href={`/templates?template=${encodeURIComponent(modalProject.id)}`}
+                      className="inline-flex items-center gap-2 bg-[#E31E36] hover:bg-[#C8162D] text-white px-4 py-2.5 rounded-xl font-bold text-xs"
+                    >
+                      <ShoppingBag className="w-3.5 h-3.5" />
+                      Make it yours
+                    </Link>
+                  )}
+                  <Link
+                    href={`/calculator?inspiration=${encodeURIComponent(modalProject.title)}`}
+                    className="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-[#101216] px-4 py-2.5 rounded-xl font-bold text-xs"
                   >
-                    Visit Live Website <ExternalLink className="w-3.5 h-3.5 text-[#E31E36]" />
-                  </a>
-                ) : (
-                  <span className="text-xs text-gray-400">Private Client Deployment</span>
-                )}
-
-                <Link
-                  href={`/calculator?inspiration=${encodeURIComponent(modalProject.title)}`}
-                  className="inline-flex items-center gap-2 bg-[#E31E36] hover:bg-[#C8162D] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-glow"
-                >
-                  <Calculator className="w-3.5 h-3.5" />
-                  Estimate Similar Project
-                </Link>
+                    <Calculator className="w-3.5 h-3.5" />
+                    Estimate Similar Project
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

@@ -51,6 +51,7 @@ import {
   isVisitorAnalyticsEvent,
 } from "../src/lib/visitor-analytics";
 import {
+  applyPortfolioTemplateStartingPrice,
   detectWebsiteFeatures,
   estimateWebsite,
   ScannedPage,
@@ -59,6 +60,7 @@ import {
   calculateReviewedWebsiteEstimate,
   getDefaultNewBuildAddonIds,
 } from "../src/lib/website-estimate-review";
+import { getTemplateRequestPlans } from "../src/lib/template-pricing";
 import { notifyAdminOfSubmission, sendInquiryWhatsappConfirmation } from "../src/lib/admin-notifications";
 import {
   buildProjectBuildBriefRecord,
@@ -286,16 +288,25 @@ test("Addon selection and deduplication protects against double charges", () => 
   assert.equal(sum, 55000.0, "Sum of installments must equal 55,000.00 exactly");
 });
 
-test("One-time feature add-ons use the flat PKR 10,000 price while maintenance remains monthly", () => {
+test("E-commerce and SaaS rates upgrade legacy flat values while general add-ons remain fixed", () => {
   const merged = mergePricingConfigWithDefaults({
     addons: {
       ...DEFAULT_PRICING_CONFIG.addons,
       google_auth: { ...DEFAULT_PRICING_CONFIG.addons.google_auth, price: 23000 },
+      advanced_product_management: {
+        ...DEFAULT_PRICING_CONFIG.addons.advanced_product_management,
+        price: 10000,
+      },
+      multi_tenant_architecture: {
+        ...DEFAULT_PRICING_CONFIG.addons.multi_tenant_architecture,
+        price: 10000,
+      },
     },
   });
   assert.equal(merged.addons.google_auth.price, 10000);
   assert.equal(merged.addons.cms.price, 10000);
-  assert.equal(merged.addons.multi_tenant_architecture.price, 10000);
+  assert.equal(merged.addons.multi_tenant_architecture.price, 180000);
+  assert.equal(merged.addons.advanced_product_management.price, 40000);
   assert.equal(merged.addons.personal_domain.price, 10000);
 
   const calculation = calculateBudget("none", ["maintenance_updates", "cms"], merged);
@@ -307,18 +318,48 @@ test("One-time feature add-ons use the flat PKR 10,000 price while maintenance r
   );
 });
 
-test("Each selected feature add-on including a personal domain adds PKR 10,000", () => {
+test("General and e-commerce add-ons use their published default rates", () => {
   const calculation = calculateBudget("none", [
     "personal_domain",
     "cms",
     "order_tracking",
   ]);
-  assert.equal(calculation.addonsTotal, 30000);
-  assert.equal(calculation.estimatedTotal, 65000);
+  assert.equal(calculation.addonsTotal, 50000);
+  assert.equal(calculation.estimatedTotal, 85000);
   assert.deepEqual(
     calculation.selectedAddonDetails.map((addon) => addon.price),
-    [10000, 10000, 10000]
+    [10000, 10000, 30000]
   );
+});
+
+test("E-commerce add-on prices start at PKR 20,000 and scale across three plans", () => {
+  const ecommAddons = Object.values(DEFAULT_PRICING_CONFIG.addons).filter(
+    (addon) => addon.category === "ecommerce"
+  );
+  assert.ok(ecommAddons.every((addon) => addon.price >= 20000));
+
+  const starter = getEcommercePricingConfig(DEFAULT_PRICING_CONFIG, "ecommerce_starter");
+  const business = getEcommercePricingConfig(DEFAULT_PRICING_CONFIG, "ecommerce_business");
+  const advanced = getEcommercePricingConfig(DEFAULT_PRICING_CONFIG, "ecommerce_advanced");
+  assert.equal(starter.addons.wishlist.price, 20000);
+  assert.equal(business.addons.wishlist.price, 25000);
+  assert.equal(advanced.addons.wishlist.price, 30000);
+  assert.equal(calculateBudget("client_admin", ["wishlist"], starter).estimatedTotal, 120000);
+  assert.equal(calculateBudget("client_admin", ["wishlist"], business).estimatedTotal, 175000);
+  assert.equal(calculateBudget("client_admin", ["wishlist"], advanced).estimatedTotal, 230000);
+  assert.equal(ECOMMERCE_PACKAGES.ecommerce_starter.basePrice, 100000);
+});
+
+test("Selecting SaaS Enterprise and its full module set estimates around PKR 3,500,000", () => {
+  const saasAddonIds = Object.values(DEFAULT_PRICING_CONFIG.addons)
+    .filter((addon) => addon.category === "saas")
+    .map((addon) => addon.id);
+  const calculation = calculateBudget(
+    "client_admin",
+    saasAddonIds,
+    getSaasPricingConfig(DEFAULT_PRICING_CONFIG, "saas_enterprise")
+  );
+  assert.equal(calculation.estimatedTotal, 3506000);
 });
 
 test("Client admin and e-commerce packages do not double-charge included modules", () => {
@@ -519,6 +560,61 @@ test("Student Burgers portfolio updates the old seeded image but preserves admin
 
   assert.deepEqual(migratedImages, [project.imageUrl, project.imageUrl, project.imageUrl]);
   assert.equal(preservedImage, customImage.imageUrl);
+});
+
+test("Saved portfolio records default missing availability and template fields without overriding explicit choices", () => {
+  const seed = INITIAL_PORTFOLIO_PROJECTS[0];
+  const legacyProject = { ...seed };
+  delete (legacyProject as Partial<typeof seed>).availabilityStatus;
+  delete (legacyProject as Partial<typeof seed>).templateAvailable;
+
+  const defaulted = mergePortfolioSeedProjects([legacyProject]).find(
+    (project) => project.id === legacyProject.id
+  );
+  assert.ok(defaulted);
+  assert.equal(defaulted.availabilityStatus, "Online");
+  assert.equal(defaulted.templateAvailable, true);
+
+  const customized = mergePortfolioSeedProjects([
+    { ...legacyProject, availabilityStatus: "Offline", templateAvailable: false },
+  ]).find((project) => project.id === legacyProject.id);
+  assert.ok(customized);
+  assert.equal(customized.availabilityStatus, "Offline");
+  assert.equal(customized.templateAvailable, false);
+});
+
+test("GRILLVI legacy portfolio entry migrates to the unbranded template listing and its template price", () => {
+  const seed = INITIAL_PORTFOLIO_PROJECTS.find((project) => project.id === "grillvi-gtroad");
+  assert.ok(seed);
+  assert.equal(seed.title, "Restaurant Name - Restaurant Website Template");
+  assert.equal(seed.demoUrl, "https://gtroad1.vercel.app/");
+  assert.equal(seed.imageUrl, "https://gtroad1.vercel.app/images/family-sharing-thaal.jpg");
+  assert.equal(seed.approvedPublicBudget, 150000);
+  assert.equal(seed.budgetLabel, "Template Price");
+  assert.equal(seed.clientConsentForBudget, false);
+
+  const savedLegacyProject = {
+    ...seed,
+    title: "GRILLVI - Restaurant Website & Online Ordering",
+    shortDescription: "Live website for GRILLVI on Main GT Road, Lahore, featuring an online menu, ordering cart, and WhatsApp ordering.",
+    fullDescription: "A live restaurant website for GRILLVI, serving charcoal BBQ, rice thaals, and karahi in Baghbanpura, Lahore. Customers can browse the menu and food details, add items to a cart, place an order, and contact the restaurant through WhatsApp. The website also shares restaurant location, opening hours, and contact information.",
+    imageUrl: "https://grillvi-gtroad.vercel.app/images/restaurant-interior.jpg",
+    demoUrl: "https://grillvi-gtroad.vercel.app/",
+    approvedPublicBudget: 55000,
+    budgetLabel: "Actual Project Fee",
+    adminPanelIncluded: true,
+    includedAddonIds: ["supabase_db"],
+    clientConsentForBudget: true,
+  };
+  const migratedProject = mergePortfolioSeedProjects([savedLegacyProject]).find(
+    (project) => project.id === seed.id
+  );
+  assert.equal(migratedProject?.title, "Restaurant Name - Restaurant Website Template");
+  assert.equal(migratedProject?.imageUrl, seed.imageUrl);
+  assert.equal(migratedProject?.demoUrl, "https://gtroad1.vercel.app/");
+  assert.equal(migratedProject?.approvedPublicBudget, 150000);
+  assert.equal(migratedProject?.budgetLabel, "Template Price");
+  assert.equal(migratedProject?.clientConsentForBudget, false);
 });
 
 test("Client project installment schedule preserves the agreed total and clamps month ends", () => {
@@ -2031,6 +2127,66 @@ test("Restaurant cart with WhatsApp ordering selects E-Commerce and prices its Q
   assert.equal(reviewed.calculation.estimatedTotal, 160000);
 });
 
+test("Known template URL estimates stay anchored to the published starting price despite scan signal changes", async () => {
+  const template = INITIAL_PORTFOLIO_PROJECTS.find((project) => project.id === "grillvi-gtroad");
+  assert.ok(template);
+  const withoutQr = await estimateWebsite(
+    "https://gtroad1.vercel.app/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": `<title>Restaurant Name</title><h1>Menu</h1><button>Add to cart</button><a href="/checkout">Checkout</a>`,
+      "/sitemap.xml": `<urlset></urlset>`,
+    })
+  );
+  const withQr = await estimateWebsite(
+    "https://gtroad1.vercel.app/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": `<title>Restaurant Name</title><h1>Menu</h1><button>Add to cart</button><a href="/checkout">Checkout</a><p>Scan QR code from your table to order.</p>`,
+      "/sitemap.xml": `<urlset></urlset>`,
+    })
+  );
+
+  const normalizedEstimates = [withoutQr, withQr].map((estimate) =>
+    applyPortfolioTemplateStartingPrice(estimate, template, template.approvedPublicBudget || 0)
+  );
+  for (const estimate of normalizedEstimates) {
+    assert.equal(estimate.estimatedTotal, 150000);
+    assert.equal(estimate.basePrice, 150000);
+    assert.equal(estimate.suggestedPricingOptionId, "template_grillvi-gtroad");
+    assert.equal(estimate.matchedTemplateId, template.id);
+    assert.deepEqual(estimate.addons, []);
+    assert.deepEqual(getDefaultNewBuildAddonIds(estimate), []);
+    assert.ok(estimate.pricingOptions.every((option) =>
+      (option.adminPanelType === "client_admin" ? option.basePriceWithAdmin : option.basePrice) >= 150000
+    ));
+  }
+});
+
+test("Template request plans always use the template price as their minimum", () => {
+  const restaurantTemplate = INITIAL_PORTFOLIO_PROJECTS.find(
+    (project) => project.id === "grillvi-gtroad"
+  );
+  assert.ok(restaurantTemplate);
+  const restaurantPlans = getTemplateRequestPlans(restaurantTemplate);
+  assert.equal(restaurantPlans[0]?.price, 150000);
+  assert.equal(restaurantPlans[0]?.packageId, "ecommerce_business");
+  assert.ok(restaurantPlans.every((plan) => plan.price >= 150000));
+
+  const millionRupeeTemplate = {
+    ...restaurantTemplate,
+    approvedPublicBudget: 1_000_000,
+  };
+  const millionRupeePlans = getTemplateRequestPlans(millionRupeeTemplate);
+  assert.equal(millionRupeePlans[0]?.id, "template_starting");
+  assert.equal(millionRupeePlans[0]?.price, 1_000_000);
+  assert.ok(millionRupeePlans.every((plan) => plan.price >= 1_000_000));
+});
+
 test("URL estimator offers every published package and uses configured rates and add-ons", async () => {
   const configuredPricing: PricingRuleConfig = {
     ...DEFAULT_PRICING_CONFIG,
@@ -2068,6 +2224,7 @@ test("URL estimator offers every published package and uses configured rates and
     [
       "package_1",
       "package_2",
+      "ecommerce_starter",
       "ecommerce_business",
       "ecommerce_advanced",
       "saas_starter",
@@ -2316,6 +2473,10 @@ test("E-commerce packages use their published starting prices and advances", () 
       "ecommerce_advanced"
     ),
     ["ai_chatbot"]
+  );
+  assert.deepEqual(
+    getChargeableAddonIds(["inventory_management", "advanced_product_management"], "ecommerce_starter"),
+    ["inventory_management", "advanced_product_management"]
   );
 });
 

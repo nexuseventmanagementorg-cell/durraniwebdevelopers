@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { estimateWebsite } from "@/lib/website-estimator";
+import { applyPortfolioTemplateStartingPrice, estimateWebsite } from "@/lib/website-estimator";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getRegionalPricingConfig, isCurrencyCode } from "@/lib/currency";
 import { getExchangeRateSnapshot } from "@/lib/exchange-rates";
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const snapshot = requestedCurrency === "PKR" ? null : await getExchangeRateSnapshot();
-    const estimate = await estimateWebsite(
+    let estimate = await estimateWebsite(
       url.trim(),
       requestedCurrency,
       snapshot?.rates || { PKR: 1 },
@@ -67,6 +67,30 @@ export async function POST(request: NextRequest) {
       DataStore.getPricingConfig()
     );
     const sourceHost = new URL(estimate.url).hostname.toLowerCase();
+    const requestedHost = new URL(url.trim()).hostname.toLowerCase();
+    const templateProject = DataStore.getPortfolio(false).find((project) => {
+      if (
+        project.templateAvailable === false ||
+        project.budgetLabel !== "Template Price" ||
+        !project.approvedPublicBudget ||
+        !project.demoUrl
+      ) return false;
+      const demoHost = new URL(project.demoUrl).hostname.toLowerCase();
+      const legacyHosts: Record<string, string[]> = {
+        "grillvi-gtroad": ["grillvi-gtroad.vercel.app"],
+      };
+      const recognizedHosts = [demoHost, ...(legacyHosts[project.id] || [])];
+      return recognizedHosts.includes(sourceHost) || recognizedHosts.includes(requestedHost);
+    });
+    if (templateProject?.approvedPublicBudget) {
+      const rate = requestedCurrency === "PKR" ? 1 : snapshot?.rates[requestedCurrency];
+      if (!rate) throw new Error("Exchange rate is unavailable for the selected currency.");
+      estimate = applyPortfolioTemplateStartingPrice(
+        estimate,
+        templateProject,
+        Math.round(templateProject.approvedPublicBudget * rate * 100) / 100
+      );
+    }
     const historicalProject = DataStore.getPortfolio(false).find((project) => {
       if (
         !project.clientConsentForBudget ||

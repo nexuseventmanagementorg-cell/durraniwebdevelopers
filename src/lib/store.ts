@@ -34,21 +34,22 @@ interface DatabaseSchema {
 export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
   {
     id: "grillvi-gtroad",
-    title: "GRILLVI - Restaurant Website & Online Ordering",
+    title: "Restaurant Name - Restaurant Website Template",
     category: "Restaurant web applications",
-    shortDescription: "Live website for GRILLVI on Main GT Road, Lahore, featuring an online menu, ordering cart, and WhatsApp ordering.",
-    fullDescription: "A live restaurant website for GRILLVI, serving charcoal BBQ, rice thaals, and karahi in Baghbanpura, Lahore. Customers can browse the menu and food details, add items to a cart, place an order, and contact the restaurant through WhatsApp. The website also shares restaurant location, opening hours, and contact information.",
-    imageUrl: "https://grillvi-gtroad.vercel.app/images/restaurant-interior.jpg",
+    shortDescription: "A customizable restaurant website template with an online menu, ordering cart, and WhatsApp ordering.",
+    fullDescription: "A ready-made restaurant website demo with a replaceable restaurant name and tagline, online menu, food categories, cart, WhatsApp ordering, and restaurant information. Customize the branding, menu, images, and content for your own business.",
+    imageUrl: "https://gtroad1.vercel.app/images/family-sharing-thaal.jpg",
     technologies: ["Next.js", "Responsive Web Design", "Online Menu", "Online Ordering", "WhatsApp Ordering"],
     status: "Live",
-    demoUrl: "https://grillvi-gtroad.vercel.app/",
+    availabilityStatus: "Online",
+    templateAvailable: true,
+    templatePricingPackage: "ecommerce_business",
+    demoUrl: "https://gtroad1.vercel.app/",
     isPublic: true,
-    approvedPublicBudget: 55000,
-    budgetLabel: "Actual Project Fee",
-    adminPanelIncluded: true,
-    includedAddonIds: ["supabase_db"],
+    approvedPublicBudget: 150000,
+    budgetLabel: "Template Price",
     featured: true,
-    clientConsentForBudget: true,
+    clientConsentForBudget: false,
   },
   {
     id: "student-burgers-shawarmas",
@@ -59,6 +60,8 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     imageUrl: "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-1.webp",
     technologies: ["Next.js", "Responsive Web Design", "Digital Menu", "WhatsApp Ordering", "Dine-In Table QR"],
     status: "Live",
+    availabilityStatus: "Online",
+    templateAvailable: true,
     demoUrl: "https://student-burgers-and-shawarmas.vercel.app/",
     isPublic: true,
     approvedPublicBudget: 65000,
@@ -77,6 +80,21 @@ const LEGACY_PORTFOLIO_IMAGE_URLS: Record<string, string[]> = {
     "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-4.webp",
   ],
 };
+const LEGACY_PORTFOLIO_DEMO_URLS: Record<string, string> = {
+  "grillvi-gtroad": "https://grillvi-gtroad.vercel.app/",
+};
+const LEGACY_GRILLVI_PORTFOLIO_VALUES: Partial<PortfolioProject> = {
+  title: "GRILLVI - Restaurant Website & Online Ordering",
+  shortDescription: "Live website for GRILLVI on Main GT Road, Lahore, featuring an online menu, ordering cart, and WhatsApp ordering.",
+  fullDescription: "A live restaurant website for GRILLVI, serving charcoal BBQ, rice thaals, and karahi in Baghbanpura, Lahore. Customers can browse the menu and food details, add items to a cart, place an order, and contact the restaurant through WhatsApp. The website also shares restaurant location, opening hours, and contact information.",
+  imageUrl: "https://grillvi-gtroad.vercel.app/images/restaurant-interior.jpg",
+  technologies: ["Next.js", "Responsive Web Design", "Online Menu", "Online Ordering", "WhatsApp Ordering"],
+  approvedPublicBudget: 55000,
+  budgetLabel: "Actual Project Fee",
+  adminPanelIncluded: true,
+  includedAddonIds: ["supabase_db"],
+  clientConsentForBudget: true,
+};
 
 export function mergePortfolioSeedProjects(
   savedProjects: PortfolioProject[],
@@ -84,14 +102,38 @@ export function mergePortfolioSeedProjects(
 ): PortfolioProject[] {
   const updatedSavedProjects = savedProjects.map((savedProject) => {
     const seedProject = seedProjects.find((project) => project.id === savedProject.id);
-    if (
-      !seedProject ||
-      !LEGACY_PORTFOLIO_IMAGE_URLS[savedProject.id]?.includes(savedProject.imageUrl)
-    ) {
-      return savedProject;
-    }
+    const isLegacyGrillvi = savedProject.id === "grillvi-gtroad";
+    const isUnchangedLegacyValue = (field: keyof PortfolioProject) =>
+      isLegacyGrillvi &&
+      JSON.stringify(savedProject[field]) === JSON.stringify(LEGACY_GRILLVI_PORTFOLIO_VALUES[field]);
+    const migratedLegacyValue = <K extends keyof PortfolioProject>(field: K) =>
+      isUnchangedLegacyValue(field) && seedProject ? seedProject[field] : savedProject[field];
+    const imageUrl = seedProject && (
+      LEGACY_PORTFOLIO_IMAGE_URLS[savedProject.id]?.includes(savedProject.imageUrl) ||
+      isUnchangedLegacyValue("imageUrl")
+    )
+      ? seedProject.imageUrl
+      : savedProject.imageUrl;
+    const demoUrl = seedProject && LEGACY_PORTFOLIO_DEMO_URLS[savedProject.id] === savedProject.demoUrl
+      ? seedProject.demoUrl
+      : savedProject.demoUrl;
 
-    return { ...savedProject, imageUrl: seedProject.imageUrl };
+    return {
+      ...savedProject,
+      title: migratedLegacyValue("title"),
+      shortDescription: migratedLegacyValue("shortDescription"),
+      fullDescription: migratedLegacyValue("fullDescription"),
+      technologies: migratedLegacyValue("technologies"),
+      imageUrl,
+      demoUrl,
+      approvedPublicBudget: migratedLegacyValue("approvedPublicBudget"),
+      budgetLabel: migratedLegacyValue("budgetLabel"),
+      adminPanelIncluded: migratedLegacyValue("adminPanelIncluded"),
+      includedAddonIds: migratedLegacyValue("includedAddonIds"),
+      clientConsentForBudget: migratedLegacyValue("clientConsentForBudget"),
+      availabilityStatus: savedProject.availabilityStatus ?? seedProject?.availabilityStatus ?? "Online",
+      templateAvailable: savedProject.templateAvailable ?? seedProject?.templateAvailable ?? true,
+    };
   });
   const newSeedProjects = seedProjects.filter(
     (project) => !savedProjects.some((savedProject) => savedProject.id === project.id)

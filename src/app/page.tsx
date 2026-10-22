@@ -141,7 +141,7 @@ export default function HomePage() {
     },
     {
       q: "Can I customize the features and add special integrations?",
-      a: "Yes! The budget calculator lets you select optional add-ons like Google OAuth, Supabase PostgreSQL, payment integration, AI chatbots, personal domain setup, and bespoke workflows. Every selected one-time Pakistan feature add-on is PKR 10,000; each international add-on is a flat 100 units in the selected currency. Monthly maintenance is priced separately.",
+      a: "Yes! The budget calculator lets you select optional add-ons like Google OAuth, Supabase PostgreSQL, payment integration, AI chatbots, personal domain setup, and bespoke workflows. One-time add-on rates vary by feature complexity and selected e-commerce or SaaS plan; e-commerce add-ons start at PKR 20,000. International one-time add-ons use the published flat 100-unit estimate, and monthly maintenance is priced separately.",
     },
     {
       q: "How quickly can my web application be delivered?",
@@ -855,7 +855,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="px-6 pb-6 pt-3 border-t border-gray-800 flex items-center justify-between">
+                <div className="px-6 pb-6 pt-3 border-t border-gray-800 flex flex-col gap-3">
                   {item.approvedPublicBudget ? (
                     <div>
                       <span className="text-[10px] text-gray-400 block uppercase">
@@ -874,16 +874,27 @@ export default function HomePage() {
                     <span className="text-xs text-gray-500 italic">Custom Scope</span>
                   )}
 
-                  {item.demoUrl && (
-                    <a
-                      href={item.demoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-bold text-gray-300 hover:text-white inline-flex items-center gap-1"
-                    >
-                      Live Website <ExternalLink className="w-3 h-3 text-[#E31E36]" />
-                    </a>
-                  )}
+                  <div className="flex flex-wrap items-center justify-end gap-3">
+                    {item.templateAvailable !== false && (
+                      <Link
+                        href={`/templates?template=${encodeURIComponent(item.id)}`}
+                        className="text-xs font-bold text-[#ff6073] hover:text-white inline-flex items-center gap-1"
+                      >
+                        <ShoppingBag className="w-3 h-3" />
+                        Make it yours
+                      </Link>
+                    )}
+                    {item.demoUrl && (
+                      <a
+                        href={item.demoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-bold text-gray-300 hover:text-white inline-flex items-center gap-1"
+                      >
+                        Live Website <ExternalLink className="w-3 h-3 text-[#E31E36]" />
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

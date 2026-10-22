@@ -56,7 +56,11 @@ function defineAddon(
     id,
     label,
     category,
-    price: billingPeriod === "monthly" ? price : FEATURE_ADDON_PRICE_PKR,
+    price: billingPeriod === "monthly" ||
+      category === "ecommerce" ||
+      category === "saas"
+      ? price
+      : FEATURE_ADDON_PRICE_PKR,
     description,
     enabled: true,
     billingPeriod,
@@ -84,40 +88,40 @@ export const EXTENDED_ADDONS: AddonOption[] = [
   defineAddon("audit_trail", "Audit Trail", "business", 20000, "Detailed record of who changed important data and when."),
   defineAddon("api_integration", "API Integration", "business", 15000, "Exchange data with an agreed external service; complex integrations are scoped separately."),
 
-  defineAddon("advanced_product_management", "Advanced Product Management", "ecommerce", 15000, "Manage product variants, SKUs, stock, and product attributes."),
-  defineAddon("inventory_management", "Inventory Management", "ecommerce", 15000, "Track stock quantities and configure low-stock alerts."),
-  defineAddon("discount_coupons", "Discount & Coupon System", "ecommerce", 10000, "Create promotional codes and apply discount rules to orders."),
-  defineAddon("wishlist", "Wishlist", "ecommerce", 10000, "Let customers save products to revisit later."),
-  defineAddon("product_reviews", "Product Reviews & Ratings", "ecommerce", 10000, "Collect product ratings and provide review moderation."),
-  defineAddon("shipping_rules", "Shipping & Delivery Rules", "ecommerce", 15000, "Calculate delivery charges by area, weight, or order total."),
-  defineAddon("order_tracking", "Order Tracking", "ecommerce", 15000, "Show customers order status and tracking information."),
-  defineAddon("abandoned_cart", "Abandoned Cart Recovery", "ecommerce", 20000, "Create a recovery workflow for unfinished shopping carts."),
-  defineAddon("invoice_receipts", "Invoice & Receipt Generator", "ecommerce", 10000, "Generate downloadable PDF order invoices and receipts."),
-  defineAddon("product_qr_codes", "Product QR Codes", "ecommerce", 10000, "Generate product QR codes and printable labels."),
-  defineAddon("loyalty_rewards", "Customer Loyalty / Rewards", "ecommerce", 20000, "Reward repeat customers with points and loyalty benefits."),
-  defineAddon("bulk_product_import", "Bulk Product Import", "ecommerce", 15000, "Import and update product catalogs from CSV or Excel files."),
-  defineAddon("product_comparison", "Product Comparison", "ecommerce", 10000, "Compare selected products and their attributes side by side."),
-  defineAddon("multi_warehouse", "Multiple Warehouses", "ecommerce", 30000, "Track stock across multiple storage locations; final scope may vary."),
+  defineAddon("advanced_product_management", "Advanced Product Management", "ecommerce", 40000, "Manage product variants, SKUs, stock, and product attributes."),
+  defineAddon("inventory_management", "Inventory Management", "ecommerce", 30000, "Track stock quantities and configure low-stock alerts."),
+  defineAddon("discount_coupons", "Discount & Coupon System", "ecommerce", 25000, "Create promotional codes and apply discount rules to orders."),
+  defineAddon("wishlist", "Wishlist", "ecommerce", 20000, "Let customers save products to revisit later."),
+  defineAddon("product_reviews", "Product Reviews & Ratings", "ecommerce", 25000, "Collect product ratings and provide review moderation."),
+  defineAddon("shipping_rules", "Shipping & Delivery Rules", "ecommerce", 40000, "Calculate delivery charges by area, weight, or order total."),
+  defineAddon("order_tracking", "Order Tracking", "ecommerce", 30000, "Show customers order status and tracking information."),
+  defineAddon("abandoned_cart", "Abandoned Cart Recovery", "ecommerce", 50000, "Create a recovery workflow for unfinished shopping carts."),
+  defineAddon("invoice_receipts", "Invoice & Receipt Generator", "ecommerce", 25000, "Generate downloadable PDF order invoices and receipts."),
+  defineAddon("product_qr_codes", "Product QR Codes", "ecommerce", 20000, "Generate product QR codes and printable labels."),
+  defineAddon("loyalty_rewards", "Customer Loyalty / Rewards", "ecommerce", 50000, "Reward repeat customers with points and loyalty benefits."),
+  defineAddon("bulk_product_import", "Bulk Product Import", "ecommerce", 35000, "Import and update product catalogs from CSV or Excel files."),
+  defineAddon("product_comparison", "Product Comparison", "ecommerce", 25000, "Compare selected products and their attributes side by side."),
+  defineAddon("multi_warehouse", "Multiple Warehouses", "ecommerce", 80000, "Track stock across multiple storage locations; final scope may vary."),
 
-  defineAddon("multi_tenant_architecture", "Multi-Tenant Architecture", "saas", 50000, "Separate business workspaces and enforce tenant data boundaries."),
-  defineAddon("subscription_plans", "Subscription & Plan Management", "saas", 30000, "Configure Free, Basic, Pro, or Enterprise plans, limits, and status."),
-  defineAddon("usage_metering", "Usage Limits & Metering", "saas", 20000, "Track users, storage, products, API calls, or usage credits."),
-  defineAddon("saas_super_admin", "Super Admin Panel", "saas", 25000, "Manage platform businesses, users, plans, and account status."),
-  defineAddon("vendor_management", "Vendor Management System", "saas", 30000, "Manage seller registration, shop profiles, listings, and orders."),
-  defineAddon("commission_payouts", "Commission & Payout Management", "saas", 25000, "Calculate seller commissions, payable balances, and settlements."),
-  defineAddon("team_invitations", "Team Members & Invitations", "saas", 15000, "Invite team members and assign workspace roles."),
-  defineAddon("white_label", "White-Label Branding", "saas", 25000, "Configure supported client-specific logos, colors, and branding."),
-  defineAddon("automated_onboarding", "Automated Onboarding", "saas", 15000, "Guide new accounts through setup steps and initial configuration."),
-  defineAddon("trial_expiry", "Trial Periods & Plan Expiry", "saas", 15000, "Configure trial windows, expiration states, and plan transitions."),
-  defineAddon("referral_affiliate", "Referral / Affiliate System", "saas", 25000, "Track referral links, attribution, and agreed reward rules."),
-  defineAddon("usage_based_billing", "Usage-Based Billing Calculations", "saas", 30000, "Calculate charges from configured usage metrics and billing rules."),
-  defineAddon("tenant_domains", "Tenant-Specific Custom Domains", "saas", 30000, "Connect and manage approved custom domains for tenant workspaces."),
-  defineAddon("data_import_export", "Data Import / Export Tools", "saas", 15000, "Move tenant data through agreed import and export formats."),
-  defineAddon("feature_flags", "Feature Flags & Plan-Based Access", "saas", 20000, "Control features and access according to account plans."),
-  defineAddon("in_app_notifications", "In-App Notifications", "saas", 10000, "Show account and workflow notifications inside the application."),
-  defineAddon("support_tickets", "Support Ticket System", "saas", 20000, "Create and manage customer support requests and responses."),
-  defineAddon("knowledge_base", "Customer Help Center / Knowledge Base", "saas", 15000, "Publish searchable help articles and customer guidance."),
-  defineAddon("platform_audit_monitoring", "Platform-Wide Audit & Monitoring", "saas", 25000, "Track platform-wide operational events and important changes."),
+  defineAddon("multi_tenant_architecture", "Multi-Tenant Architecture", "saas", 180000, "Separate business workspaces and enforce tenant data boundaries."),
+  defineAddon("subscription_plans", "Subscription & Plan Management", "saas", 120000, "Configure Free, Basic, Pro, or Enterprise plans, limits, and status."),
+  defineAddon("usage_metering", "Usage Limits & Metering", "saas", 90000, "Track users, storage, products, API calls, or usage credits."),
+  defineAddon("saas_super_admin", "Super Admin Panel", "saas", 125000, "Manage platform businesses, users, plans, and account status."),
+  defineAddon("vendor_management", "Vendor Management System", "saas", 150000, "Manage seller registration, shop profiles, listings, and orders."),
+  defineAddon("commission_payouts", "Commission & Payout Management", "saas", 100000, "Calculate seller commissions, payable balances, and settlements."),
+  defineAddon("team_invitations", "Team Members & Invitations", "saas", 60000, "Invite team members and assign workspace roles."),
+  defineAddon("white_label", "White-Label Branding", "saas", 100000, "Configure supported client-specific logos, colors, and branding."),
+  defineAddon("automated_onboarding", "Automated Onboarding", "saas", 60000, "Guide new accounts through setup steps and initial configuration."),
+  defineAddon("trial_expiry", "Trial Periods & Plan Expiry", "saas", 50000, "Configure trial windows, expiration states, and plan transitions."),
+  defineAddon("referral_affiliate", "Referral / Affiliate System", "saas", 90000, "Track referral links, attribution, and agreed reward rules."),
+  defineAddon("usage_based_billing", "Usage-Based Billing Calculations", "saas", 140000, "Calculate charges from configured usage metrics and billing rules."),
+  defineAddon("tenant_domains", "Tenant-Specific Custom Domains", "saas", 80000, "Connect and manage approved custom domains for tenant workspaces."),
+  defineAddon("data_import_export", "Data Import / Export Tools", "saas", 70000, "Move tenant data through agreed import and export formats."),
+  defineAddon("feature_flags", "Feature Flags & Plan-Based Access", "saas", 70000, "Control features and access according to account plans."),
+  defineAddon("in_app_notifications", "In-App Notifications", "saas", 50000, "Show account and workflow notifications inside the application."),
+  defineAddon("support_tickets", "Support Ticket System", "saas", 80000, "Create and manage customer support requests and responses."),
+  defineAddon("knowledge_base", "Customer Help Center / Knowledge Base", "saas", 50000, "Publish searchable help articles and customer guidance."),
+  defineAddon("platform_audit_monitoring", "Platform-Wide Audit & Monitoring", "saas", 125000, "Track platform-wide operational events and important changes."),
 
   defineAddon("ai_product_recommendations", "AI Product Recommendations", "ai", 25000, "Suggest products based on configured customer interest signals."),
   defineAddon("ai_content_assistant", "AI Content Assistant", "ai", 15000, "Generate product descriptions and content drafts with an AI provider."),
@@ -244,18 +248,38 @@ export function mergePricingConfigWithDefaults(
   return {
     ...DEFAULT_PRICING_CONFIG,
     ...config,
-    addons: Object.fromEntries(
-      Object.entries(addons).map(([id, addon]) => [
+    addons: Object.fromEntries(Object.entries(addons).map(([id, addon]) => {
+      const defaultAddon = DEFAULT_PRICING_CONFIG.addons[id];
+      const planSpecificAddon = addon.category === "ecommerce" || addon.category === "saas";
+      const isLegacyFlatPrice =
+        addon.billingPeriod !== "monthly" &&
+        addon.price === FEATURE_ADDON_PRICE_PKR &&
+        planSpecificAddon &&
+        (defaultAddon?.price || 0) > FEATURE_ADDON_PRICE_PKR;
+      return [
         id,
-        addon.billingPeriod === "monthly"
-          ? addon
-          : { ...addon, price: FEATURE_ADDON_PRICE_PKR },
-      ])
-    ),
+        {
+          ...defaultAddon,
+          ...addon,
+          ...(addon.billingPeriod === "monthly" || planSpecificAddon
+            ? isLegacyFlatPrice
+              ? { price: defaultAddon.price }
+              : planSpecificAddon
+                ? { price: Math.max(addon.price, addon.category === "ecommerce" ? 20000 : 50000) }
+                : {}
+            : { price: FEATURE_ADDON_PRICE_PKR }),
+        },
+      ];
+    })),
   };
 }
 
 export const ECOMMERCE_PACKAGES = {
+  ecommerce_starter: {
+    label: "E-Commerce Starter",
+    basePrice: 100000,
+    advance: 40000,
+  },
   ecommerce_business: {
     label: "E-Commerce Business",
     basePrice: 150000,
@@ -295,12 +319,50 @@ export type SaasPackageId = keyof typeof SAAS_PACKAGES;
 export type PricingPackageId = EcommercePackageId | SaasPackageId;
 
 const PACKAGE_INCLUDED_ADDONS: Record<PricingPackageId, string[]> = {
+  ecommerce_starter: ["supabase_db", "payment_gateway", "admin_dashboard", "order_invoice_management"],
   ecommerce_business: ["supabase_db", "payment_gateway", "admin_dashboard", "advanced_product_management", "inventory_management", "order_invoice_management"],
   ecommerce_advanced: ["supabase_db", "payment_gateway", "advanced_dashboard", "admin_dashboard", "advanced_product_management", "inventory_management", "order_invoice_management"],
   saas_starter: ["supabase_db", "google_auth"],
   saas_business: ["supabase_db", "google_auth", "payment_gateway", "advanced_dashboard"],
   saas_enterprise: ["supabase_db", "google_auth", "payment_gateway", "advanced_dashboard"],
 };
+
+const PACKAGE_ADDON_MULTIPLIERS: Record<PricingPackageId, number> = {
+  ecommerce_starter: 1,
+  ecommerce_business: 1.25,
+  ecommerce_advanced: 1.5,
+  saas_starter: 1,
+  saas_business: 1.2,
+  saas_enterprise: 1.4,
+};
+
+export function getAddonPriceForPackage(
+  addon: AddonOption,
+  packageId?: PricingPackageId | null
+): number {
+  if (!packageId || addon.billingPeriod === "monthly") return addon.price;
+  const matchingCategory =
+    (isEcommercePackageId(packageId) && addon.category === "ecommerce") ||
+    (isSaasPackageId(packageId) && addon.category === "saas");
+  return matchingCategory
+    ? Math.round(addon.price * PACKAGE_ADDON_MULTIPLIERS[packageId])
+    : addon.price;
+}
+
+function withPackageAddonPrices(
+  config: PricingRuleConfig,
+  packageId: PricingPackageId
+): PricingRuleConfig {
+  return {
+    ...config,
+    addons: Object.fromEntries(
+      Object.entries(config.addons).map(([id, addon]) => [
+        id,
+        { ...addon, price: getAddonPriceForPackage(addon, packageId) },
+      ])
+    ),
+  };
+}
 
 export function isEcommercePackageId(value: unknown): value is EcommercePackageId {
   return typeof value === "string" && value in ECOMMERCE_PACKAGES;
@@ -330,7 +392,7 @@ export function getEcommercePricingConfig(
 ): PricingRuleConfig {
   const ecommercePackage = ECOMMERCE_PACKAGES[packageId];
   return {
-    ...config,
+    ...withPackageAddonPrices(config, packageId),
     baseWithoutAdmin: ecommercePackage.basePrice,
     baseWithAdmin: ecommercePackage.basePrice,
     advanceDefault: ecommercePackage.advance,
@@ -343,7 +405,7 @@ export function getSaasPricingConfig(
 ): PricingRuleConfig {
   const saasPackage = SAAS_PACKAGES[packageId];
   return {
-    ...config,
+    ...withPackageAddonPrices(config, packageId),
     baseWithoutAdmin: saasPackage.basePrice,
     baseWithAdmin: saasPackage.basePrice,
     advanceDefault: saasPackage.advance,

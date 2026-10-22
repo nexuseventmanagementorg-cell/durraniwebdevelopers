@@ -38,6 +38,9 @@ export default function AdminPortfolioPage() {
   const [approvedBudget, setApprovedBudget] = useState("");
   const [budgetLabel, setBudgetLabel] = useState("Starting Package with Admin Panel");
   const [clientConsent, setClientConsent] = useState(true);
+  const [availabilityStatus, setAvailabilityStatus] = useState<"Online" | "Offline">("Online");
+  const [templateAvailable, setTemplateAvailable] = useState(true);
+  const [projectStatus, setProjectStatus] = useState<PortfolioProject["status"]>("Live");
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
@@ -91,6 +94,9 @@ export default function AdminPortfolioPage() {
     setApprovedBudget("45000");
     setBudgetLabel("Starting Package with Admin Panel");
     setClientConsent(true);
+    setAvailabilityStatus("Online");
+    setTemplateAvailable(true);
+    setProjectStatus("Live");
     setModalOpen(true);
   };
 
@@ -107,6 +113,9 @@ export default function AdminPortfolioPage() {
     setApprovedBudget(item.approvedPublicBudget ? String(item.approvedPublicBudget) : "");
     setBudgetLabel(item.budgetLabel || "Starting Package");
     setClientConsent(Boolean(item.clientConsentForBudget));
+    setAvailabilityStatus(item.availabilityStatus || "Online");
+    setTemplateAvailable(item.templateAvailable !== false);
+    setProjectStatus(item.status);
     setModalOpen(true);
   };
 
@@ -132,6 +141,9 @@ export default function AdminPortfolioPage() {
         approvedPublicBudget: approvedBudget ? Number(approvedBudget) : undefined,
         budgetLabel,
         clientConsentForBudget: clientConsent,
+        availabilityStatus,
+        templateAvailable,
+        status: projectStatus,
       };
 
       const res = await fetch("/api/admin/portfolio", {
@@ -270,6 +282,18 @@ export default function AdminPortfolioPage() {
                           : "Hidden"}
                       </strong>
                     </div>
+                    <div className="pt-1 text-xs flex justify-between items-center text-gray-500">
+                      <span>Website:</span>
+                      <strong className={item.availabilityStatus === "Offline" ? "text-red-600" : "text-emerald-600"}>
+                        {item.availabilityStatus || "Online"}
+                      </strong>
+                    </div>
+                    <div className="pt-1 text-xs flex justify-between items-center text-gray-500">
+                      <span>Template:</span>
+                      <strong className={item.templateAvailable === false ? "text-gray-500" : "text-blue-600"}>
+                        {item.templateAvailable === false ? "Sold / unavailable" : "Available"}
+                      </strong>
+                    </div>
                   </div>
                 </div>
 
@@ -369,6 +393,41 @@ export default function AdminPortfolioPage() {
                   className="w-full bg-[#F4F5F7] px-3 py-2 rounded-xl border border-gray-300 text-[#101216]"
                   required
                 />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Website Availability</label>
+                <select
+                  value={availabilityStatus}
+                  onChange={(event) => setAvailabilityStatus(event.target.value as "Online" | "Offline")}
+                  className="w-full bg-[#F4F5F7] px-3 py-2 rounded-xl border border-gray-300 text-[#101216]"
+                >
+                  <option value="Online">Online</option>
+                  <option value="Offline">Offline</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Project Status</label>
+                <select
+                  value={projectStatus}
+                  onChange={(event) => setProjectStatus(event.target.value as PortfolioProject["status"])}
+                  className="w-full bg-[#F4F5F7] px-3 py-2 rounded-xl border border-gray-300 text-[#101216]"
+                >
+                  <option value="Live">Live</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Delivered">Delivered</option>
+                </select>
+              </div>
+              <label className="flex items-center gap-2 pt-5 font-bold text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={templateAvailable}
+                  onChange={(event) => setTemplateAvailable(event.target.checked)}
+                  className="accent-[#E31E36]"
+                />
+                Available as a template
+              </label>
               </div>
 
               <div>

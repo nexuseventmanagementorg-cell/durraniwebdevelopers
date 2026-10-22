@@ -2,6 +2,7 @@ import {
   calculateBudget,
   DEFAULT_PRICING_CONFIG,
   getChargeableAddonIds,
+  getAddonPriceForPackage,
 } from "./constants";
 import type {
   ExistingFeatureScope,
@@ -60,7 +61,12 @@ export function calculateReviewedWebsiteEstimate(
           id: addon.id,
           label: addon.title,
           description: addon.description,
-          price: addon.price,
+          price: scopeMode === "new_build" && estimate.currency === "PKR" && addon.basePrice !== undefined
+            ? getAddonPriceForPackage(
+                { ...DEFAULT_PRICING_CONFIG.addons[addon.id], price: addon.basePrice },
+                pricingPackage
+              )
+            : addon.price,
           billingPeriod: addon.billingPeriod,
           enabled: true,
         },
@@ -92,7 +98,7 @@ export function getDefaultNewBuildAddonIds(
   const enabledAddonIds = new Set(estimate.addonCatalog.map((addon) => addon.id));
   return Array.from(new Set(
     [
-      ...estimate.features.map((feature) => feature.addonId),
+      ...(estimate.matchedTemplateId ? [] : estimate.features.map((feature) => feature.addonId)),
       ...estimate.addons.map((addon) => addon.id),
     ].filter((addonId): addonId is string => Boolean(addonId && enabledAddonIds.has(addonId)))
   ));

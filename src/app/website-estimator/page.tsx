@@ -85,6 +85,9 @@ export default function WebsiteEstimatorPage() {
         return `/calculator?${params.toString()}`;
       })()
     : "/calculator";
+  const nextStepUrl = estimate?.matchedTemplateId
+      ? `/templates?template=${encodeURIComponent(estimate.matchedTemplateId)}`
+      : calculatorUrl;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -553,10 +556,13 @@ export default function WebsiteEstimatorPage() {
                 </p>
               )}
               <Link
-                href={calculatorUrl}
+                href={nextStepUrl}
                 className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#101216] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#E31E36] transition"
               >
-                Is tarah ki website apne brand ke liye banwayein <ArrowRight className="w-3.5 h-3.5" />
+                {estimate.matchedTemplateId
+                  ? "Is template ko apne brand ke liye customize karein"
+                  : "Is tarah ki website apne brand ke liye banwayein"}
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </section>
           </div>

@@ -105,7 +105,7 @@ export default function AdminPricingPage() {
       <main className="flex-1 ml-64 min-h-screen flex flex-col">
         <AdminHeader
           title="Pricing Rules & Calculator Engine"
-          subtitle="Adjust base packages and payment terms, manage add-on availability, and keep the PKR 10,000 one-time feature add-on rate consistent"
+          subtitle="Adjust base packages, payment terms, and feature-specific add-on rates"
         />
 
         <div className="p-6 space-y-6 flex-1">
@@ -213,7 +213,7 @@ export default function AdminPricingPage() {
                     Modular Add-on Feature Pricing (Step 6 Additions)
                   </h3>
                   <p className="text-xs text-gray-500">
-                    Every one-time feature add-on is fixed at PKR 10,000. Monthly maintenance retains its separate recurring rate; you can still toggle add-on availability.
+                    E-commerce add-ons start at PKR 20,000 and SaaS modules use higher feature rates. E-commerce plans apply ×1.0 / ×1.25 / ×1.5; SaaS plans apply ×1.0 / ×1.2 / ×1.4 from Starter to Enterprise. Other one-time add-ons remain PKR 10,000; monthly maintenance retains its recurring rate.
                   </p>
                 </div>
 
@@ -258,10 +258,26 @@ export default function AdminPricingPage() {
                               required
                             />
                           </>
+                        ) : addon.category === "ecommerce" || addon.category === "saas" ? (
+                          <>
+                            <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                              One-time Add-on Price (PKR)
+                            </label>
+                            <input
+                              type="number"
+                              min={addon.category === "ecommerce" ? 20000 : 50000}
+                              value={addon.price}
+                              onChange={(e) =>
+                                handleUpdateAddonPrice(addon.id, Number(e.target.value))
+                              }
+                              className="w-full bg-white px-3 py-2 rounded-xl border border-gray-300 font-bold text-[#E31E36]"
+                              required
+                            />
+                          </>
                         ) : (
                           <>
                             <label className="block text-[11px] font-bold text-gray-600 mb-1">
-                              One-time Feature Add-on Price
+                              One-time Add-on Price
                             </label>
                             <p className="w-full bg-white px-3 py-2 rounded-xl border border-gray-300 font-bold text-[#E31E36]">
                               {formatPKR(FEATURE_ADDON_PRICE_PKR)}

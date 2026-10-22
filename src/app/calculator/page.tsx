@@ -7,7 +7,6 @@ import confetti from "canvas-confetti";
 import {
   ADDON_CATEGORY_LABELS,
   DEFAULT_PRICING_CONFIG,
-  FEATURE_ADDON_PRICE_PKR,
   calculateBudget,
   BUSINESS_INFO,
   buildWhatsAppLink,
@@ -114,7 +113,9 @@ function CalculatorContent() {
             ? "business-tools"
             : initialType ? "not-sure" : "business-site";
   const initialGuideBudget: BeginnerBudgetBand =
-    initialConfiguredPackage === "ecommerce_business" || initialConfiguredPackage === "saas_starter"
+    initialConfiguredPackage === "ecommerce_starter" ||
+    initialConfiguredPackage === "ecommerce_business" ||
+    initialConfiguredPackage === "saas_starter"
       ? "150-300k"
       : initialConfiguredPackage === "ecommerce_advanced" ||
           initialConfiguredPackage === "saas_business" ||
@@ -260,8 +261,10 @@ function CalculatorContent() {
   const [isNewOrUpgrade, setIsNewOrUpgrade] = useState<"new" | "upgrade">("new");
   const [preferredLaunchDate, setPreferredLaunchDate] = useState("Within 3 to 4 weeks");
   const [expectedBudgetRange, setExpectedBudgetRange] = useState(
-    initialConfiguredPackage === "ecommerce_advanced"
-      ? "ecommerce-advanced"
+    initialConfiguredPackage === "ecommerce_starter"
+      ? "ecommerce-starter"
+      : initialConfiguredPackage === "ecommerce_advanced"
+        ? "ecommerce-advanced"
       : initialConfiguredPackage === "ecommerce_business" ||
           (initialType ? isEcommerceProjectType(initialType) : false)
         ? "ecommerce-business"
@@ -374,6 +377,10 @@ function CalculatorContent() {
       { value: "admin", label: `${formatPrice(45000)} - ${formatPrice(65000)} (Client Admin & Add-ons)` },
       { value: "advanced", label: `${formatPrice(65000)} - ${formatPrice(95000)} (Advanced / Custom)` },
       { value: "enterprise", label: `${formatPrice(100000)}+ (Enterprise systems)` },
+      {
+        value: "ecommerce-starter",
+        label: `${formatPrice(100000)}+ (E-Commerce Starter)`,
+      },
       {
         value: "ecommerce-business",
         label: `${formatPrice(150000)}+ (E-Commerce Business starting)`,
@@ -1706,14 +1713,14 @@ function CalculatorContent() {
               <p className="text-xs text-gray-600 mt-1">
                 {selectedPricingPackage
                   ? selectedIsEcommerce
-                    ? "Both store plans include a client admin dashboard, product and order management, and the core features shown on the pricing page. Advanced pricing depends on your final scope."
+                    ? "Each store plan includes a client admin dashboard and core shopping workflows; included features and add-on rates vary by plan."
                     : "Choose a SaaS marketplace plan. Each plan includes its listed platform, vendor-management, and administration features; Enterprise is a starting price."
                   : "Choose whether you need a dedicated client dashboard or prefer our team to manage backend updates exclusively."}
               </p>
             </div>
 
             {selectedPricingPackage ? (
-              <div className={`grid grid-cols-1 ${selectedIsEcommerce ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-3"} gap-4`}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {selectablePricingPackages.map((packageId) => {
                   const packageDetails = selectedIsEcommerce
                     ? ECOMMERCE_PACKAGES[packageId as keyof typeof ECOMMERCE_PACKAGES]
@@ -1748,7 +1755,9 @@ function CalculatorContent() {
                           </strong>
                         </div>
                         <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                          {packageId === "ecommerce_business"
+                          {packageId === "ecommerce_starter"
+                            ? "A focused online store with an essential catalog, cart, checkout, admin dashboard, and order workflow."
+                            : packageId === "ecommerce_business"
                             ? "Professional online store, shopping cart, secure checkout, client admin dashboard, inventory, and order management. Starting package price."
                             : packageId === "ecommerce_advanced"
                               ? "Advanced store workflows, analytics, gateway and courier integrations, and custom features. Starting price; final scope is PKR 200,000–300,000."
@@ -1874,7 +1883,7 @@ function CalculatorContent() {
                 Optional Advanced Features & Add-ons
               </h2>
               <p className="text-xs text-gray-600 mt-1">
-                Every selected one-time feature add-on is PKR 10,000. A personal domain (.com, .pk, etc.) is a separate PKR 10,000 setup add-on; registrar purchase and renewal fees are separate. Monthly maintenance is shown separately.
+                Add-on prices vary by feature complexity and selected e-commerce or SaaS plan. E-commerce add-ons start at PKR 20,000. Personal domain setup is PKR 10,000; registrar purchase and renewal fees are separate. Monthly maintenance is shown separately.
               </p>
             </div>
 
@@ -1922,7 +1931,7 @@ function CalculatorContent() {
                         <strong className={`text-xs font-black ${isIncluded ? "text-emerald-700" : "text-[#E31E36]"}`}>
                           {isIncluded
                             ? "Included"
-                            : `+${formatEstimate(addon.billingPeriod === "monthly" ? addon.price : FEATURE_ADDON_PRICE_PKR)}${addon.billingPeriod === "monthly" ? " / month" : ""}`}
+                            : `+${formatEstimate(addon.price)}${addon.billingPeriod === "monthly" ? " / month" : ""}`}
                         </strong>
                       </div>
                       <h4 className="font-extrabold text-xs text-[#101216] mb-1">
@@ -2011,7 +2020,7 @@ function CalculatorContent() {
                     <div key={item.id} className="flex justify-between items-center text-gray-700">
                       <span>• {item.label}</span>
                       <strong className="text-gray-900 font-bold">
-                        +{formatEstimate(item.billingPeriod === "monthly" ? item.price : FEATURE_ADDON_PRICE_PKR)}
+                        +{formatEstimate(item.price)}
                         {item.billingPeriod === "monthly" ? " / month" : ""}
                       </strong>
                     </div>

@@ -21,6 +21,7 @@ import {
   Globe,
   CreditCard,
   Users,
+  Store,
 } from "lucide-react";
 
 export default function Header() {
@@ -36,6 +37,7 @@ export default function Header() {
     { name: "Services", href: "/services", icon: Layers },
     { name: "AI Workforce", href: "/workforce", icon: Users },
     { name: "Portfolio", href: "/portfolio", icon: Briefcase },
+    { name: "Website Templates", href: "/templates", icon: Store },
     { name: "Pricing & Rates", href: "/pricing", icon: Sparkles },
     { name: "Budget Calculator", href: "/calculator", icon: Calculator },
     { name: "URL Budget Estimator", href: "/website-estimator", icon: Globe },

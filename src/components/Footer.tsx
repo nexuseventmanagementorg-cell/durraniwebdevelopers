@@ -192,6 +192,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/templates" className="hover:text-white transition">
+                  Ready-Made Website Templates
+                </Link>
+              </li>
+              <li>
                 <Link href="/pricing" className="hover:text-white transition">
                   Starting Packages & Installments
                 </Link>
