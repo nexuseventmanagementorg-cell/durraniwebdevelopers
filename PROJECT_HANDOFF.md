@@ -1516,6 +1516,6 @@ This implementation supersedes the audit-only recommendation above. The user aut
 
 ### Student Burgers portfolio image correction (2026-10-22)
 
-- Replaced the generic hero image with the current branded `Regular Shawarma` product image displayed on the live site's homepage: `https://student-burgers-and-shawarmas.vercel.app/images/products/chicken-shawarma-s.webp`.
-- Added a seed migration so deployments with the previous portfolio image update to this current image while administrator-selected custom images remain unchanged.
+- Replaced the shawarma-only product photo with the current `Zinger Burger + Fries` deal image (`/images/deals/deal-4.webp`), which clearly shows the Student Burgers & Shawarmas branding/logo.
+- Added a seed migration so deployments with either previous seeded image update to this branded deal image while administrator-selected custom images remain unchanged.
 - Validation: **104 tests passed**, TypeScript and production build passed; the local public portfolio API returned the new image URL and retained the PKR 65,000 budget.

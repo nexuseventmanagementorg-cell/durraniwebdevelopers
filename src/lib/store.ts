@@ -56,7 +56,7 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     category: "Restaurant web applications",
     shortDescription: "Restaurant website with a digital menu, WhatsApp ordering, and dine-in table QR access.",
     fullDescription: "A live restaurant website for Student Burgers & Shawarmas in Ramgarh, Lahore. Customers can browse its menu and student deals, order directly through WhatsApp, or scan a table QR code for dine-in. The project budget is PKR 65,000. The website uses a Vercel subdomain; a personal domain and its registration are not included.",
-    imageUrl: "https://student-burgers-and-shawarmas.vercel.app/images/products/chicken-shawarma-s.webp",
+    imageUrl: "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-4.webp",
     technologies: ["Next.js", "Responsive Web Design", "Digital Menu", "WhatsApp Ordering", "Dine-In Table QR"],
     status: "Live",
     demoUrl: "https://student-burgers-and-shawarmas.vercel.app/",
@@ -70,9 +70,11 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
-const LEGACY_PORTFOLIO_IMAGE_URLS: Record<string, string> = {
-  "student-burgers-shawarmas":
+const LEGACY_PORTFOLIO_IMAGE_URLS: Record<string, string[]> = {
+  "student-burgers-shawarmas": [
     "https://student-burgers-and-shawarmas.vercel.app/images/hero/hero-shawarma.webp",
+    "https://student-burgers-and-shawarmas.vercel.app/images/products/chicken-shawarma-s.webp",
+  ],
 };
 
 export function mergePortfolioSeedProjects(
@@ -83,7 +85,7 @@ export function mergePortfolioSeedProjects(
     const seedProject = seedProjects.find((project) => project.id === savedProject.id);
     if (
       !seedProject ||
-      savedProject.imageUrl !== LEGACY_PORTFOLIO_IMAGE_URLS[savedProject.id]
+      !LEGACY_PORTFOLIO_IMAGE_URLS[savedProject.id]?.includes(savedProject.imageUrl)
     ) {
       return savedProject;
     }

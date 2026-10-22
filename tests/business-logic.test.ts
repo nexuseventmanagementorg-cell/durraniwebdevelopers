@@ -481,7 +481,6 @@ test("Student Burgers & Shawarmas appears in the public portfolio at PKR 65,000 
   const project = INITIAL_PORTFOLIO_PROJECTS.find(
     (item) => item.id === "student-burgers-shawarmas"
   );
-
   assert.ok(project);
   assert.equal(project.isPublic, true);
   assert.equal(project.demoUrl, "https://student-burgers-and-shawarmas.vercel.app/");
@@ -489,7 +488,7 @@ test("Student Burgers & Shawarmas appears in the public portfolio at PKR 65,000 
   assert.equal(project.budgetLabel, "Project Budget");
   assert.equal(
     project.imageUrl,
-    "https://student-burgers-and-shawarmas.vercel.app/images/products/chicken-shawarma-s.webp"
+    "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-4.webp"
   );
   assert.match(project.fullDescription, /personal domain and its registration are not included/i);
   assert.ok(project.technologies.includes("WhatsApp Ordering"));
@@ -502,20 +501,22 @@ test("Student Burgers portfolio updates the old seeded image but preserves admin
   );
   assert.ok(project);
 
-  const previousImage = {
-    ...project,
-    imageUrl: "https://student-burgers-and-shawarmas.vercel.app/images/hero/hero-shawarma.webp",
-  };
+  const previousImages = [
+    "https://student-burgers-and-shawarmas.vercel.app/images/hero/hero-shawarma.webp",
+    "https://student-burgers-and-shawarmas.vercel.app/images/products/chicken-shawarma-s.webp",
+  ];
   const customImage = { ...project, imageUrl: "https://example.com/custom-portfolio-image.webp" };
 
-  const migratedImage = mergePortfolioSeedProjects([previousImage]).find(
-    (item) => item.id === project.id
-  )?.imageUrl;
+  const migratedImages = previousImages.map((imageUrl) =>
+    mergePortfolioSeedProjects([{ ...project, imageUrl }]).find(
+      (item) => item.id === project.id
+    )?.imageUrl
+  );
   const preservedImage = mergePortfolioSeedProjects([customImage]).find(
     (item) => item.id === project.id
   )?.imageUrl;
 
-  assert.equal(migratedImage, project.imageUrl);
+  assert.deepEqual(migratedImages, [project.imageUrl, project.imageUrl]);
   assert.equal(preservedImage, customImage.imageUrl);
 });
 
