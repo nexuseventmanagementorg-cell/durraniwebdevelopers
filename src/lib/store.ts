@@ -56,7 +56,7 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     category: "Restaurant web applications",
     shortDescription: "Restaurant website with a digital menu, WhatsApp ordering, and dine-in table QR access.",
     fullDescription: "A live restaurant website for Student Burgers & Shawarmas in Ramgarh, Lahore. Customers can browse its menu and student deals, order directly through WhatsApp, or scan a table QR code for dine-in. The project budget is PKR 65,000. The website uses a Vercel subdomain; a personal domain and its registration are not included.",
-    imageUrl: "https://student-burgers-and-shawarmas.vercel.app/images/hero/hero-shawarma.webp",
+    imageUrl: "https://student-burgers-and-shawarmas.vercel.app/images/products/chicken-shawarma-s.webp",
     technologies: ["Next.js", "Responsive Web Design", "Digital Menu", "WhatsApp Ordering", "Dine-In Table QR"],
     status: "Live",
     demoUrl: "https://student-burgers-and-shawarmas.vercel.app/",
@@ -70,6 +70,32 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
+const LEGACY_PORTFOLIO_IMAGE_URLS: Record<string, string> = {
+  "student-burgers-shawarmas":
+    "https://student-burgers-and-shawarmas.vercel.app/images/hero/hero-shawarma.webp",
+};
+
+export function mergePortfolioSeedProjects(
+  savedProjects: PortfolioProject[],
+  seedProjects: PortfolioProject[] = INITIAL_PORTFOLIO_PROJECTS
+): PortfolioProject[] {
+  const updatedSavedProjects = savedProjects.map((savedProject) => {
+    const seedProject = seedProjects.find((project) => project.id === savedProject.id);
+    if (
+      !seedProject ||
+      savedProject.imageUrl !== LEGACY_PORTFOLIO_IMAGE_URLS[savedProject.id]
+    ) {
+      return savedProject;
+    }
+
+    return { ...savedProject, imageUrl: seedProject.imageUrl };
+  });
+  const newSeedProjects = seedProjects.filter(
+    (project) => !savedProjects.some((savedProject) => savedProject.id === project.id)
+  );
+
+  return [...newSeedProjects, ...updatedSavedProjects];
+}
 
 function getInitialData(): DatabaseSchema {
   const initialClients: Client[] = [];
@@ -501,12 +527,7 @@ export class DataStore {
   // Portfolio
   static getPortfolio(includePrivate: boolean = false): PortfolioProject[] {
     const data = this.ensureDataFile();
-    const newSeedProjects = INITIAL_PORTFOLIO_PROJECTS.filter(
-      (project) =>
-        project.id === "student-burgers-shawarmas" &&
-        !data.portfolio.some((savedProject) => savedProject.id === project.id)
-    );
-    const portfolio = [...newSeedProjects, ...data.portfolio];
+    const portfolio = mergePortfolioSeedProjects(data.portfolio);
     if (includePrivate) return portfolio;
     return portfolio.filter((p) => p.isPublic);
   }

@@ -40,7 +40,11 @@ import {
   type TaskProposalReport,
   type TaskProposalScopeDraft,
 } from "../src/lib/task-proposal-client";
-import { DataStore, INITIAL_PORTFOLIO_PROJECTS } from "../src/lib/store";
+import {
+  DataStore,
+  INITIAL_PORTFOLIO_PROJECTS,
+  mergePortfolioSeedProjects,
+} from "../src/lib/store";
 import { buildInstallmentSchedule } from "../src/lib/client-finances";
 import {
   hashVisitorId,
@@ -483,9 +487,36 @@ test("Student Burgers & Shawarmas appears in the public portfolio at PKR 65,000 
   assert.equal(project.demoUrl, "https://student-burgers-and-shawarmas.vercel.app/");
   assert.equal(project.approvedPublicBudget, 65000);
   assert.equal(project.budgetLabel, "Project Budget");
+  assert.equal(
+    project.imageUrl,
+    "https://student-burgers-and-shawarmas.vercel.app/images/products/chicken-shawarma-s.webp"
+  );
   assert.match(project.fullDescription, /personal domain and its registration are not included/i);
   assert.ok(project.technologies.includes("WhatsApp Ordering"));
   assert.ok(project.technologies.includes("Dine-In Table QR"));
+});
+
+test("Student Burgers portfolio updates the old seeded image but preserves admin image edits", () => {
+  const project = INITIAL_PORTFOLIO_PROJECTS.find(
+    (item) => item.id === "student-burgers-shawarmas"
+  );
+  assert.ok(project);
+
+  const previousImage = {
+    ...project,
+    imageUrl: "https://student-burgers-and-shawarmas.vercel.app/images/hero/hero-shawarma.webp",
+  };
+  const customImage = { ...project, imageUrl: "https://example.com/custom-portfolio-image.webp" };
+
+  const migratedImage = mergePortfolioSeedProjects([previousImage]).find(
+    (item) => item.id === project.id
+  )?.imageUrl;
+  const preservedImage = mergePortfolioSeedProjects([customImage]).find(
+    (item) => item.id === project.id
+  )?.imageUrl;
+
+  assert.equal(migratedImage, project.imageUrl);
+  assert.equal(preservedImage, customImage.imageUrl);
 });
 
 test("Client project installment schedule preserves the agreed total and clamps month ends", () => {

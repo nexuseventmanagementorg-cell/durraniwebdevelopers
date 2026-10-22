@@ -1513,3 +1513,9 @@ This implementation supersedes the audit-only recommendation above. The user aut
 - The project description states that the site runs on a Vercel subdomain and excludes personal-domain registration. The portfolio image uses the site's public shawarma hero image.
 - Existing deployments with a saved portfolio list receive the new default project in the public/admin portfolio response without overwriting saved project records. Added a regression test for the project details and price.
 - Validation: **103 tests passed**, TypeScript passed, and the local public portfolio API returned the new project at PKR 65,000.
+
+### Student Burgers portfolio image correction (2026-10-22)
+
+- Replaced the generic hero image with the current branded `Regular Shawarma` product image displayed on the live site's homepage: `https://student-burgers-and-shawarmas.vercel.app/images/products/chicken-shawarma-s.webp`.
+- Added a seed migration so deployments with the previous portfolio image update to this current image while administrator-selected custom images remain unchanged.
+- Validation: **104 tests passed**, TypeScript and production build passed; the local public portfolio API returned the new image URL and retained the PKR 65,000 budget.
