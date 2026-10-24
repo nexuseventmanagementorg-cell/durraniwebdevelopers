@@ -22,8 +22,8 @@ Relevant architecture:
 
 - Admin portfolio entries can store a demo URL and configure a public offer tag, discount percentage, and expiration. The API validates active offer values; deleted seed entries remain deleted until restored.
 - Public home, portfolio, and template pages display available demo URLs and a live offer countdown. Offer pricing is derived from the approved public budget and is kept separate from new-build package/add-on estimates. The portfolio API is dynamic and disables response caching so admin updates can appear promptly.
-- The Student Burgers portfolio seed includes a 50% offer and demo URL. Its expiration is set to 2026-10-27 13:00 UTC so it remains active for approximately three days from this handoff update.
-- Regression tests cover offer pricing/expiry validation and persistence of seeded portfolio deletions. `npm test` passed (114 tests); the production build still needs to be rerun after stopping the concurrent development server.
+- The Student Burgers portfolio seed includes a 50% offer and demo URL. Its existing expiration (`2026-10-24T16:57:54.113Z`) is preserved; publishing these changes must not restart or extend the running timer.
+- Regression tests cover offer pricing/expiry validation and persistence of seeded portfolio deletions. `npm test` passed (114 tests), and `npm run build` passed.
 
 ### Public ready-made website templates and availability controls
 

@@ -75,7 +75,7 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     offerEnabled: true,
     offerTag: "3-Day Half-Price Deal",
     offerDiscountPercent: 50,
-    offerEndsAt: "2026-10-27T13:00:00.000Z",
+    offerEndsAt: "2026-10-24T16:57:54.113Z",
     featured: true,
     clientConsentForBudget: false,
   },
