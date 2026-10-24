@@ -1,6 +1,8 @@
 import {
   DEFAULT_PRICING_CONFIG,
   ECOMMERCE_PACKAGES,
+  getChargeableAddonIds,
+  isPricingPackageId,
   SAAS_PACKAGES,
   type PricingPackageId,
 } from "./constants";
@@ -74,4 +76,16 @@ export function getTemplateRequestPlans(template: PortfolioProject): TemplateReq
   );
 
   return [startingPlan, ...eligibleUpgradePlans];
+}
+
+export function getTemplateChargeableAddonIds(
+  template: PortfolioProject,
+  plan: TemplateRequestPlan,
+  addonIds: string[]
+): string[] {
+  const packageId = plan.packageId ||
+    (isPricingPackageId(plan.id) ? plan.id : undefined);
+  const templateIncludedAddonIds = new Set(template.templateIncludedAddonIds || []);
+  return getChargeableAddonIds(addonIds, packageId, plan.adminPanelType)
+    .filter((id) => !templateIncludedAddonIds.has(id));
 }

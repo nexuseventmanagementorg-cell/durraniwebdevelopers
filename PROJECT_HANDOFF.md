@@ -25,6 +25,7 @@ Relevant architecture:
 - The Student Burgers portfolio seed includes a 50% offer and demo URL. Its existing expiration (`2026-10-24T16:57:54.113Z`) is preserved; publishing these changes must not restart or extend the running timer.
 - Regression tests cover offer pricing/expiry validation and persistence of seeded portfolio deletions. `npm test` passed (114 tests), and `npm run build` passed.
 - Both public template cards show their configured template starting price, using the same plan calculation as the request form; promotional offer pricing remains displayed separately.
+- Template cards include a details dialog listing the website description, included technologies/features, included add-ons, and an itemized starting-plan total. Customers can select optional add-ons in the dialog, see each published one-time/monthly price, and get an updated one-time total plus recurring monthly total; included add-ons are not double-counted. Active project offers are labeled separately from the template-plan total; customizations are confirmed after scope review.
 
 ### Public ready-made website templates and availability controls
 

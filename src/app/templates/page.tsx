@@ -9,22 +9,26 @@ import {
   CheckCircle2,
   Clock3,
   ExternalLink,
+  Info,
   Layers3,
   Send,
   ShieldCheck,
   ShoppingBag,
+  X,
 } from "lucide-react";
 import {
   ADDON_CATEGORY_LABELS,
   DEFAULT_PRICING_CONFIG,
   ECOMMERCE_PACKAGES,
-  getChargeableAddonIds,
   getAddonPriceForPackage,
   isPricingPackageId,
   SAAS_PACKAGES,
   formatPKR,
 } from "@/lib/constants";
-import { getTemplateRequestPlans } from "@/lib/template-pricing";
+import {
+  getTemplateChargeableAddonIds,
+  getTemplateRequestPlans,
+} from "@/lib/template-pricing";
 import { getPortfolioOffer } from "@/lib/portfolio-offers";
 import type { AddonOption, PortfolioProject } from "@/lib/types";
 
@@ -46,6 +50,8 @@ export default function WebsiteTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [detailsTemplate, setDetailsTemplate] = useState<PortfolioProject | null>(null);
+  const [detailsAddonIds, setDetailsAddonIds] = useState<string[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState("template_starting");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -103,6 +109,15 @@ export default function WebsiteTemplatesPage() {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (!detailsTemplate) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDetailsTemplate(null);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [detailsTemplate]);
+
   const selectedTemplate = useMemo(
     () => templates.find((template) => template.id === selectedTemplateId),
     [selectedTemplateId, templates]
@@ -123,8 +138,9 @@ export default function WebsiteTemplatesPage() {
   };
   const packageId = selectedPlan?.packageId ||
     (selectedPlan && isPricingPackageId(selectedPlan.id) ? selectedPlan.id : undefined);
-  const adminPanelType = selectedPlan?.adminPanelType || "none";
-  const chargeableAddonIds = getChargeableAddonIds(selectedAddonIds, packageId, adminPanelType);
+  const chargeableAddonIds = selectedTemplate
+    ? getTemplateChargeableAddonIds(selectedTemplate, selectedPlan, selectedAddonIds)
+    : [];
   const selectedAddons = addons.filter((addon) => selectedAddonIds.includes(addon.id));
   const chargeableAddons = selectedAddons.filter((addon) => chargeableAddonIds.includes(addon.id));
   const priceForAddon = (addon: AddonOption) =>
@@ -137,6 +153,29 @@ export default function WebsiteTemplatesPage() {
     .filter((addon) => addon.billingPeriod === "monthly")
     .reduce((total, addon) => total + priceForAddon(addon), 0);
   const estimatedInitialTotal = selectedPlan.price + oneTimeAddonTotal;
+  const detailsPlan = detailsTemplate ? getTemplateRequestPlans(detailsTemplate)[0] : undefined;
+  const detailsPackageId = detailsPlan?.packageId ||
+    (detailsPlan && isPricingPackageId(detailsPlan.id) ? detailsPlan.id : undefined);
+  const detailsChargeableAddonIds = detailsTemplate && detailsPlan
+    ? getTemplateChargeableAddonIds(detailsTemplate, detailsPlan, detailsAddonIds)
+    : [];
+  const detailsSelectedAddons = addons.filter((addon) => detailsAddonIds.includes(addon.id));
+  const detailsPriceForAddon = (addon: AddonOption) =>
+    detailsTemplate?.templateIncludedAddonPrices?.[addon.id] ??
+    getAddonPriceForPackage(addon, detailsPackageId);
+  const detailsOneTimeAddonTotal = detailsSelectedAddons
+    .filter((addon) =>
+      detailsChargeableAddonIds.includes(addon.id) &&
+      (addon.billingPeriod || "one_time") === "one_time"
+    )
+    .reduce((total, addon) => total + detailsPriceForAddon(addon), 0);
+  const detailsMonthlyAddonTotal = detailsSelectedAddons
+    .filter((addon) =>
+      detailsChargeableAddonIds.includes(addon.id) &&
+      addon.billingPeriod === "monthly"
+    )
+    .reduce((total, addon) => total + detailsPriceForAddon(addon), 0);
+  const detailsEstimatedInitialTotal = (detailsPlan?.price || 0) + detailsOneTimeAddonTotal;
   const groupedAddons = addons.reduce<Record<string, AddonOption[]>>((groups, addon) => {
     const category = ADDON_CATEGORY_LABELS[addon.category] || "Other";
     (groups[category] ||= []).push(addon);
@@ -307,6 +346,19 @@ export default function WebsiteTemplatesPage() {
                     <button
                       type="button"
                       onClick={() => {
+                        setDetailsTemplate(template);
+                        setDetailsAddonIds(
+                          (template.templateIncludedAddonIds || [])
+                            .filter((id) => addons.some((addon) => addon.id === id))
+                        );
+                      }}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-xs font-bold text-gray-800 hover:border-[#E31E36] hover:text-[#E31E36]"
+                    >
+                      <Info className="h-4 w-4" /> View template details
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
                         setSelectedTemplateId(template.id);
                         setSelectedPlanId("template_starting");
                         setSelectedAddonIds(
@@ -336,6 +388,174 @@ export default function WebsiteTemplatesPage() {
             </div>
           )}
         </div>
+
+        {detailsTemplate && (() => {
+          const includedAddonIds = (detailsTemplate.templateIncludedAddonIds || [])
+            .map((id) => addons.find((addon) => addon.id === id))
+            .filter((addon): addon is AddonOption => Boolean(addon));
+          const optionalAddonIds = new Set(includedAddonIds.map((addon) => addon.id));
+
+          return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4">
+              <button
+                type="button"
+                aria-label="Close template details"
+                onClick={() => setDetailsTemplate(null)}
+                className="absolute inset-0 bg-black/70"
+              />
+              <section
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="template-details-title"
+                className="relative z-10 my-auto max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 text-[#101216] shadow-2xl sm:p-7"
+              >
+                <button
+                  type="button"
+                  aria-label="Close template details"
+                  onClick={() => setDetailsTemplate(null)}
+                  className="absolute right-4 top-4 rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#E31E36]">Template details</p>
+                <h2 id="template-details-title" className="mt-2 pr-10 text-2xl font-black">
+                  {detailsTemplate.title}
+                </h2>
+                <p className="mt-3 text-sm leading-relaxed text-gray-600">
+                  {detailsTemplate.fullDescription || detailsTemplate.shortDescription}
+                </p>
+
+                <div className="mt-6">
+                  <h3 className="text-sm font-extrabold">Included website features</h3>
+                  <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {detailsTemplate.technologies.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-sm">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                        {feature}
+                      </li>
+                    ))}
+                    {includedAddonIds.map((addon) => (
+                      <li key={addon.id} className="flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-sm">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                        <span>{addon.label} <strong className="text-emerald-700">(Included)</strong></span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-6">
+                  <h3 className="text-sm font-extrabold">Optional add-ons and prices</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                    Select features to see them itemized in the estimate. Included features are part of the starting plan and are not charged twice.
+                  </p>
+                  <div className="mt-3 max-h-72 space-y-2 overflow-y-auto">
+                    {Object.entries(groupedAddons).map(([category, categoryAddons]) => {
+                      const optionalAddons = categoryAddons.filter((addon) => !optionalAddonIds.has(addon.id));
+                      if (optionalAddons.length === 0) return null;
+                      return (
+                        <details key={category} className="rounded-lg border border-gray-200">
+                          <summary className="cursor-pointer px-3 py-2.5 text-xs font-extrabold">
+                            {category} <span className="font-medium text-gray-500">({optionalAddons.length})</span>
+                          </summary>
+                          <div className="divide-y divide-gray-100 border-t border-gray-200">
+                            {optionalAddons.map((addon) => {
+                              const isSelected = detailsAddonIds.includes(addon.id);
+                              return (
+                                <label key={addon.id} className="flex cursor-pointer items-start gap-3 px-3 py-2.5 hover:bg-gray-50">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(event) => setDetailsAddonIds((current) =>
+                                      event.target.checked
+                                        ? [...current, addon.id]
+                                        : current.filter((id) => id !== addon.id)
+                                    )}
+                                    className="mt-0.5 h-4 w-4 shrink-0 accent-[#E31E36]"
+                                  />
+                                  <span className="min-w-0 flex-1">
+                                    <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                                      <span className="text-xs font-bold">{addon.label}</span>
+                                      <strong className="whitespace-nowrap text-xs text-[#E31E36]">
+                                        {formatPKR(detailsPriceForAddon(addon))}
+                                        {addon.billingPeriod === "monthly" ? " / month" : ""}
+                                      </strong>
+                                    </span>
+                                    <span className="mt-0.5 block text-[10px] leading-relaxed text-gray-500">{addon.description}</span>
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </details>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="mt-6 rounded-xl border border-gray-200 p-4">
+                  <h3 className="text-sm font-extrabold">Starting price breakdown</h3>
+                  <div className="mt-3 flex justify-between gap-3 text-sm">
+                    <span>{detailsPlan?.name || "Template starting plan"}</span>
+                    <strong>{formatPKR(detailsPlan?.price || 0)}</strong>
+                  </div>
+                  {includedAddonIds.map((addon) => (
+                    <div key={addon.id} className="mt-2 flex justify-between gap-3 text-sm text-gray-600">
+                      <span>{addon.label}</span>
+                      <strong>Included</strong>
+                    </div>
+                  ))}
+                  {detailsSelectedAddons
+                    .filter((addon) => detailsChargeableAddonIds.includes(addon.id))
+                    .map((addon) => (
+                      <div key={addon.id} className="mt-2 flex justify-between gap-3 text-sm text-gray-600">
+                        <span>{addon.label}{addon.billingPeriod === "monthly" ? " / month" : ""}</span>
+                        <strong>{formatPKR(detailsPriceForAddon(addon))}{addon.billingPeriod === "monthly" ? " / month" : ""}</strong>
+                      </div>
+                    ))}
+                  <div className="mt-3 flex justify-between gap-3 border-t border-gray-200 pt-3 text-base font-black">
+                    <span>One-time total</span>
+                    <strong className="text-[#E31E36]">{formatPKR(detailsEstimatedInitialTotal)}+</strong>
+                  </div>
+                  {detailsMonthlyAddonTotal > 0 && (
+                    <div className="mt-2 flex justify-between gap-3 text-sm font-bold text-gray-700">
+                      <span>Recurring add-ons</span>
+                      <strong>{formatPKR(detailsMonthlyAddonTotal)} / month</strong>
+                    </div>
+                  )}
+                  <p className="mt-2 text-xs leading-relaxed text-gray-500">
+                    Included features above have no additional charge in this starting price. Optional add-ons,
+                    changes, and recurring services are not included; the final quote is confirmed after scope review.
+                  </p>
+                </div>
+
+                {getPortfolioOffer(detailsTemplate, offerClock) && (
+                  <div className="mt-4">
+                    <p className="mb-2 text-xs font-semibold text-gray-600">
+                      Limited-time portfolio offer (shown separately from the template starting-plan total):
+                    </p>
+                    <PortfolioOffer project={detailsTemplate} />
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedTemplateId(detailsTemplate.id);
+                    setSelectedPlanId("template_starting");
+                    setSelectedAddonIds(
+                      detailsAddonIds
+                    );
+                    setDetailsTemplate(null);
+                    document.getElementById("template-request")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#101216] px-4 py-3 text-sm font-bold text-white hover:bg-[#252a33]"
+                >
+                  Request this template <ArrowRight className="h-4 w-4" />
+                </button>
+              </section>
+            </div>
+          );
+        })()}
 
         <section id="template-request" className="grid scroll-mt-24 gap-8 rounded-3xl bg-[#101216] p-6 text-white sm:p-9 lg:grid-cols-[0.8fr_1.2fr]">
           <div>

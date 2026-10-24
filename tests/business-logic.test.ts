@@ -61,7 +61,10 @@ import {
   calculateReviewedWebsiteEstimate,
   getDefaultNewBuildAddonIds,
 } from "../src/lib/website-estimate-review";
-import { getTemplateRequestPlans } from "../src/lib/template-pricing";
+import {
+  getTemplateChargeableAddonIds,
+  getTemplateRequestPlans,
+} from "../src/lib/template-pricing";
 import { notifyAdminOfSubmission, sendInquiryWhatsappConfirmation } from "../src/lib/admin-notifications";
 import {
   buildProjectBuildBriefRecord,
@@ -2293,6 +2296,14 @@ test("Template request plans always use the template price as their minimum", ()
   assert.equal(studentPlans[0]?.price, 150000);
   assert.equal(studentPlans[0]?.packageId, "ecommerce_business");
   assert.ok(studentPlans.every((plan) => plan.price >= 150000));
+  assert.deepEqual(
+    getTemplateChargeableAddonIds(
+      studentTemplate,
+      studentPlans[0],
+      ["restaurant_qr_menu", "order_tracking", "personal_domain"]
+    ),
+    ["personal_domain"]
+  );
 });
 
 test("URL estimator offers every published package and uses configured rates and add-ons", async () => {
