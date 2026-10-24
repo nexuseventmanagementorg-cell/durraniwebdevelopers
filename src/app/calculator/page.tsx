@@ -525,6 +525,7 @@ function CalculatorContent() {
     "SaaS & Multi-Vendor": "Online platform aur multiple sellers",
     "Security & Reliability": "Security aur website ki bharosemandi",
     "Industry-Specific": "Business ke khaas tools",
+    "Real Estate & PropertyTech": "Real estate aur property portal ke tools",
   };
 
   const adminFeatureOptions = [

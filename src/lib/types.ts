@@ -47,7 +47,8 @@ export interface AddonOption {
     | "saas"
     | "automation"
     | "security"
-    | "industry";
+    | "industry"
+    | "propertytech";
   price: number;
   description: string;
   enabled: boolean;

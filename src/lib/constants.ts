@@ -60,6 +60,7 @@ function defineAddon(
     category === "creative" ||
     category === "ecommerce" ||
       category === "saas" ||
+      category === "propertytech" ||
       id === "kitchen_order_tickets"
       ? price
       : FEATURE_ADDON_PRICE_PKR,
@@ -172,6 +173,39 @@ export const EXTENDED_ADDONS: AddonOption[] = [
   defineAddon("course_progress", "Education Course Progress Tracking", "industry", 20000, "Track learner progress through courses and lessons."),
   defineAddon("quizzes_assessments", "Quizzes & Assessments", "industry", 25000, "Create quizzes and review learner assessment results."),
   defineAddon("event_ticketing", "Digital Tickets & QR Check-In", "industry", 20000, "Issue event tickets and validate entry with QR check-in."),
+
+  defineAddon("property_listing_management", "Advanced Property Listing Management", "propertytech", 35000, "Create, edit, archive, and manage property listings with structured details, pricing, location, property type, purpose, and listing status."),
+  defineAddon("property_submission_wizard", "Property Listing Submission Wizard", "propertytech", 25000, "A guided multi-step form for owners and agents to submit property details, pricing, location, descriptions, and media."),
+  defineAddon("property_media_gallery", "Property Media Gallery & Upload System", "propertytech", 25000, "Upload, organize, optimize, and display property photos, galleries, floor plans, and approved media files."),
+  defineAddon("property_map_explorer", "Property Map & Location Explorer", "propertytech", 35000, "Display properties on interactive maps with location markers, map-based search, and supported location filters. Third-party map usage fees are separate."),
+  defineAddon("property_detail_comparison", "Property Detail & Comparison System", "propertytech", 25000, "Create detailed property pages and let users compare selected properties by price, size, location, features, and other supported attributes."),
+  defineAddon("property_availability_status", "Property Availability & Listing Status Management", "propertytech", 20000, "Manage available, reserved, sold, rented, archived, and other approved listing states with controlled transitions."),
+  defineAddon("agent_directory_profiles", "Agent Directory & Public Profiles", "propertytech", 25000, "Publish searchable agent profiles with contact details, agency affiliation, service areas, listed properties, and verification status."),
+  defineAddon("agency_workspace_team_management", "Agency Workspace & Team Management", "propertytech", 60000, "Give agencies a dedicated workspace to manage team members, assigned listings, lead activity, and permitted agency information."),
+  defineAddon("agent_verification_kyc", "Agent Verification & KYC Workflow", "propertytech", 50000, "Collect approved identity and credential evidence, manage verification statuses, and support authorized human review. Verification does not guarantee legal ownership or prevent all fraud."),
+  defineAddon("agent_performance_leaderboards", "Agent Performance & Area Leaderboards", "propertytech", 35000, "Display configured performance metrics such as active listings, verified activity, completed transactions, and area-level rankings based on reliable records."),
+  defineAddon("real_estate_lead_crm", "Real Estate Lead CRM", "propertytech", 50000, "Capture, assign, organize, and follow up on buyer, seller, landlord, tenant, and agent inquiries with persistent lead records."),
+  defineAddon("exclusive_lead_lock", "Exclusive Lead Lock System", "propertytech", 60000, "Provide configurable exclusive lead claiming, lock expiry, conflict prevention, and release rules enforced by the backend."),
+  defineAddon("property_visit_scheduling", "Property Visit & Appointment Scheduling", "propertytech", 25000, "Manage property visit requests, agent availability, appointment status, and customer notifications."),
+  defineAddon("deal_pipeline_transactions", "Deal Pipeline & Transaction Management", "propertytech", 60000, "Track deals through approved stages such as inquiry, visit, negotiation, documentation, and completion, with role-based access."),
+  defineAddon("deal_lock_expiry", "Deal Lock & Expiry Management", "propertytech", 50000, "Implement configurable transaction protection periods, expiry checks, extensions, and release rules. Business rules must be agreed before implementation."),
+  defineAddon("commission_settlement_records", "Commission & Deal Settlement Records", "propertytech", 35000, "Record agreed commissions, transaction participants, payable amounts, and settlement status with access controls and audit history."),
+  defineAddon("property_review_approval", "Property Review & Approval Queue", "propertytech", 40000, "Let authorized reviewers inspect submitted listings, request corrections, approve or reject submissions, and record decision reasons."),
+  defineAddon("property_fraud_case_management", "Property Fraud Reporting & Case Management", "propertytech", 40000, "Allow users to report suspicious listings and provide administrators with a controlled workflow for investigation, evidence, decisions, and case history."),
+  defineAddon("property_portal_subscriptions", "Property Portal Subscription Plans", "propertytech", 50000, "Configure agent and agency plans, subscription status, listing limits, and plan-based feature access. Payment-provider fees and gateway integration are separate."),
+  defineAddon("featured_property_listings", "Featured Listings & Promotion Management", "propertytech", 30000, "Manage sponsored property placements, featured listing periods, promotion status, and agreed ranking rules."),
+  defineAddon("real_estate_lead_analytics", "Real Estate Inquiry & Lead Analytics", "propertytech", 35000, "Report on inquiries, listing engagement, lead conversion, agent activity, and supported area-level metrics using available verified data."),
+  defineAddon("property_secure_documents", "Property Documents & Secure File Access", "propertytech", 35000, "Manage permitted property-related documents with access controls, upload validation, and defined retention rules. Sensitive identity documents require a separately approved security design."),
+  defineAddon("ai_property_search", "AI Property Search Assistant", "propertytech", 40000, "Help visitors discover suitable properties using natural-language questions and supported listing filters. Responses must be grounded in available property data."),
+  defineAddon("ai_lead_qualification", "AI Lead Qualification Assistant", "propertytech", 30000, "Collect buyer or renter preferences, budget, property requirements, and contact details through a guided conversational workflow."),
+  defineAddon("automated_lead_followup", "Automated Lead Follow-Up", "propertytech", 25000, "Configure agreed follow-up reminders and communication workflows based on lead status, consent, and supported messaging integrations."),
+  defineAddon("ai_property_description", "AI Property Description Assistant", "propertytech", 20000, "Generate editable property descriptions and marketing drafts from agent-provided details. Generated content requires review and must not invent property facts."),
+  defineAddon("real_estate_whatsapp", "Real Estate WhatsApp Integration", "propertytech", 30000, "Connect supported WhatsApp workflows for inquiries, notifications, and follow-ups. WhatsApp Business access, provider approval, message charges, and API usage are separate."),
+  defineAddon("property_portal_api_integration", "Property Portal API & Partner Integration", "propertytech", 40000, "Exchange agreed property or lead data with approved external systems through documented API endpoints and access controls. Third-party accounts and complex integrations are separately scoped."),
+  defineAddon("property_data_import_migration", "Property Data Import & Migration", "propertytech", 25000, "Import property records from agreed CSV or spreadsheet formats with field mapping, validation, duplicate checks, and error reports."),
+  defineAddon("property_change_audit_trail", "Property Change History & Audit Trail", "propertytech", 30000, "Maintain durable records of important listing changes, administrative decisions, and authorized actions, including who performed them and when."),
+  defineAddon("property_seo_structured_data", "Real Estate SEO & Structured Property Data", "propertytech", 25000, "Configure property-page metadata, canonical URLs, sitemaps, indexation rules, and applicable structured data. Search-engine display is not guaranteed."),
+  defineAddon("property_portal_monitoring_backups", "Property Portal Monitoring & Backup Planning", "propertytech", 30000, "Configure agreed application monitoring, error reporting, backup procedures, and restore documentation. Provider availability, backup storage, and recurring service costs are separate."),
 ];
 
 export const ADDON_CATEGORY_LABELS: Record<AddonOption["category"], string> = {
@@ -190,6 +224,7 @@ export const ADDON_CATEGORY_LABELS: Record<AddonOption["category"], string> = {
   automation: "AI & Automation",
   security: "Security & Reliability",
   industry: "Industry-Specific",
+  propertytech: "Real Estate & PropertyTech",
 };
 
 export const DEFAULT_PRICING_CONFIG: PricingRuleConfig = {
@@ -282,7 +317,7 @@ export function mergePricingConfigWithDefaults(
           ...defaultAddon,
           ...addon,
           ...(shouldMigrateDescription ? { description: defaultAddon.description } : {}),
-          ...(addon.billingPeriod === "monthly" || planSpecificAddon || addon.category === "creative"
+          ...(addon.billingPeriod === "monthly" || planSpecificAddon || addon.category === "creative" || addon.category === "propertytech"
             ? isLegacyFlatPrice
               ? { price: defaultAddon.price }
               : planSpecificAddon

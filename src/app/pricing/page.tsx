@@ -639,7 +639,7 @@ export default function PricingPage() {
               Business aur industry ke mutabiq add-ons
             </h2>
             <p className="text-xs text-gray-600 mt-2">
-              Yeh starting estimates hain. Complex scope, third-party accounts, gateway fees, hosting, aur API usage alag ho sakte hain.
+              Yeh starting estimates hain; Real Estate & PropertyTech modules ki rates Pakistan ke liye PKR mein hain. Complex scope, third-party accounts, gateway fees, hosting, aur API usage alag ho sakte hain.
             </p>
           </div>
 
@@ -647,7 +647,7 @@ export default function PricingPage() {
             {Object.entries(extendedAddonGroups).map(([group, groupAddons], groupIndex) => (
               <details
                 key={group}
-                open={groupIndex === 0}
+                open={groupIndex === 0 || group === "Real Estate & PropertyTech"}
                 className="rounded-lg border border-gray-200 bg-white"
               >
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 font-bold text-sm text-[#101216]">
@@ -691,6 +691,22 @@ export default function PricingPage() {
                 </div>
               </details>
             ))}
+          </div>
+
+          <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6">
+            <h3 className="font-extrabold text-sm text-[#101216]">
+              Real Estate & PropertyTech Pricing & Delivery Conditions
+            </h3>
+            <ul className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-xs leading-relaxed text-gray-700">
+              <li>All prices are starting estimates for an agreed standard scope.</li>
+              <li>Complex workflows, multi-agency permissions, large data migrations, and production-grade security require a separate quotation.</li>
+              <li>Third-party subscriptions, paid APIs, gateway charges, hosting upgrades, and external accounts are separate unless explicitly included.</li>
+              <li>Features are considered delivered only after the agreed acceptance tests pass.</li>
+              <li>UI prototypes and sample data are not represented as live production functionality.</li>
+              <li>Property verification, ownership checks, and fraud controls require approved procedures and cannot guarantee zero fraud.</li>
+              <li>Vercel deployment is included only as specified in the agreed project scope; paid hosting plans remain separate.</li>
+              <li>Milestones advance after the agreed delivery criteria and payment-verification rules are satisfied.</li>
+            </ul>
           </div>
         </div>
       </section>

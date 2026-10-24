@@ -258,14 +258,14 @@ export default function AdminPricingPage() {
                               required
                             />
                           </>
-                        ) : addon.category === "ecommerce" || addon.category === "saas" ? (
+                        ) : addon.category === "ecommerce" || addon.category === "saas" || addon.category === "propertytech" ? (
                           <>
                             <label className="block text-[11px] font-bold text-gray-600 mb-1">
                               One-time Add-on Price (PKR)
                             </label>
                             <input
                               type="number"
-                              min={addon.category === "ecommerce" ? 20000 : 50000}
+                              min={addon.category === "ecommerce" || addon.category === "propertytech" ? 20000 : 50000}
                               value={addon.price}
                               onChange={(e) =>
                                 handleUpdateAddonPrice(addon.id, Number(e.target.value))

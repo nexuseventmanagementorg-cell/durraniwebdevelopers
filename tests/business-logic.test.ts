@@ -522,6 +522,60 @@ test("Kitchen order tickets retain their published PKR 20,000 rate", () => {
   );
 });
 
+test("Real Estate & PropertyTech add-ons retain their published starting rates", () => {
+  const expectedRates: Record<string, number> = {
+    property_listing_management: 35000,
+    property_submission_wizard: 25000,
+    property_media_gallery: 25000,
+    property_map_explorer: 35000,
+    property_detail_comparison: 25000,
+    property_availability_status: 20000,
+    agent_directory_profiles: 25000,
+    agency_workspace_team_management: 60000,
+    agent_verification_kyc: 50000,
+    agent_performance_leaderboards: 35000,
+    real_estate_lead_crm: 50000,
+    exclusive_lead_lock: 60000,
+    property_visit_scheduling: 25000,
+    deal_pipeline_transactions: 60000,
+    deal_lock_expiry: 50000,
+    commission_settlement_records: 35000,
+    property_review_approval: 40000,
+    property_fraud_case_management: 40000,
+    property_portal_subscriptions: 50000,
+    featured_property_listings: 30000,
+    real_estate_lead_analytics: 35000,
+    property_secure_documents: 35000,
+    ai_property_search: 40000,
+    ai_lead_qualification: 30000,
+    automated_lead_followup: 25000,
+    ai_property_description: 20000,
+    real_estate_whatsapp: 30000,
+    property_portal_api_integration: 40000,
+    property_data_import_migration: 25000,
+    property_change_audit_trail: 30000,
+    property_seo_structured_data: 25000,
+    property_portal_monitoring_backups: 30000,
+  };
+  const propertyAddons = EXTENDED_ADDONS.filter((addon) => addon.category === "propertytech");
+  assert.equal(propertyAddons.length, 32);
+  assert.deepEqual(
+    Object.fromEntries(propertyAddons.map(({ id, price }) => [id, price])),
+    expectedRates
+  );
+
+  const configured = mergePricingConfigWithDefaults({
+    addons: {
+      property_listing_management: {
+        ...DEFAULT_PRICING_CONFIG.addons.property_listing_management,
+        price: 42000,
+      },
+    },
+  });
+  assert.equal(configured.addons.property_listing_management.price, 42000);
+  assert.equal(configured.addons.property_submission_wizard.price, 25000);
+});
+
 test("E-commerce add-on prices start at PKR 20,000 and scale across three plans", () => {
   const ecommAddons = Object.values(DEFAULT_PRICING_CONFIG.addons).filter(
     (addon) => addon.category === "ecommerce"
