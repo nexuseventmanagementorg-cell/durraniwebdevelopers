@@ -9,8 +9,11 @@ Last updated: 2026-10-24
 - Existing uncommitted application, test, and handoff changes are part of the requested project update. `.env` and `.env.local` are ignored; a scan of the pending source diff found no common private-key/API-token patterns. Do not stage environment files or credentials.
 - `tsconfig.tsbuildinfo` is tracked and dirty as generated TypeScript build metadata; exclude it from the delivery commit.
 - Final pre-delivery validation passed: `npm test` (131/131), `npm run build` (all 52 static pages generated), and `git diff --check`. The generated `tsconfig.tsbuildinfo` remains excluded from the delivery commit.
-- Exactly 19 intended application, regression-test, and handoff files are staged; `.env`, `.env.local`, `.vercel` metadata, and `tsconfig.tsbuildinfo` are not staged. The staged diff summary is 1,845 insertions and 161 deletions, and its whitespace check passes.
-- No commit, push, or deployment has happened yet. Next: reread this handoff and commit the staged changes, then update and reread this handoff before pushing. Record push and deployment outcomes after each respective step before continuing.
+- Local commit `e939b91` (`feat: sync portfolio pricing and estimates`) now contains the 19 intended application, regression-test, and handoff files. `.env`, `.env.local`, `.vercel` metadata, and generated `tsconfig.tsbuildinfo` were excluded. The committed diff has 1,846 insertions and 161 deletions.
+- Commit `e939b91` was pushed successfully to `origin/main` in GitHub. The push output confirmed `main` advanced from `8eb343d` to `e939b91`.
+- The explicit CLI deploy attempt returned `fetch failed`, but the GitHub push did trigger a Vercel production deployment. Vercel reports the deployment for commit `e939b91` as `READY` (`durraniwebdevelopers-76bv1uuwe-nexuseventmanagementorg-2858.vercel.app`).
+- Production verification passed: `https://durraniwebdevelopers.vercel.app`, `/api/public/portfolio`, and `/api/public/addons` returned HTTP 200. The live portfolio API reports Restaurant Name at PKR 225,000 (`Estimated Build Price`); the live add-on API returns 102 add-ons and its pricing configuration.
+- The production release is verified. Next: reread this handoff, commit and push this release-status documentation update, then confirm GitHub is in sync. The verified application source is commit `e939b91`; the follow-up contains handoff documentation only.
 
 ## Project goal and architecture
 
