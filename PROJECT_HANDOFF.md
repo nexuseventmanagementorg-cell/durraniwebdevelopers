@@ -4,7 +4,7 @@ Last updated: 2026-10-24
 
 ## Current delivery checkpoint (2026-10-24)
 
-- Current request: make public marketing-page motion more noticeable, then publish the validated changes to GitHub and deploy through Vercel. Admin, calculator, inquiry, and customer flows remain untouched.
+- Current request: make public marketing-page motion more noticeable, then publish the validated changes to GitHub and deploy through Vercel. Admin, calculator, inquiry, and customer flows remain untouched. Completed and verified below.
 - Delivery preference: for future completed project updates, proactively include the GitHub push and Vercel deployment when the repository is configured for deployment; report clearly if anything prevents publication.
 - User requested publishing the current project to `origin/main` (`nexuseventmanagementorg-cell/durraniwebdevelopers`) and deploying the linked Vercel project, plus a reusable continuation prompt.
 - Preflight: local branch is `main`; `git fetch origin main` reports local `HEAD` and `origin/main` in sync before the pending worktree changes. Vercel project linkage and CLI authentication are available.
@@ -25,7 +25,9 @@ Last updated: 2026-10-24
 - Validation passed: targeted ESLint, `npx tsc --noEmit --incremental false`, `npm test` (131 tests), `npm run build` (52 static pages), and `git diff --check`.
 - Browser verification passed on `http://localhost:3001` for `/`, `/portfolio`, and `/templates`. The homepage's 20 reveal elements all became visible after scrolling, with no pending elements remaining.
 - Follow-up after user feedback that motion was not noticeable: visible-on-load reveal elements now enter on the next animation frame rather than appearing instantly; offscreen reveals travel 36px with a brief blur/scale transition. The hero gradient and ambient orb motion are more apparent, and card hover lift/image zoom is stronger. Reduced-motion handling remains in place.
-- Follow-up validation passed: targeted ESLint, TypeScript, all 131 tests, production build (52 static pages), and `git diff --check`. Rechecked the updated homepage at `http://localhost:3001`; 20 reveal wrappers are present and the hero headline uses the animated gradient. Publishing to `origin/main` and Vercel is in progress.
+- Follow-up validation passed: targeted ESLint, TypeScript, all 131 tests, production build (52 static pages), and `git diff --check`. Rechecked the updated homepage at `http://localhost:3001`; 20 reveal wrappers are present and the hero headline uses the animated gradient.
+- Published as `3460087` (`feat: polish public page motion`) to `origin/main`. Vercel production deployment `durraniwebdevelopers-pqhdvjfet-nexuseventmanagementorg-2858.vercel.app` reached `Ready` and is aliased to `https://durraniwebdevelopers.vercel.app`.
+- Production verification passed after deployment: homepage returned HTTP 200 and its served CSS contains the new gradient and scroll-reveal motion rules; `/api/public/portfolio` and `/api/public/addons` both returned HTTP 200.
 
 ## Project goal and architecture
 
