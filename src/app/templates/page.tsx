@@ -4,6 +4,7 @@ import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PortfolioOffer from "@/components/PortfolioOffer";
+import ScrollReveal from "@/components/ScrollReveal";
 import {
   ArrowRight,
   CheckCircle2,
@@ -324,11 +325,12 @@ export default function WebsiteTemplatesPage() {
             </p>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {templates.map((template) => {
+              {templates.map((template, index) => {
                 const startingPlan = getTemplateRequestPlans(template)[0];
                 const startingTotal = getTemplatePriceBreakdown(template, addons, startingPlan).total;
                 return (
-                <article key={template.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                <ScrollReveal key={template.id} className="dwd-lift overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm" delayMs={(index % 3) * 70}>
+                <article>
                   <div className="relative h-52 bg-gray-900">
                     <Image
                       src={template.imageUrl}
@@ -404,6 +406,7 @@ export default function WebsiteTemplatesPage() {
                     )}
                   </div>
                 </article>
+                </ScrollReveal>
                 );
               })}
             </div>

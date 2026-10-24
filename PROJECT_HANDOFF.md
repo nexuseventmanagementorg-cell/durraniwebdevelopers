@@ -4,6 +4,8 @@ Last updated: 2026-10-24
 
 ## Current delivery checkpoint (2026-10-24)
 
+- Current request: make public marketing-page motion more noticeable, then publish the validated changes to GitHub and deploy through Vercel. Admin, calculator, inquiry, and customer flows remain untouched.
+- Delivery preference: for future completed project updates, proactively include the GitHub push and Vercel deployment when the repository is configured for deployment; report clearly if anything prevents publication.
 - User requested publishing the current project to `origin/main` (`nexuseventmanagementorg-cell/durraniwebdevelopers`) and deploying the linked Vercel project, plus a reusable continuation prompt.
 - Preflight: local branch is `main`; `git fetch origin main` reports local `HEAD` and `origin/main` in sync before the pending worktree changes. Vercel project linkage and CLI authentication are available.
 - Existing uncommitted application, test, and handoff changes are part of the requested project update. `.env` and `.env.local` are ignored; a scan of the pending source diff found no common private-key/API-token patterns. Do not stage environment files or credentials.
@@ -14,6 +16,16 @@ Last updated: 2026-10-24
 - The explicit CLI deploy attempt returned `fetch failed`, but GitHub pushes triggered Vercel production deployments. The application deployment for commit `e939b91` is `READY` (`durraniwebdevelopers-76bv1uuwe-nexuseventmanagementorg-2858.vercel.app`); the latest pushed commit `5739c6a` also reached production `READY` (`durraniwebdevelopers-cfzj2l6br-nexuseventmanagementorg-2858.vercel.app`).
 - Production verification passed: `https://durraniwebdevelopers.vercel.app`, `/api/public/portfolio`, and `/api/public/addons` returned HTTP 200. The live portfolio API reports Restaurant Name at PKR 225,000 (`Estimated Build Price`); the live add-on API returns 102 add-ons and its pricing configuration.
 - Production deployment of the project and latest pushed commit is verified. The application source remains commit `e939b91`; later commits are documentation-only. After pushing `5739c6a`, the production domain and both portfolio/add-on APIs returned HTTP 200; the restaurant portfolio estimate is PKR 225,000.
+
+### Public marketing motion polish (2026-10-24)
+
+- Added a reusable IntersectionObserver scroll-reveal wrapper with stagger timing for selected hero media, package cards, industry cards, homepage portfolio/process cards, public portfolio cards, and template cards.
+- Added restrained DWD red ambient hero motion and hover lift/shadow on selected public cards. Motion is CSS-based; no external UI component code was copied and no animation dependency was added.
+- Preserved the site's existing native smooth scrolling and made it honor `prefers-reduced-motion`; reveal transitions and hover/ambient motion also respect reduced motion. Admin and calculator pages are not decorated.
+- Validation passed: targeted ESLint, `npx tsc --noEmit --incremental false`, `npm test` (131 tests), `npm run build` (52 static pages), and `git diff --check`.
+- Browser verification passed on `http://localhost:3001` for `/`, `/portfolio`, and `/templates`. The homepage's 20 reveal elements all became visible after scrolling, with no pending elements remaining.
+- Follow-up after user feedback that motion was not noticeable: visible-on-load reveal elements now enter on the next animation frame rather than appearing instantly; offscreen reveals travel 36px with a brief blur/scale transition. The hero gradient and ambient orb motion are more apparent, and card hover lift/image zoom is stronger. Reduced-motion handling remains in place.
+- Follow-up validation passed: targeted ESLint, TypeScript, all 131 tests, production build (52 static pages), and `git diff --check`. Rechecked the updated homepage at `http://localhost:3001`; 20 reveal wrappers are present and the hero headline uses the animated gradient. Publishing to `origin/main` and Vercel is in progress.
 
 ## Project goal and architecture
 

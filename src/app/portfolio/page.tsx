@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AddonOption, PortfolioProject } from "@/lib/types";
 import RegionalPrice from "@/components/RegionalPrice";
 import PortfolioOffer from "@/components/PortfolioOffer";
+import ScrollReveal from "@/components/ScrollReveal";
 import { DEFAULT_PRICING_CONFIG } from "@/lib/constants";
 import {
   getPortfolioFeatureLabels,
@@ -176,9 +177,10 @@ export default function PortfolioPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredProjects.map((project, index) => (
-              <div
+              <ScrollReveal
                 key={project.id}
-                className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-gray-400 shadow-sm hover:shadow-card transition flex flex-col justify-between group"
+                className="dwd-lift bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-gray-400 shadow-sm hover:shadow-card transition flex flex-col justify-between group"
+                delayMs={(index % 3) * 70}
               >
                 <div>
                   <div className="relative h-52 w-full bg-gray-900 overflow-hidden cursor-pointer" onClick={() => setModalProject(project)}>
@@ -303,7 +305,7 @@ export default function PortfolioPage() {
                     )}
                   </div>
                 </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         )}

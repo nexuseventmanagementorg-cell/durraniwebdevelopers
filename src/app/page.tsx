@@ -8,6 +8,7 @@ import {
 import { DataStore } from "@/lib/store";
 import RegionalPrice from "@/components/RegionalPrice";
 import PortfolioOffer from "@/components/PortfolioOffer";
+import ScrollReveal from "@/components/ScrollReveal";
 import { DWD_WORKFORCE_AGENTS, DWD_WORKFORCE_DEPARTMENTS } from "@/lib/workforce-agents";
 import {
   Calculator,
@@ -158,11 +159,15 @@ export default function HomePage() {
       <section className="relative bg-[#101216] text-white pt-20 pb-24 overflow-hidden border-b border-[#242830]">
         {/* Subtle grid background */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f242d_1px,transparent_1px),linear-gradient(to_bottom,#1f242d_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-30" />
+        <div
+          aria-hidden="true"
+          className="dwd-hero-orb pointer-events-none absolute -right-24 top-8 h-72 w-72 rounded-full bg-[#E31E36]/15 blur-3xl"
+        />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 xl:gap-12 items-center">
             {/* Left Column */}
-            <div className="lg:col-span-12 mx-auto w-full max-w-5xl space-y-6 text-center lg:text-left">
+            <ScrollReveal className="lg:col-span-12 mx-auto w-full max-w-5xl space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 bg-[#242830] border border-[#E31E36]/30 px-3.5 py-1.5 rounded-full text-xs font-semibold text-gray-200">
                 <span className="w-2 h-2 rounded-full bg-[#E31E36] animate-ping" />
                 <span className="text-[#E31E36] font-bold">Durrani Web Developers</span>
@@ -171,7 +176,7 @@ export default function HomePage() {
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1]">
                 We Turn Your Ideas Into{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#E31E36] via-red-500 to-rose-400">
+                <span className="dwd-gradient-text text-transparent bg-clip-text bg-gradient-to-r from-[#E31E36] via-red-500 to-rose-400">
                   Powerful Web Applications
                 </span>
               </h1>
@@ -218,9 +223,9 @@ export default function HomePage() {
                   <span>Long-Term Support</span>
                 </div>
               </div>
-            </div>
+            </ScrollReveal>
 
-            <div className="lg:col-span-12 mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-gray-700 shadow-card-dark">
+            <ScrollReveal className="dwd-lift lg:col-span-12 mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-gray-700 shadow-card-dark" delayMs={90}>
               <Image
                 src="/hero_banner.jpeg"
                 alt="Durrani Web Developers web application development banner"
@@ -229,10 +234,10 @@ export default function HomePage() {
                 priority
                 className="h-auto w-full"
               />
-            </div>
+            </ScrollReveal>
 
             {/* Intro Video */}
-            <div className="lg:col-span-12 flex justify-center">
+            <ScrollReveal className="lg:col-span-12 flex justify-center" delayMs={140}>
               <div className="w-full max-w-5xl rounded-2xl border border-gray-700 bg-gradient-to-b from-[#242830] to-[#181B20] p-3 shadow-card-dark sm:p-5">
                 <video
                   controls
@@ -256,9 +261,9 @@ export default function HomePage() {
                     <Download className="h-4 w-4 text-[#E31E36]" />
                     Download video
                   </a>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </ScrollReveal>
           </div>
         </div>
       </section>
@@ -323,7 +328,7 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
             {/* Package 1: Without Admin Panel */}
-            <div className="bg-white rounded-2xl border-2 border-gray-200 hover:border-gray-400 p-8 shadow-sm transition-all relative flex flex-col justify-between">
+            <ScrollReveal className="dwd-lift bg-white rounded-2xl border-2 border-gray-200 hover:border-gray-400 p-8 shadow-sm transition-all relative flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-[#101216]">
@@ -381,10 +386,10 @@ export default function HomePage() {
                   <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
-            </div>
+            </ScrollReveal>
 
             {/* Package 2: With Client Admin Panel */}
-            <div className="bg-white rounded-2xl border-2 border-[#E31E36] p-8 shadow-glow relative flex flex-col justify-between">
+            <ScrollReveal className="dwd-lift bg-white rounded-2xl border-2 border-[#E31E36] p-8 shadow-glow relative flex flex-col justify-between" delayMs={100}>
               <div className="absolute -top-3.5 right-6 bg-[#E31E36] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-md">
                 Most Popular
               </div>
@@ -446,7 +451,7 @@ export default function HomePage() {
                   <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
-            </div>
+            </ScrollReveal>
           </div>
 
           {/* What's Included Bar */}
@@ -749,10 +754,11 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {industries.map((ind) => (
-              <div
+            {industries.map((ind, index) => (
+              <ScrollReveal
                 key={ind.name}
-                className="group p-6 rounded-2xl bg-[#F4F5F7] hover:bg-[#101216] hover:text-white transition-all duration-300 border border-transparent hover:border-[#E31E36]/30 flex flex-col justify-between"
+                className="dwd-lift group p-6 rounded-2xl bg-[#F4F5F7] hover:bg-[#101216] hover:text-white transition-all duration-300 border border-transparent hover:border-[#E31E36]/30 flex flex-col justify-between"
+                delayMs={(index % 4) * 60}
               >
                 <div>
                   <div className="w-12 h-12 rounded-xl bg-white group-hover:bg-[#E31E36] text-[#E31E36] group-hover:text-white flex items-center justify-center transition-colors shadow-sm mb-4">
@@ -775,7 +781,7 @@ export default function HomePage() {
                     Calculate Budget &rarr;
                   </Link>
                 </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -812,9 +818,10 @@ export default function HomePage() {
             }`}
           >
             {portfolioHighlights.map((item, index) => (
-              <div
+              <ScrollReveal
                 key={item.id}
-                className="bg-[#181B20] rounded-2xl overflow-hidden border border-gray-800 hover:border-[#E31E36]/40 transition group flex flex-col justify-between"
+                className="dwd-lift bg-[#181B20] rounded-2xl overflow-hidden border border-gray-800 hover:border-[#E31E36]/40 transition group flex flex-col justify-between"
+                delayMs={index * 80}
               >
                 <div>
                   <div className="relative h-48 w-full bg-gray-900 overflow-hidden">
@@ -915,7 +922,7 @@ export default function HomePage() {
                     )}
                   </div>
                 </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -938,9 +945,10 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {processSteps.map((step) => (
-              <div
+              <ScrollReveal
                 key={step.step}
-                className="group bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-lg hover:border-[#E31E36]/30 transition-all duration-300 flex flex-col"
+                className="dwd-lift group bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-lg hover:border-[#E31E36]/30 transition-all duration-300 flex flex-col"
+                delayMs={(Number(step.step) - 1) % 3 * 70}
               >
                 <div className="relative h-48 sm:h-56 overflow-hidden bg-gray-200">
                   <Image
@@ -986,7 +994,7 @@ export default function HomePage() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
 
