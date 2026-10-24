@@ -414,14 +414,6 @@ export default function WebsiteTemplatesPage() {
             .map((id) => addons.find((addon) => addon.id === id))
             .filter((addon): addon is AddonOption => Boolean(addon));
           const templateIncludedAddonIds = new Set(templateIncludedAddons.map((addon) => addon.id));
-          const planIncludedAddons = detailsPlan
-            ? addons.filter((addon) =>
-                !templateIncludedAddonIds.has(addon.id) &&
-                getTemplateChargeableAddonIds(detailsTemplate, detailsPlan, [addon.id]).length === 0
-              )
-            : [];
-          const includedAddons = [...templateIncludedAddons, ...planIncludedAddons];
-          const includedAddonIds = new Set(includedAddons.map((addon) => addon.id));
 
           return (
             <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4">
@@ -462,7 +454,7 @@ export default function WebsiteTemplatesPage() {
                         {feature}
                       </li>
                     ))}
-                    {includedAddons.map((addon) => (
+                    {templateIncludedAddons.map((addon) => (
                       <li key={addon.id} className="flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-sm">
                         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                         <span>
@@ -478,11 +470,11 @@ export default function WebsiteTemplatesPage() {
                 <div className="mt-6">
                   <h3 className="text-sm font-extrabold">Optional add-ons and prices</h3>
                   <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                    Select features to see them itemized in the estimate. Included features are part of the starting plan and are not charged twice.
+                    These are optional custom-quote items, not claims about features already installed in the demo. Select an item to add its listed estimate.
                   </p>
                   <div className="mt-3 max-h-72 space-y-2 overflow-y-auto">
                     {Object.entries(groupedAddons).map(([category, categoryAddons]) => {
-                      const optionalAddons = categoryAddons.filter((addon) => !includedAddonIds.has(addon.id));
+                      const optionalAddons = categoryAddons.filter((addon) => !templateIncludedAddonIds.has(addon.id));
                       if (optionalAddons.length === 0) return null;
                       return (
                         <details key={category} className="rounded-lg border border-gray-200">
