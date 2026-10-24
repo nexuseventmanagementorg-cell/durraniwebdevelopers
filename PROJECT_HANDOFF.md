@@ -24,6 +24,7 @@ Relevant architecture:
 - Public home, portfolio, and template pages display available demo URLs and a live offer countdown. Offer pricing is derived from the approved public budget and is kept separate from new-build package/add-on estimates. The portfolio API is dynamic and disables response caching so admin updates can appear promptly.
 - The Student Burgers portfolio seed includes a 50% offer and demo URL. Its existing expiration (`2026-10-24T16:57:54.113Z`) is preserved; publishing these changes must not restart or extend the running timer.
 - Regression tests cover offer pricing/expiry validation and persistence of seeded portfolio deletions. `npm test` passed (114 tests), and `npm run build` passed.
+- Both public template cards show their configured template starting price, using the same plan calculation as the request form; promotional offer pricing remains displayed separately.
 
 ### Public ready-made website templates and availability controls
 

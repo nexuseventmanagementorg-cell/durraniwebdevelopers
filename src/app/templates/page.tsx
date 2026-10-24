@@ -290,6 +290,12 @@ export default function WebsiteTemplatesPage() {
                   <div className="space-y-3 p-5">
                     <h3 className="text-lg font-extrabold">{template.title}</h3>
                     <p className="text-xs leading-relaxed text-gray-600">{template.shortDescription}</p>
+                    <p className="text-sm text-gray-700">
+                      Starting from{" "}
+                      <strong className="font-black text-[#E31E36]">
+                        {formatPKR(getTemplateRequestPlans(template)[0]?.price || 0)}+
+                      </strong>
+                    </p>
                     <div className="flex flex-wrap gap-1.5">
                       {template.technologies.map((feature) => (
                         <span key={feature} className="rounded bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-600">
