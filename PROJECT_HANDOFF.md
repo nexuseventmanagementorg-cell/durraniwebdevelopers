@@ -13,7 +13,7 @@ Last updated: 2026-10-24
 - Commit `e939b91` was pushed successfully to `origin/main` in GitHub. The push output confirmed `main` advanced from `8eb343d` to `e939b91`.
 - The explicit CLI deploy attempt returned `fetch failed`, but the GitHub push did trigger a Vercel production deployment. Vercel reports the deployment for commit `e939b91` as `READY` (`durraniwebdevelopers-76bv1uuwe-nexuseventmanagementorg-2858.vercel.app`).
 - Production verification passed: `https://durraniwebdevelopers.vercel.app`, `/api/public/portfolio`, and `/api/public/addons` returned HTTP 200. The live portfolio API reports Restaurant Name at PKR 225,000 (`Estimated Build Price`); the live add-on API returns 102 add-ons and its pricing configuration.
-- The production release is verified. Next: reread this handoff, commit and push this release-status documentation update, then confirm GitHub is in sync. The verified application source is commit `e939b91`; the follow-up contains handoff documentation only.
+- The production release is verified. Application source commit `e939b91` is active in production; the follow-up commit records the release evidence and changes documentation only. No additional application-source changes are pending.
 
 ## Project goal and architecture
 
