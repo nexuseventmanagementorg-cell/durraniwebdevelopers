@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import PortfolioOffer from "@/components/PortfolioOffer";
 import {
   ArrowRight,
   CheckCircle2,
@@ -24,6 +25,7 @@ import {
   formatPKR,
 } from "@/lib/constants";
 import { getTemplateRequestPlans } from "@/lib/template-pricing";
+import { getPortfolioOffer } from "@/lib/portfolio-offers";
 import type { AddonOption, PortfolioProject } from "@/lib/types";
 
 const TEMPLATE_PLANS = [
@@ -52,6 +54,7 @@ export default function WebsiteTemplatesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [offerClock, setOfferClock] = useState(() => Date.now());
 
   useEffect(() => {
     async function loadTemplates() {
@@ -95,10 +98,18 @@ export default function WebsiteTemplatesPage() {
     loadTemplates();
   }, []);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setOfferClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const selectedTemplate = useMemo(
     () => templates.find((template) => template.id === selectedTemplateId),
     [selectedTemplateId, templates]
   );
+  const selectedOffer = selectedTemplate
+    ? getPortfolioOffer(selectedTemplate, offerClock)
+    : undefined;
   const templatePlans = useMemo(
     () => selectedTemplate ? getTemplateRequestPlans(selectedTemplate) : [],
     [selectedTemplate]
@@ -147,9 +158,13 @@ export default function WebsiteTemplatesPage() {
       setSubmitting(false);
       return;
     }
+    const activeOffer = getPortfolioOffer(selectedTemplate);
     const message = [
       `Ready-made template: ${selectedTemplate.title}`,
       `Template preview: ${selectedTemplate.demoUrl || "Offline preview; please confirm availability"}`,
+      ...(activeOffer
+        ? [`Active offer: ${activeOffer.tag} — ${activeOffer.discountPercent}% off the published ${formatPKR(activeOffer.originalPrice)} price; offer price ${formatPKR(activeOffer.offerPrice)} until ${new Date(activeOffer.endsAt).toLocaleString()}.`]
+        : []),
       `Requested pricing plan: ${selectedPlan.name} (${formatPKR(selectedPlan.price)} starting price)`,
       `Selected add-ons: ${selectedAddons.length > 0
         ? selectedAddons.map((addon) => `${addon.label} — ${formatPKR(priceForAddon(addon))}${addon.billingPeriod === "monthly" ? " / month" : ""}${chargeableAddonIds.includes(addon.id) ? "" : " (included in selected plan)"}`).join(", ")
@@ -282,6 +297,7 @@ export default function WebsiteTemplatesPage() {
                         </span>
                       ))}
                     </div>
+                    <PortfolioOffer project={template} />
                     <button
                       type="button"
                       onClick={() => {
@@ -304,7 +320,7 @@ export default function WebsiteTemplatesPage() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 hover:text-[#E31E36]"
                       >
-                        {template.availabilityStatus === "Offline" ? "Try preview (may be unavailable)" : "Open live preview"}
+                        {template.demoUrl}
                         <ExternalLink className="h-3 w-3" />
                       </a>
                     )}
@@ -424,6 +440,14 @@ export default function WebsiteTemplatesPage() {
                 </div>
                 {monthlyAddonTotal > 0 && (
                   <div className="mt-1 flex justify-between gap-3 text-gray-600"><span>Recurring add-ons</span><strong>{formatPKR(monthlyAddonTotal)} / month</strong></div>
+                )}
+                {selectedOffer && selectedTemplate && (
+                  <div className="mt-3">
+                    <p className="mb-1 text-[10px] font-semibold text-gray-600">
+                      This limited-time template offer is separate from the new-build estimate above.
+                    </p>
+                    <PortfolioOffer project={selectedTemplate} />
+                  </div>
                 )}
                 <p className="mt-2 text-[10px] leading-relaxed text-gray-500">Estimate only; final price is confirmed after requirements and scope review.</p>
               </div>

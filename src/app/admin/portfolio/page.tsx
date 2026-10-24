@@ -6,6 +6,7 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { PortfolioProject } from "@/lib/types";
 import { formatPKR } from "@/lib/constants";
+import { getPortfolioOffer } from "@/lib/portfolio-offers";
 import {
   Image as ImageIcon,
   Search,
@@ -17,7 +18,26 @@ import {
   ExternalLink,
   X,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
+
+const TEMPLATE_PACKAGE_OPTIONS: { id: NonNullable<PortfolioProject["templatePricingPackage"]>; label: string }[] = [
+  { id: "ecommerce_starter", label: "E-Commerce Starter" },
+  { id: "ecommerce_business", label: "E-Commerce Business" },
+  { id: "ecommerce_advanced", label: "E-Commerce Advanced" },
+  { id: "saas_starter", label: "SaaS Starter" },
+  { id: "saas_business", label: "SaaS Business" },
+  { id: "saas_enterprise", label: "SaaS Enterprise" },
+];
+
+const OFFER_TAG_PRESETS = ["50% OFF", "Limited-Time Offer", "Flash Sale", "3-Day Deal", "Special Offer"];
+
+function toLocalDateTimeValue(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
 
 export default function AdminPortfolioPage() {
   const [portfolio, setPortfolio] = useState<PortfolioProject[]>([]);
@@ -40,9 +60,18 @@ export default function AdminPortfolioPage() {
   const [clientConsent, setClientConsent] = useState(true);
   const [availabilityStatus, setAvailabilityStatus] = useState<"Online" | "Offline">("Online");
   const [templateAvailable, setTemplateAvailable] = useState(true);
+  const [templatePricingPackage, setTemplatePricingPackage] =
+    useState<NonNullable<PortfolioProject["templatePricingPackage"]>>("ecommerce_business");
+  const [templateStartingPrice, setTemplateStartingPrice] = useState("");
+  const [offerEnabled, setOfferEnabled] = useState(false);
+  const [offerTag, setOfferTag] = useState("");
+  const [offerDiscountPercent, setOfferDiscountPercent] = useState("");
+  const [offerEndsAt, setOfferEndsAt] = useState("");
   const [projectStatus, setProjectStatus] = useState<PortfolioProject["status"]>("Live");
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const categories = [
     "Restaurant web applications",
@@ -69,9 +98,13 @@ export default function AdminPortfolioPage() {
       const data = await res.json();
       if (data.success) {
         setPortfolio(data.portfolio);
+        setErrorMsg("");
+      } else {
+        setErrorMsg(data.error || "Could not load portfolio items.");
       }
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error("Failed to load portfolio items", error);
+      setErrorMsg("Could not load portfolio items. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -96,7 +129,14 @@ export default function AdminPortfolioPage() {
     setClientConsent(true);
     setAvailabilityStatus("Online");
     setTemplateAvailable(true);
+    setTemplatePricingPackage("ecommerce_business");
+    setTemplateStartingPrice("");
+    setOfferEnabled(false);
+    setOfferTag("");
+    setOfferDiscountPercent("");
+    setOfferEndsAt("");
     setProjectStatus("Live");
+    setErrorMsg("");
     setModalOpen(true);
   };
 
@@ -115,7 +155,18 @@ export default function AdminPortfolioPage() {
     setClientConsent(Boolean(item.clientConsentForBudget));
     setAvailabilityStatus(item.availabilityStatus || "Online");
     setTemplateAvailable(item.templateAvailable !== false);
+    setTemplatePricingPackage(item.templatePricingPackage || "ecommerce_business");
+    setTemplateStartingPrice(item.templateStartingPrice ? String(item.templateStartingPrice) : "");
+    setOfferEnabled(
+      Boolean(item.offerEnabled && item.offerEndsAt && Date.parse(item.offerEndsAt) > Date.now())
+    );
+    setOfferTag(item.offerTag || "");
+    setOfferDiscountPercent(
+      item.offerDiscountPercent ? String(item.offerDiscountPercent) : ""
+    );
+    setOfferEndsAt(toLocalDateTimeValue(item.offerEndsAt));
     setProjectStatus(item.status);
+    setErrorMsg("");
     setModalOpen(true);
   };
 
@@ -128,7 +179,7 @@ export default function AdminPortfolioPage() {
     setSaving(true);
 
     try {
-      const payload: Partial<PortfolioProject> = {
+      const payload = {
         id: selectedItem ? selectedItem.id : undefined,
         title,
         category,
@@ -138,11 +189,17 @@ export default function AdminPortfolioPage() {
         demoUrl,
         technologies: techInput.split(",").map((t) => t.trim()).filter(Boolean),
         isPublic,
-        approvedPublicBudget: approvedBudget ? Number(approvedBudget) : undefined,
+        approvedPublicBudget: approvedBudget ? Number(approvedBudget) : null,
         budgetLabel,
         clientConsentForBudget: clientConsent,
         availabilityStatus,
         templateAvailable,
+        templatePricingPackage,
+        templateStartingPrice: templateStartingPrice ? Number(templateStartingPrice) : null,
+        offerEnabled,
+        offerTag,
+        offerDiscountPercent: offerDiscountPercent ? Number(offerDiscountPercent) : undefined,
+        offerEndsAt: offerEndsAt ? new Date(offerEndsAt).toISOString() : undefined,
         status: projectStatus,
       };
 
@@ -158,9 +215,12 @@ export default function AdminPortfolioPage() {
         setModalOpen(false);
         fetchPortfolio();
         setTimeout(() => setSuccessMsg(""), 3000);
+      } else {
+        setErrorMsg(data.error || "Could not save this portfolio item.");
       }
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error("Failed to save portfolio item", error);
+      setErrorMsg("Could not save this portfolio item. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -178,9 +238,38 @@ export default function AdminPortfolioPage() {
         setPortfolio((prev) =>
           prev.map((p) => (p.id === item.id ? { ...p, isPublic: !p.isPublic } : p))
         );
+      } else {
+        setErrorMsg(data.error || "Could not update portfolio visibility.");
       }
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error("Failed to update portfolio visibility", error);
+      setErrorMsg("Could not update portfolio visibility. Please try again.");
+    }
+  };
+
+  const handleDelete = async (item: PortfolioProject) => {
+    if (!window.confirm(`Permanently remove "${item.title}" from the portfolio and template marketplace?`)) return;
+    setDeletingId(item.id);
+    setErrorMsg("");
+    try {
+      const response = await fetch("/api/admin/portfolio", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        setErrorMsg(data.error || "Could not delete this portfolio item.");
+        return;
+      }
+      setPortfolio((current) => current.filter((project) => project.id !== item.id));
+      setSuccessMsg("Portfolio item removed.");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (error) {
+      console.error("Failed to delete portfolio item", error);
+      setErrorMsg("Could not delete this portfolio item. Please try again.");
+    } finally {
+      setDeletingId("");
     }
   };
 
@@ -197,8 +286,8 @@ export default function AdminPortfolioPage() {
 
       <main className="flex-1 ml-64 min-h-screen flex flex-col">
         <AdminHeader
-          title="Portfolio Management & Public Privacy"
-          subtitle="Control public project visibility, demo links, and approved client budget disclosures"
+          title="Portfolio & Template Marketplace"
+          subtitle="Add, edit, remove, price, promote, and manage public portfolio projects and templates"
           actionButton={
             <button
               onClick={openNewModal}
@@ -215,6 +304,11 @@ export default function AdminPortfolioPage() {
             <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
               <span>{successMsg}</span>
+            </div>
+          )}
+          {errorMsg && (
+            <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-bold text-red-800">
+              {errorMsg}
             </div>
           )}
 
@@ -273,6 +367,16 @@ export default function AdminPortfolioPage() {
                     <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
                       {item.shortDescription}
                     </p>
+                    {item.demoUrl && (
+                      <a
+                        href={item.demoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block break-all text-[10px] font-semibold text-blue-700 underline underline-offset-2"
+                      >
+                        {item.demoUrl}
+                      </a>
+                    )}
 
                     <div className="pt-2 text-xs flex justify-between items-center text-gray-500">
                       <span>Public Budget:</span>
@@ -282,6 +386,16 @@ export default function AdminPortfolioPage() {
                           : "Hidden"}
                       </strong>
                     </div>
+                    {item.offerEnabled && (
+                      <div className="pt-1 text-xs flex justify-between items-center text-gray-500">
+                        <span>{getPortfolioOffer(item) ? "Live offer:" : "Offer:"}</span>
+                        <strong className="text-[#E31E36]">
+                          {getPortfolioOffer(item)
+                            ? `${item.offerTag} — ${formatPKR(getPortfolioOffer(item)?.offerPrice || 0)}`
+                            : "Inactive / expired"}
+                        </strong>
+                      </div>
+                    )}
                     <div className="pt-1 text-xs flex justify-between items-center text-gray-500">
                       <span>Website:</span>
                       <strong className={item.availabilityStatus === "Offline" ? "text-red-600" : "text-emerald-600"}>
@@ -316,6 +430,14 @@ export default function AdminPortfolioPage() {
                     className="bg-white hover:bg-gray-100 text-[#101216] px-3 py-1.5 rounded-lg border border-gray-300 font-bold transition inline-flex items-center gap-1"
                   >
                     <Edit2 className="w-3 h-3" /> Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item)}
+                    disabled={deletingId === item.id}
+                    aria-label={`Remove ${item.title}`}
+                    className="bg-white hover:bg-red-50 text-red-600 px-2.5 py-1.5 rounded-lg border border-red-200 font-bold transition disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -395,39 +517,30 @@ export default function AdminPortfolioPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">Website Availability</label>
-                <select
-                  value={availabilityStatus}
-                  onChange={(event) => setAvailabilityStatus(event.target.value as "Online" | "Offline")}
-                  className="w-full bg-[#F4F5F7] px-3 py-2 rounded-xl border border-gray-300 text-[#101216]"
-                >
-                  <option value="Online">Online</option>
-                  <option value="Offline">Offline</option>
-                </select>
-              </div>
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">Project Status</label>
-                <select
-                  value={projectStatus}
-                  onChange={(event) => setProjectStatus(event.target.value as PortfolioProject["status"])}
-                  className="w-full bg-[#F4F5F7] px-3 py-2 rounded-xl border border-gray-300 text-[#101216]"
-                >
-                  <option value="Live">Live</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Delivered">Delivered</option>
-                </select>
-              </div>
-              <label className="flex items-center gap-2 pt-5 font-bold text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={templateAvailable}
-                  onChange={(event) => setTemplateAvailable(event.target.checked)}
-                  className="accent-[#E31E36]"
-                />
-                Available as a template
-              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Website Availability</label>
+                  <select
+                    value={availabilityStatus}
+                    onChange={(event) => setAvailabilityStatus(event.target.value as "Online" | "Offline")}
+                    className="w-full bg-[#F4F5F7] px-3 py-2 rounded-xl border border-gray-300 text-[#101216]"
+                  >
+                    <option value="Online">Online</option>
+                    <option value="Offline">Offline</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Project Status</label>
+                  <select
+                    value={projectStatus}
+                    onChange={(event) => setProjectStatus(event.target.value as PortfolioProject["status"])}
+                    className="w-full bg-[#F4F5F7] px-3 py-2 rounded-xl border border-gray-300 text-[#101216]"
+                  >
+                    <option value="Live">Live</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Delivered">Delivered</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -441,6 +554,117 @@ export default function AdminPortfolioPage() {
                   className="w-full bg-[#F4F5F7] px-3 py-2 rounded-xl border border-gray-300 text-[#101216]"
                 />
               </div>
+
+              <section className="space-y-3 rounded-xl border border-blue-200 bg-blue-50/60 p-4">
+                <div>
+                  <strong className="block text-sm font-extrabold text-gray-900">Template marketplace settings</strong>
+                  <span className="text-[11px] text-gray-600">Manage template availability, starting price, promotional tags, and the offer countdown.</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block font-bold text-gray-700">Template pricing plan</label>
+                    <select
+                      value={templatePricingPackage}
+                      onChange={(event) => setTemplatePricingPackage(event.target.value as NonNullable<PortfolioProject["templatePricingPackage"]>)}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-[#101216]"
+                    >
+                      {TEMPLATE_PACKAGE_OPTIONS.map((option) => (
+                        <option key={option.id} value={option.id}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block font-bold text-gray-700">Template starting price (PKR)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={templateStartingPrice}
+                      onChange={(event) => setTemplateStartingPrice(event.target.value)}
+                      placeholder="Use package price"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-[#101216]"
+                    />
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={templateAvailable}
+                    onChange={(event) => setTemplateAvailable(event.target.checked)}
+                    className="accent-[#E31E36]"
+                  />
+                  Publish as an available website template
+                </label>
+                <div className="space-y-3 border-t border-blue-200 pt-3">
+                  <label className="flex items-center gap-2 text-xs font-bold text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={offerEnabled}
+                      onChange={(event) => setOfferEnabled(event.target.checked)}
+                      className="accent-[#E31E36]"
+                    />
+                    Activate a limited-time offer
+                  </label>
+                  {offerEnabled && (
+                    <>
+                      <div className="flex flex-wrap gap-1.5">
+                        {OFFER_TAG_PRESETS.map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => setOfferTag(tag)}
+                            className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${
+                              offerTag === tag
+                                ? "border-[#E31E36] bg-[#E31E36] text-white"
+                                : "border-gray-300 bg-white text-gray-700 hover:border-[#E31E36]"
+                            }`}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="col-span-3 sm:col-span-1">
+                          <label className="mb-1 block font-bold text-gray-700">Offer badge text</label>
+                          <input
+                            value={offerTag}
+                            onChange={(event) => setOfferTag(event.target.value)}
+                            placeholder="e.g. Half Price"
+                            maxLength={40}
+                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-[#101216]"
+                            required={offerEnabled}
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block font-bold text-gray-700">Discount %</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="99"
+                            value={offerDiscountPercent}
+                            onChange={(event) => setOfferDiscountPercent(event.target.value)}
+                            placeholder="50"
+                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-[#101216]"
+                            required={offerEnabled}
+                          />
+                        </div>
+                        <div className="col-span-3 sm:col-span-1">
+                          <label className="mb-1 block font-bold text-gray-700">Offer ends (local time)</label>
+                          <input
+                            type="datetime-local"
+                            value={offerEndsAt}
+                            onChange={(event) => setOfferEndsAt(event.target.value)}
+                            className="w-full rounded-lg border border-gray-300 bg-white px-2 py-2 text-[#101216]"
+                            required={offerEnabled}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[10px] leading-relaxed text-gray-600">
+                        Discount applies to the published portfolio price. The original build estimate and the template package breakdown remain unchanged.
+                      </p>
+                    </>
+                  )}
+                </div>
+              </section>
 
               <div>
                 <label className="block font-bold text-gray-700 mb-1">Short Description</label>

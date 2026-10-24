@@ -26,6 +26,7 @@ interface DatabaseSchema {
   installments: InstallmentScheduleItem[];
   reminders: PaymentReminder[];
   portfolio: PortfolioProject[];
+  deletedPortfolioIds?: string[];
   pricingConfig: PricingRuleConfig;
   settings: SystemSettings;
   auditLogs: AuditLog[];
@@ -71,6 +72,10 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     isPublic: true,
     approvedPublicBudget: 185000,
     budgetLabel: "Estimated Build Price",
+    offerEnabled: true,
+    offerTag: "3-Day Half-Price Deal",
+    offerDiscountPercent: 50,
+    offerEndsAt: "2026-10-27T13:00:00.000Z",
     featured: true,
     clientConsentForBudget: false,
   },
@@ -111,9 +116,12 @@ const LEGACY_STUDENT_BURGERS_PORTFOLIO_VALUES: Partial<PortfolioProject> = {
 
 export function mergePortfolioSeedProjects(
   savedProjects: PortfolioProject[],
-  seedProjects: PortfolioProject[] = INITIAL_PORTFOLIO_PROJECTS
+  seedProjects: PortfolioProject[] = INITIAL_PORTFOLIO_PROJECTS,
+  deletedProjectIds: string[] = []
 ): PortfolioProject[] {
-  const updatedSavedProjects = savedProjects.map((savedProject) => {
+  const updatedSavedProjects = savedProjects.filter(
+    (project) => !deletedProjectIds.includes(project.id)
+  ).map((savedProject) => {
     const seedProject = seedProjects.find((project) => project.id === savedProject.id);
     const isLegacyGrillvi = savedProject.id === "grillvi-gtroad";
     const legacyValues = isLegacyGrillvi
@@ -153,12 +161,18 @@ export function mergePortfolioSeedProjects(
       templateStartingPrice: savedProject.templateStartingPrice ?? seedProject?.templateStartingPrice,
       templateIncludedAddonIds: savedProject.templateIncludedAddonIds ?? seedProject?.templateIncludedAddonIds,
       templateIncludedAddonPrices: savedProject.templateIncludedAddonPrices ?? seedProject?.templateIncludedAddonPrices,
+      offerEnabled: savedProject.offerEnabled ?? seedProject?.offerEnabled ?? false,
+      offerTag: savedProject.offerTag ?? seedProject?.offerTag,
+      offerDiscountPercent: savedProject.offerDiscountPercent ?? seedProject?.offerDiscountPercent,
+      offerEndsAt: savedProject.offerEndsAt ?? seedProject?.offerEndsAt,
       availabilityStatus: savedProject.availabilityStatus ?? seedProject?.availabilityStatus ?? "Online",
       templateAvailable: savedProject.templateAvailable ?? seedProject?.templateAvailable ?? true,
     };
   });
   const newSeedProjects = seedProjects.filter(
-    (project) => !savedProjects.some((savedProject) => savedProject.id === project.id)
+    (project) =>
+      !deletedProjectIds.includes(project.id) &&
+      !savedProjects.some((savedProject) => savedProject.id === project.id)
   );
 
   return [...newSeedProjects, ...updatedSavedProjects];
@@ -594,13 +608,18 @@ export class DataStore {
   // Portfolio
   static getPortfolio(includePrivate: boolean = false): PortfolioProject[] {
     const data = this.ensureDataFile();
-    const portfolio = mergePortfolioSeedProjects(data.portfolio);
+    const portfolio = mergePortfolioSeedProjects(
+      data.portfolio,
+      INITIAL_PORTFOLIO_PROJECTS,
+      data.deletedPortfolioIds || []
+    );
     if (includePrivate) return portfolio;
     return portfolio.filter((p) => p.isPublic);
   }
 
   static savePortfolioProject(project: PortfolioProject, actor: string = "Admin"): PortfolioProject {
     const data = this.ensureDataFile();
+    data.deletedPortfolioIds = (data.deletedPortfolioIds || []).filter((id) => id !== project.id);
     const idx = data.portfolio.findIndex((p) => p.id === project.id);
     if (idx >= 0) {
       data.portfolio[idx] = project;
@@ -623,6 +642,28 @@ export class DataStore {
     }
     this.writeData(data);
     return project;
+  }
+
+  static deletePortfolioProject(id: string, actor: string = "Admin"): boolean {
+    const data = this.ensureDataFile();
+    const project = mergePortfolioSeedProjects(
+      data.portfolio,
+      INITIAL_PORTFOLIO_PROJECTS,
+      data.deletedPortfolioIds
+    ).find((entry) => entry.id === id);
+    if (!project) return false;
+
+    data.portfolio = data.portfolio.filter((entry) => entry.id !== id);
+    data.deletedPortfolioIds = Array.from(new Set([...(data.deletedPortfolioIds || []), id]));
+    this.addAuditLog({
+      action: "PORTFOLIO_DELETED",
+      actor,
+      targetType: "project",
+      targetId: id,
+      details: `Portfolio item "${project.title}" deleted.`,
+    }, data);
+    this.writeData(data, true);
+    return true;
   }
 
   // Pricing configuration

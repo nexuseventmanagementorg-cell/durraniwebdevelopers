@@ -7,6 +7,7 @@ import {
 } from "@/lib/constants";
 import { DataStore } from "@/lib/store";
 import RegionalPrice from "@/components/RegionalPrice";
+import PortfolioOffer from "@/components/PortfolioOffer";
 import { DWD_WORKFORCE_AGENTS, DWD_WORKFORCE_DEPARTMENTS } from "@/lib/workforce-agents";
 import {
   Calculator,
@@ -34,6 +35,8 @@ import {
   Bot,
   Workflow,
 } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default function HomePage() {
   const publicProjects = DataStore.getPortfolio(false);
@@ -852,6 +855,16 @@ export default function HomePage() {
                         </span>
                       ))}
                     </div>
+                    {item.demoUrl && (
+                      <a
+                        href={item.demoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 block break-all text-[10px] font-semibold text-blue-300 underline decoration-blue-800 underline-offset-2 hover:text-white"
+                      >
+                        {item.demoUrl}
+                      </a>
+                    )}
                   </div>
                 </div>
 
@@ -878,6 +891,7 @@ export default function HomePage() {
                   ) : (
                     <span className="text-xs text-gray-500 italic">Custom Scope</span>
                   )}
+                  <PortfolioOffer project={item} />
 
                   <div className="flex flex-wrap items-center justify-end gap-3">
                     {item.templateAvailable !== false && (

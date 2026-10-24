@@ -36,7 +36,7 @@ export default function AdminSidebar() {
     { name: "Receipt Reviews", href: "/admin/payment-proofs", icon: ReceiptText },
     { name: "Project Invoices", href: "/admin/invoices", icon: FileText },
     { name: "Dynamic Pricing Rules", href: "/admin/pricing", icon: Sliders },
-    { name: "Portfolio & Privacy", href: "/admin/portfolio", icon: ImageIcon },
+    { name: "Portfolio & Templates", href: "/admin/portfolio", icon: ImageIcon },
     { name: "Automated Reminders", href: "/admin/reminders", icon: Bell },
     { name: "Settings & Audit Logs", href: "/admin/settings", icon: Settings },
   ];

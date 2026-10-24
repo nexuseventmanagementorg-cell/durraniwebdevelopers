@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { PortfolioProject } from "@/lib/types";
 import RegionalPrice from "@/components/RegionalPrice";
+import PortfolioOffer from "@/components/PortfolioOffer";
 import {
   Search,
   ExternalLink,
@@ -197,6 +198,16 @@ export default function PortfolioPage() {
                         </span>
                       ))}
                     </div>
+                    {project.demoUrl && (
+                      <a
+                        href={project.demoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 block break-all text-[10px] font-semibold text-blue-700 underline decoration-blue-200 underline-offset-2 hover:text-[#E31E36]"
+                      >
+                        {project.demoUrl}
+                      </a>
+                    )}
                   </div>
                 </div>
 
@@ -223,6 +234,7 @@ export default function PortfolioPage() {
                   ) : (
                     <span className="text-xs text-gray-400 italic">Custom Enterprise Scope</span>
                   )}
+                  <PortfolioOffer project={project} />
 
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     <button
@@ -318,6 +330,20 @@ export default function PortfolioPage() {
                   ))}
                 </div>
               </div>
+              {modalProject.demoUrl && (
+                <div>
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Website link</h4>
+                  <a
+                    href={modalProject.demoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="break-all text-sm font-semibold text-blue-700 underline underline-offset-2 hover:text-[#E31E36]"
+                  >
+                    {modalProject.demoUrl}
+                  </a>
+                </div>
+              )}
+              <PortfolioOffer project={modalProject} />
 
               {modalProject.approvedPublicBudget && (
                 <div className="bg-red-50 p-4 rounded-xl border border-red-200 flex justify-between items-center">

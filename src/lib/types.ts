@@ -396,6 +396,10 @@ export interface PortfolioProject {
   isPublic: boolean;
   approvedPublicBudget?: number;
   budgetLabel?: string;
+  offerEnabled?: boolean;
+  offerTag?: string;
+  offerDiscountPercent?: number;
+  offerEndsAt?: string;
   adminPanelIncluded?: boolean;
   includedAddonIds?: string[];
   featured: boolean;

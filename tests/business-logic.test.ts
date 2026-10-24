@@ -45,6 +45,7 @@ import {
   INITIAL_PORTFOLIO_PROJECTS,
   mergePortfolioSeedProjects,
 } from "../src/lib/store";
+import { getPortfolioOffer } from "../src/lib/portfolio-offers";
 import { buildInstallmentSchedule } from "../src/lib/client-finances";
 import {
   hashVisitorId,
@@ -530,6 +531,13 @@ test("Student Burgers & Shawarmas portfolio shows the PKR 185,000 e-commerce bui
   assert.equal(project.clientConsentForBudget, false);
   assert.equal(project.templatePricingPackage, "ecommerce_business");
   assert.equal(project.templateStartingPrice, 150000);
+  assert.equal(project.offerEnabled, true);
+  assert.equal(project.offerTag, "3-Day Half-Price Deal");
+  assert.equal(project.offerDiscountPercent, 50);
+  assert.equal(
+    getPortfolioOffer(project, Date.parse("2026-10-22T19:57:54.113+05:00"))?.offerPrice,
+    92500
+  );
   assert.deepEqual(project.templateIncludedAddonIds, ["restaurant_qr_menu", "order_tracking"]);
   assert.deepEqual(project.templateIncludedAddonPrices, { restaurant_qr_menu: 10000, order_tracking: 25000 });
   assert.equal(
@@ -540,6 +548,31 @@ test("Student Burgers & Shawarmas portfolio shows the PKR 185,000 e-commerce bui
   assert.match(project.fullDescription, /PKR 185,000/);
   assert.ok(project.technologies.includes("WhatsApp Ordering"));
   assert.ok(project.technologies.includes("Dine-In Table QR"));
+});
+
+test("Portfolio offers expire at their configured deadline and ignore invalid discounts", () => {
+  const student = INITIAL_PORTFOLIO_PROJECTS.find(
+    (item) => item.id === "student-burgers-shawarmas"
+  );
+  assert.ok(student);
+  const endsAt = Date.parse(student.offerEndsAt || "");
+  assert.equal(getPortfolioOffer(student, endsAt), undefined);
+  assert.equal(
+    getPortfolioOffer({ ...student, offerDiscountPercent: 100 }, endsAt - 1),
+    undefined
+  );
+});
+
+test("Deleted seeded portfolio projects stay removed until restored", () => {
+  const savedProjects = [INITIAL_PORTFOLIO_PROJECTS[0]];
+  const withoutSeededProject = mergePortfolioSeedProjects(
+    savedProjects,
+    INITIAL_PORTFOLIO_PROJECTS,
+    ["grillvi-gtroad"]
+  );
+  assert.equal(withoutSeededProject.some((project) => project.id === "grillvi-gtroad"), false);
+  const restored = mergePortfolioSeedProjects(savedProjects, INITIAL_PORTFOLIO_PROJECTS);
+  assert.equal(restored.some((project) => project.id === "grillvi-gtroad"), true);
 });
 
 test("Student Burgers portfolio updates the old seeded image but preserves admin image edits", () => {

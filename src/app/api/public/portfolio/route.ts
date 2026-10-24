@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { DataStore } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const portfolio = DataStore.getPortfolio(false);
-    return NextResponse.json({ success: true, portfolio });
+    return NextResponse.json(
+      { success: true, portfolio },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   } catch (error) {
     console.error("Failed to fetch public portfolio", error);
     return NextResponse.json(
