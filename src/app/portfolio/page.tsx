@@ -3,9 +3,14 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { PortfolioProject } from "@/lib/types";
+import { AddonOption, PortfolioProject } from "@/lib/types";
 import RegionalPrice from "@/components/RegionalPrice";
 import PortfolioOffer from "@/components/PortfolioOffer";
+import { DEFAULT_PRICING_CONFIG } from "@/lib/constants";
+import {
+  getPortfolioFeatureLabels,
+  getTemplatePriceBreakdown,
+} from "@/lib/template-pricing";
 import {
   Search,
   ExternalLink,
@@ -20,6 +25,9 @@ import {
 
 export default function PortfolioPage() {
   const [projects, setProjects] = useState<PortfolioProject[]>([]);
+  const [addonCatalog, setAddonCatalog] = useState<AddonOption[]>(
+    Object.values(DEFAULT_PRICING_CONFIG.addons)
+  );
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -40,6 +48,17 @@ export default function PortfolioPage() {
       }
     }
     loadPortfolio();
+    fetch("/api/public/addons", { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok || !data.success || !Array.isArray(data.addons)) {
+          throw new Error(data.error || "Could not load current feature catalog.");
+        }
+        setAddonCatalog(data.addons);
+      })
+      .catch((error) => {
+        console.error("Could not load current portfolio feature catalog", error);
+      });
   }, []);
 
   const categories = ["All", ...Array.from(new Set(projects.map((project) => project.category)))];
@@ -53,6 +72,13 @@ export default function PortfolioPage() {
       p.technologies.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
+
+  const modalTemplateBreakdown = modalProject?.templatePricingPackage
+    ? getTemplatePriceBreakdown(
+        modalProject,
+        addonCatalog
+      )
+    : null;
 
   return (
     <div className="bg-[#FFFFFF] text-[#101216] min-h-screen">
@@ -189,7 +215,7 @@ export default function PortfolioPage() {
 
                     {/* Tech Badges */}
                     <div className="flex flex-wrap gap-1.5 mt-4">
-                      {project.technologies.map((tech) => (
+                      {getPortfolioFeatureLabels(project, addonCatalog).map((tech) => (
                         <span
                           key={tech}
                           className="bg-[#F4F5F7] text-gray-700 text-[10px] font-semibold px-2 py-0.5 rounded"
@@ -225,9 +251,22 @@ export default function PortfolioPage() {
                           Original Pakistan fee; foreign currency is direct FX conversion
                         </span>
                       )}
-                      {project.budgetLabel === "Estimated Build Price" && (
+                      {project.templatePricingPackage &&
+                        getTemplatePriceBreakdown(project, addonCatalog).total !== project.approvedPublicBudget && (
+                        <span className="mt-1 block text-[9px] text-gray-500">
+                          Comparable new-build estimate:{" "}
+                          <RegionalPrice
+                            pkrAmount={getTemplatePriceBreakdown(
+                              project,
+                              addonCatalog
+                            ).total}
+                            conversion="historical-fx"
+                          />
+                        </span>
+                      )}
+                      {modalTemplateBreakdown && (
                         <span className="block text-[9px] text-gray-500">
-                          New-build estimate based on visible features
+                              Comparable new-build estimate includes the listed template features
                         </span>
                       )}
                     </div>
@@ -365,11 +404,41 @@ export default function PortfolioPage() {
                   </span>
                 </div>
               )}
+              {modalTemplateBreakdown && (
+                <section className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                    Comparable new-build price breakdown
+                  </h4>
+                  <div className="mt-3 space-y-2 text-xs">
+                    <div className="flex justify-between gap-4">
+                      <span>{modalTemplateBreakdown.plan.name}</span>
+                      <strong className="shrink-0">
+                        <RegionalPrice pkrAmount={modalTemplateBreakdown.plan.price} conversion="historical-fx" />
+                      </strong>
+                    </div>
+                    {modalTemplateBreakdown.includedAddons.map((addon) => (
+                      <div key={addon.id} className="flex justify-between gap-4 text-gray-600">
+                        <span>{addon.label}</span>
+                        <strong className="shrink-0">
+                          <RegionalPrice pkrAmount={addon.includedPrice} conversion="historical-fx" />
+                        </strong>
+                      </div>
+                    ))}
+                    <div className="flex justify-between gap-4 border-t border-gray-200 pt-2 text-sm font-black">
+                      <span>Estimated build total</span>
+                      <RegionalPrice pkrAmount={modalTemplateBreakdown.total} conversion="historical-fx" />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[10px] leading-relaxed text-gray-500">
+                    This is the comparable new-build estimate. Any limited-time template offer shown above is separate.
+                  </p>
+                </section>
+              )}
               {(modalProject.budgetLabel === "Estimated Calculator Budget" ||
                 modalProject.budgetLabel === "Estimated Build Price") && (
                 <p className="text-xs text-gray-600 leading-relaxed">
                   {modalProject.budgetLabel === "Estimated Build Price"
-                    ? `Estimated new-build scope uses the ${modalProject.templatePricingPackage?.replaceAll("_", " ") || "matching published"} package starting at PKR ${modalProject.templateStartingPrice?.toLocaleString("en-PK") || "the published rate"}, plus the listed feature add-ons. Final scope and price require confirmation.`
+                    ? `Estimated new-build scope uses the ${modalTemplateBreakdown?.plan.name || modalProject.templatePricingPackage?.replaceAll("_", " ") || "matching published"} package starting at PKR ${modalProject.templateStartingPrice?.toLocaleString("en-PK") || "the published rate"}, plus the listed feature add-ons. Final scope and price require confirmation.`
                     : "Estimate assumes the PKR 45,000 client-admin package plus the PKR 10,000 Supabase database add-on. Vercel deployment work is included in the web-app budget. We do not provide payment gateway accounts or other third-party accounts/subscriptions; clients arrange and pay providers directly."}
                 </p>
               )}

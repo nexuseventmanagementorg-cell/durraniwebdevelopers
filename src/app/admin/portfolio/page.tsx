@@ -4,9 +4,10 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
-import { PortfolioProject } from "@/lib/types";
-import { formatPKR } from "@/lib/constants";
+import { AddonOption, PortfolioProject } from "@/lib/types";
+import { DEFAULT_PRICING_CONFIG, formatPKR, getAddonPriceForPackage } from "@/lib/constants";
 import { getPortfolioOffer } from "@/lib/portfolio-offers";
+import { getPortfolioFeatureLabels, getTemplatePriceBreakdown } from "@/lib/template-pricing";
 import {
   Image as ImageIcon,
   Search,
@@ -63,6 +64,11 @@ export default function AdminPortfolioPage() {
   const [templatePricingPackage, setTemplatePricingPackage] =
     useState<NonNullable<PortfolioProject["templatePricingPackage"]>>("ecommerce_business");
   const [templateStartingPrice, setTemplateStartingPrice] = useState("");
+  const [templateIncludedAddonIds, setTemplateIncludedAddonIds] = useState<string[]>([]);
+  const [templateIncludedAddonPrices, setTemplateIncludedAddonPrices] = useState<Record<string, string>>({});
+  const [addonCatalog, setAddonCatalog] = useState<AddonOption[]>(
+    Object.values(DEFAULT_PRICING_CONFIG.addons)
+  );
   const [offerEnabled, setOfferEnabled] = useState(false);
   const [offerTag, setOfferTag] = useState("");
   const [offerDiscountPercent, setOfferDiscountPercent] = useState("");
@@ -112,6 +118,18 @@ export default function AdminPortfolioPage() {
 
   useEffect(() => {
     fetchPortfolio();
+    fetch("/api/public/addons")
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok || !data.success || !Array.isArray(data.addons)) {
+          throw new Error(data.error || "Could not load add-on catalog.");
+        }
+        setAddonCatalog(data.addons);
+      })
+      .catch((error) => {
+        console.error("Failed to load portfolio add-on catalog", error);
+        setErrorMsg("Portfolio loaded, but current add-on prices could not be loaded.");
+      });
   }, []);
 
   const openNewModal = () => {
@@ -131,6 +149,8 @@ export default function AdminPortfolioPage() {
     setTemplateAvailable(true);
     setTemplatePricingPackage("ecommerce_business");
     setTemplateStartingPrice("");
+    setTemplateIncludedAddonIds([]);
+    setTemplateIncludedAddonPrices({});
     setOfferEnabled(false);
     setOfferTag("");
     setOfferDiscountPercent("");
@@ -157,6 +177,10 @@ export default function AdminPortfolioPage() {
     setTemplateAvailable(item.templateAvailable !== false);
     setTemplatePricingPackage(item.templatePricingPackage || "ecommerce_business");
     setTemplateStartingPrice(item.templateStartingPrice ? String(item.templateStartingPrice) : "");
+    setTemplateIncludedAddonIds(item.templateIncludedAddonIds || []);
+    setTemplateIncludedAddonPrices(Object.fromEntries(
+      Object.entries(item.templateIncludedAddonPrices || {}).map(([id, price]) => [id, String(price)])
+    ));
     setOfferEnabled(
       Boolean(item.offerEnabled && item.offerEndsAt && Date.parse(item.offerEndsAt) > Date.now())
     );
@@ -196,6 +220,16 @@ export default function AdminPortfolioPage() {
         templateAvailable,
         templatePricingPackage,
         templateStartingPrice: templateStartingPrice ? Number(templateStartingPrice) : null,
+        templateIncludedAddonIds,
+        templateIncludedAddonPrices: Object.fromEntries(
+          templateIncludedAddonIds.flatMap((id) => {
+            const value = templateIncludedAddonPrices[id]?.trim();
+            return value && Number.isFinite(Number(value)) && Number(value) >= 0
+              ? [[id, Number(value)]]
+              : [];
+          })
+        ),
+        templateFeatureVersion: 1,
         offerEnabled,
         offerTag,
         offerDiscountPercent: offerDiscountPercent ? Number(offerDiscountPercent) : undefined,
@@ -331,7 +365,12 @@ export default function AdminPortfolioPage() {
 
           {/* Portfolio Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPortfolio.map((item) => (
+            {filteredPortfolio.map((item) => {
+              const featureLabels = getPortfolioFeatureLabels(item, addonCatalog);
+              const templateBreakdown = item.templatePricingPackage
+                ? getTemplatePriceBreakdown(item, addonCatalog)
+                : undefined;
+              return (
               <div
                 key={item.id}
                 className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm flex flex-col justify-between"
@@ -367,6 +406,13 @@ export default function AdminPortfolioPage() {
                     <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
                       {item.shortDescription}
                     </p>
+                    <div className="flex flex-wrap gap-1">
+                      {featureLabels.map((feature) => (
+                        <span key={feature} className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] font-medium text-gray-600">
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
                     {item.demoUrl && (
                       <a
                         href={item.demoUrl}
@@ -386,6 +432,12 @@ export default function AdminPortfolioPage() {
                           : "Hidden"}
                       </strong>
                     </div>
+                    {templateBreakdown && (
+                      <div className="pt-1 text-xs flex justify-between items-center text-gray-500">
+                        <span>Comparable new-build estimate:</span>
+                        <strong className="text-[#E31E36]">{formatPKR(templateBreakdown.total)}</strong>
+                      </div>
+                    )}
                     {item.offerEnabled && (
                       <div className="pt-1 text-xs flex justify-between items-center text-gray-500">
                         <span>{getPortfolioOffer(item) ? "Live offer:" : "Offer:"}</span>
@@ -441,7 +493,8 @@ export default function AdminPortfolioPage() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </main>
@@ -558,7 +611,7 @@ export default function AdminPortfolioPage() {
               <section className="space-y-3 rounded-xl border border-blue-200 bg-blue-50/60 p-4">
                 <div>
                   <strong className="block text-sm font-extrabold text-gray-900">Template marketplace settings</strong>
-                  <span className="text-[11px] text-gray-600">Manage template availability, starting price, promotional tags, and the offer countdown.</span>
+                  <span className="text-[11px] text-gray-600">This project record drives public feature lists, template pricing, URL-estimator confirmations, and calculator handoff.</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -594,6 +647,55 @@ export default function AdminPortfolioPage() {
                   />
                   Publish as an available website template
                 </label>
+                <div className="space-y-2 border-t border-blue-200 pt-3">
+                  <div>
+                    <strong className="block text-xs font-bold text-gray-800">Included priced features</strong>
+                    <span className="text-[10px] text-gray-600">
+                      Select features that are confirmed in this working project. These become visible in portfolio/template details and are included by the URL estimator.
+                    </span>
+                  </div>
+                  <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-blue-100 bg-white p-3">
+                    {addonCatalog.filter((addon) => addon.enabled).map((addon) => {
+                      const checked = templateIncludedAddonIds.includes(addon.id);
+                      const catalogPrice = getAddonPriceForPackage(addon, templatePricingPackage);
+                      const customPrice = templateIncludedAddonPrices[addon.id] || "";
+                      return (
+                        <div key={addon.id} className="grid grid-cols-[auto_1fr_6rem] items-center gap-2 text-[10px]">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) => setTemplateIncludedAddonIds((current) =>
+                              event.target.checked
+                                ? Array.from(new Set([...current, addon.id]))
+                                : current.filter((id) => id !== addon.id)
+                            )}
+                            aria-label={`Include ${addon.label}`}
+                            className="accent-[#E31E36]"
+                          />
+                          <span className="font-medium text-gray-700">
+                            {addon.label}
+                            <span className="ml-1 text-gray-400">
+                              ({formatPKR(catalogPrice)}{addon.billingPeriod === "monthly" ? "/mo" : ""})
+                            </span>
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            disabled={!checked}
+                            value={customPrice}
+                            onChange={(event) => setTemplateIncludedAddonPrices((current) => ({
+                              ...current,
+                              [addon.id]: event.target.value,
+                            }))}
+                            aria-label={`Custom included price for ${addon.label}; blank uses current catalog price`}
+                            placeholder="Catalog"
+                            className="w-24 rounded border border-gray-300 px-2 py-1 disabled:bg-gray-100"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
                 <div className="space-y-3 border-t border-blue-200 pt-3">
                   <label className="flex items-center gap-2 text-xs font-bold text-gray-700">
                     <input

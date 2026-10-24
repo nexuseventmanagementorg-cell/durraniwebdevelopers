@@ -42,6 +42,7 @@ export interface AddonOption {
     | "feature"
     | "website"
     | "business"
+    | "creative"
     | "ecommerce"
     | "saas"
     | "automation"
@@ -229,6 +230,7 @@ export interface Inquiry {
   scanFeatures?: InquiryScanFeature[];
   scopeReview?: InquiryScopeReview;
   customFeatureNotes?: string;
+  websiteCreationPrompt?: string;
   pricingPackage?: "ecommerce_starter" | "ecommerce_business" | "ecommerce_advanced" | "saas_starter" | "saas_business" | "saas_enterprise";
   manualAdvanceVerification?: {
     amount: number;
@@ -379,6 +381,7 @@ export interface PaymentReminder {
 
 export interface PortfolioProject {
   id: string;
+  templateFeatureVersion?: number;
   title: string;
   category: string;
   shortDescription: string;

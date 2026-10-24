@@ -15,12 +15,15 @@ import {
   PricingPackageId,
   SAAS_PACKAGES,
 } from "./constants";
+import { getPortfolioFeatureLabels, getTemplatePriceBreakdown, getTemplateRequestPlans } from "./template-pricing";
 import { CurrencyCode, ExchangeRates, getRegionalPricingConfig } from "./currency";
 
 const MAX_URL_LENGTH = 2048;
 const MAX_HTML_BYTES = 1_000_000;
 const MAX_REDIRECTS = 3;
-const MAX_PAGES = 3;
+const MAX_PAGES = 12;
+const MAX_CANDIDATE_URLS = 40;
+const PAGE_FETCH_CONCURRENCY = 4;
 const REQUEST_TIMEOUT_MS = 5000;
 const HOSTED_DOMAIN_SUFFIXES = [
   "vercel.app",
@@ -141,7 +144,8 @@ export function applyPortfolioTemplateStartingPrice(
   estimate: WebsiteEstimateResult,
   template: PortfolioProject,
   startingPrice: number,
-  startingAddonIds: string[] = template.templateIncludedAddonIds || []
+  startingAddonIds: string[] = template.templateIncludedAddonIds || [],
+  pricingConfig: PricingRuleConfig = DEFAULT_PRICING_CONFIG
 ): WebsiteEstimateResult {
   const packageId = template.templatePricingPackage || estimate.pricingPackage;
   const selectedPackage = packageId
@@ -162,38 +166,91 @@ export function applyPortfolioTemplateStartingPrice(
       : option.basePrice;
     return price >= startingPrice;
   });
-  const addons = startingAddonIds.flatMap((id) => {
-    const detectedAddon = estimate.addons.find((addon) => addon.id === id);
-    const templateBasePrice = template.templateIncludedAddonPrices?.[id];
-    const templatePrice = templateBasePrice === undefined
-      ? undefined
-      : Math.round(
-          templateBasePrice *
-          (startingPrice / (template.templateStartingPrice || startingPrice)) *
-          100
-        ) / 100;
-    if (detectedAddon) {
-      return [templatePrice === undefined ? detectedAddon : { ...detectedAddon, price: templatePrice }];
-    }
-    const catalogAddon = estimate.addonCatalog.find((addon) => addon.id === id);
-    return catalogAddon
-      ? [{
-          id,
-          title: catalogAddon.title,
-          price: templatePrice ?? catalogAddon.price,
-          billingPeriod: catalogAddon.billingPeriod,
-        }]
-      : [];
-  });
+  const templatePlan = getTemplateRequestPlans(template)[0];
+  const templateBreakdown = getTemplatePriceBreakdown(
+    template,
+    estimate.addonCatalog.map((addon) => ({
+      ...addon,
+      label: addon.title,
+      category: pricingConfig.addons[addon.id]?.category || "business",
+      enabled: true,
+    })),
+    templatePlan
+  );
+  const conversionRate = templatePlan.price > 0
+    ? startingPrice / templatePlan.price
+    : 1;
+  const includedAddonIdSet = new Set(startingAddonIds);
+  const addons = templateBreakdown.includedAddons
+    .filter((addon) => includedAddonIdSet.has(addon.id))
+    .map((addon) => ({
+      id: addon.id,
+      title: addon.label,
+      price: Math.round(addon.includedPrice * conversionRate * 100) / 100,
+      billingPeriod: addon.billingPeriod,
+    }));
   const addonTotal = addons
     .filter((addon) => addon.billingPeriod !== "monthly")
     .reduce((total, addon) => total + addon.price, 0);
   const monthlyAddonTotal = addons
     .filter((addon) => addon.billingPeriod === "monthly")
     .reduce((total, addon) => total + addon.price, 0);
+  const confirmedFeatures = getPortfolioFeatureLabels(
+    template,
+    estimate.addonCatalog.map((addon) => ({
+      ...addon,
+      label: addon.title,
+      category: pricingConfig.addons[addon.id]?.category || "business",
+      enabled: true,
+    }))
+  );
+  const includedAddonIds = new Set(startingAddonIds);
+  if (templateOption.adminPanelType === "client_admin") {
+    includedAddonIds.add("admin_dashboard");
+  }
+  const features = [...estimate.features];
+  for (const id of Array.from(includedAddonIds)) {
+    const catalogAddon = estimate.addonCatalog.find((addon) => addon.id === id);
+    if (!catalogAddon) continue;
+    const existingFeature = features.find((feature) => feature.addonId === id);
+    if (existingFeature) {
+      existingFeature.evidenceStatus = "owner_confirmed";
+      existingFeature.explanation = `Included in the verified ${template.title} project scope.`;
+      existingFeature.evidence = "Confirmed project record; this feature is not inferred from the public page scan.";
+      existingFeature.sourcePages = [];
+      continue;
+    }
+    features.push({
+      id,
+      title: catalogAddon.title,
+      explanation: `Included in the verified ${template.title} project scope.`,
+      evidence: "Confirmed project record; this feature is not inferred from the public page scan.",
+      evidenceStatus: "owner_confirmed",
+      sourcePages: [],
+      addonId: id,
+    });
+  }
+  for (const title of confirmedFeatures) {
+    const normalizedTitle = title.toLowerCase();
+    if (features.some((feature) =>
+      feature.title.toLowerCase() === normalizedTitle ||
+      (feature.addonId && estimate.addonCatalog.find((addon) =>
+        addon.id === feature.addonId && addon.title.toLowerCase() === normalizedTitle
+      ))
+    )) continue;
+    features.push({
+      id: `verified-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
+      title,
+      explanation: `Listed in the verified ${template.title} project feature record.`,
+      evidence: "Confirmed project record; this feature is not inferred from the public page scan.",
+      evidenceStatus: "owner_confirmed",
+      sourcePages: [],
+    });
+  }
 
   return {
     ...estimate,
+    features,
     pricingPackage: packageId,
     pricingOptions: [
       templateOption,
@@ -213,6 +270,7 @@ export function applyPortfolioTemplateStartingPrice(
     estimatedTotal: startingPrice + addonTotal,
     assumptions: [
       `This URL matches the published ${template.title}. The ${estimate.currency} ${startingPrice.toLocaleString()} ${templateOption.label} starting price is stable; template-specific add-ons are listed separately.`,
+      "Features listed for this known template are owner-confirmed from its project record; other public scan signals remain unverified.",
       ...estimate.assumptions,
     ],
   };
@@ -506,7 +564,7 @@ function getCandidateLinks(html: string, baseUrl: string): string[] {
       if (url.pathname === base.pathname && !url.search) continue;
 
       const anchorText = stripHtml(match[0]);
-      const relevance = /product|shop|store|menu|category|order|booking|reservation|pricing|service|feature|about|account|login|dashboard|contact|cart|checkout|track|status|blog|faq/i
+      const relevance = /product|shop|store|menu|category|order|booking|reservation|pricing|service|feature|about|account|login|dashboard|contact|cart|checkout|track|status|blog|faq|customer|sales|report|credit|payment|delivery|table|qr|staff|admin|integration|subscription|inventory|review/i
         .test(`${url.pathname} ${url.search} ${anchorText}`)
         ? 2
         : 0;
@@ -519,7 +577,7 @@ function getCandidateLinks(html: string, baseUrl: string): string[] {
 
   return Array.from(scored.entries())
     .sort((a, b) => b[1] - a[1])
-    .slice(0, MAX_PAGES - 1)
+    .slice(0, MAX_CANDIDATE_URLS)
     .map(([url]) => url);
 }
 
@@ -529,7 +587,33 @@ async function getSitemapCandidates(
 ): Promise<string[]> {
   try {
     const sitemap = await fetchDocument(new URL("/sitemap.xml", origin).toString(), true);
-    const urls = Array.from(sitemap.html.matchAll(/<loc\b[^>]*>\s*([\s\S]*?)\s*<\/loc>/gi))
+    let sitemapHtml = sitemap.html;
+    if (/<sitemapindex\b/i.test(sitemapHtml)) {
+      const childSitemaps = Array.from(sitemapHtml.matchAll(/<loc\b[^>]*>\s*([\s\S]*?)\s*<\/loc>/gi))
+        .map((match) => decodeHtml(match[1]).trim())
+        .filter((candidate) => {
+          try {
+            return new URL(candidate).origin === origin;
+          } catch {
+            return false;
+          }
+        })
+        .slice(0, 3);
+      const childResults = await Promise.all(
+        childSitemaps.map(async (candidate) => {
+          try {
+            return await fetchDocument(candidate, true);
+          } catch {
+            return null;
+          }
+        })
+      );
+      sitemapHtml = childResults
+        .filter((result): result is ScannedPage => result !== null)
+        .map((result) => result.html)
+        .join(" ");
+    }
+    const urls = Array.from(sitemapHtml.matchAll(/<loc\b[^>]*>\s*([\s\S]*?)\s*<\/loc>/gi))
       .map((match) => decodeHtml(match[1]).trim())
       .filter((candidate) => {
         try {
@@ -537,14 +621,19 @@ async function getSitemapCandidates(
           return (
             parsed.origin === origin &&
             (parsed.protocol === "https:" || parsed.protocol === "http:") &&
-            /product|shop|store|menu|category|order|booking|reservation|pricing|service|about|account|login|dashboard|contact|cart|checkout|track|status|blog|faq/i
+            /product|shop|store|menu|category|order|booking|reservation|pricing|service|about|account|login|dashboard|contact|cart|checkout|track|status|blog|faq|customer|sales|report|credit|payment|delivery|table|qr|staff|admin|feature|integration|subscription|inventory|review/i
               .test(`${parsed.pathname} ${parsed.search}`)
           );
         } catch {
           return false;
         }
       });
-    return Array.from(new Set(urls)).slice(0, 20);
+    const relevance = (candidate: string) =>
+      /product|shop|store|menu|category|order|booking|reservation|pricing|service|about|account|login|dashboard|contact|cart|checkout|track|status|blog|faq|customer|sales|report|credit|payment|delivery|table|qr|staff|admin|feature|integration|subscription|inventory|review/i
+        .test(candidate) ? 2 : 0;
+    return Array.from(new Set(urls))
+      .sort((left, right) => relevance(right) - relevance(left))
+      .slice(0, MAX_CANDIDATE_URLS);
   } catch {
     return [];
   }
@@ -576,7 +665,8 @@ const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
   { id: "search_filter_sort", pattern: /\b(search and filters?|filter and sort|sorting and filtering|advanced search)\b/i },
   { id: "order_invoice_management", pattern: /\b(order management|manage orders|order statuses|order and invoice management)\b/i },
   { id: "activity_logs", pattern: /\b(activity logs?|admin action logs?|user activity history)\b/i },
-  { id: "pdf_excel_export", pattern: /\b(pdf|excel|csv) (report|data|records?) export|export (reports?|records?) to (pdf|excel|csv)\b/i },
+  { id: "pdf_excel_export", pattern: /\b(pdf|excel) (report|data|records?) export|export (reports?|records?) to (pdf|excel)\b/i },
+  { id: "csv_data_export", pattern: /\bcsv (?:order )?(?:data )?export|export (?:order )?records? to csv|download (?:order )?records? as csv|export orders to csv\b/i },
   { id: "automated_backups", pattern: /\b(automated backups?|scheduled backups?|backup and restore)\b/i },
   { id: "audit_trail", pattern: /\b(audit trails?|who changed|change history|record of changes)\b/i },
   { id: "api_integration", pattern: /\b(api integration|connect to (an? )?(external|third[- ]party) service|system integration)\b/i },
@@ -590,6 +680,7 @@ const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
   { id: "order_tracking", pattern: /\b(order tracking|track (my |your )?order|shipment tracking)\b/i },
   { id: "abandoned_cart", pattern: /\b(abandoned carts?|recover (unfinished|abandoned) carts?)\b/i },
   { id: "invoice_receipts", pattern: /\b(order invoices?|purchase receipts?|downloadable invoices?)\b/i },
+  { id: "kitchen_order_tickets", pattern: /\b(kitchen order tickets?|kitchen tickets?|kot\b|print(?:able)? kitchen (?:orders?|tickets?)|print kot)\b/i },
   { id: "product_qr_codes", pattern: /\b(product qr codes?|qr labels? for products?)\b/i },
   { id: "loyalty_rewards", pattern: /\b(loyalty points?|rewards program|repeat[- ]customer rewards?)\b/i },
   { id: "bulk_product_import", pattern: /\b(bulk product imports?|import products? from (csv|excel)|product catalog import)\b/i },
@@ -621,6 +712,9 @@ const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
   { id: "smart_search", pattern: /\b(semantic search|ai[- ]powered search|smart search)\b/i },
   { id: "automated_email_workflows", pattern: /\b(automated email workflows?|email sequences?|drip email campaigns?)\b/i },
   { id: "scheduled_reports", pattern: /\b(scheduled reports?|weekly reports? by email|monthly report generation)\b/i },
+  { id: "daily_sales_records", pattern: /\b(daily sales (?:records?|reports?|tracking)|day[- ]wise sales reports?|daily item sales|sales item breakdown|daily purchases|daily expenses|profit and loss report|estimated profit\/loss)\b/i },
+  { id: "daily_sales_calendar", pattern: /\b(daily sales calendar|sales reports? by date|daily sales by date|select (?:a )?report date|monthly sales calendar|browse sales by date)\b/i },
+  { id: "monthly_credit_accounts", pattern: /\b(monthly credit accounts?|customer credit balances?|record(?:ed|ing)? customer payments?|outstanding credit|credit due|credit ledger)\b/i },
   { id: "document_generation", pattern: /\b(generate (custom )?(certificates?|pdf documents?)|document generation)\b/i },
   { id: "third_party_webhooks", pattern: /\b(third[- ]party webhooks?|webhook notifications?)\b/i },
   { id: "crm_integration", pattern: /\b(crm integration|sync leads? (to|with) (a )?crm)\b/i },
@@ -696,7 +790,7 @@ export function detectWebsiteFeatures(
   const booking = has(/\b(book(ing)?|reservation|appointment|reserve a table|schedule a visit)\b/);
   const accounts = has(/\b(customer registration|register as a customer|create (a )?customer account|customer login|customer sign[ -]?in|my customer account)\b/);
   const payment = has(/\b(stripe|paypal|razorpay|paystack|authorize\.net|credit card|debit card|pay online|online payment gateway|payment gateway|online payment integration)\b/);
-  const analytics = has(/\b(analytics dashboard|sales report|financial report|business analytics|revenue chart)\b/);
+  const analytics = has(/\b(analytics dashboard|sales analytics|financial report|business analytics|revenue chart)\b/);
   const chatbot = has(
     /\b(?:chat|talk|message)\s+(?:to|with)\s+(?:our\s+)?(?:ai(?:\s+(?:chatbot|assistant))?|chatbot|virtual assistant)\b|\b(?:ask|try|open|start)\s+(?:our\s+)?(?:ai(?:\s+(?:chatbot|assistant))?|chatbot|virtual assistant)\b/i
   );
@@ -947,24 +1041,48 @@ export async function estimateWebsite(
   const warnings: string[] = [];
   const visited = new Set([new URL(firstPage.url).toString()]);
   const sitemapCandidates = await getSitemapCandidates(new URL(firstPage.url).origin, fetchDocument);
-
+  const queued = new Set<string>();
   const candidates = [
     ...sitemapCandidates,
     ...getCandidateLinks(firstPage.html, firstPage.url),
-  ];
-  for (const candidate of candidates) {
-    if (pages.length >= MAX_PAGES) break;
+  ].filter((candidate) => {
     const normalizedCandidate = new URL(candidate).toString();
-    if (visited.has(normalizedCandidate)) continue;
-    visited.add(normalizedCandidate);
-    try {
-      const page = await fetchDocument(candidate, false);
-      if (new URL(page.url).origin === new URL(firstPage.url).origin) {
-        pages.push(page);
+    if (visited.has(normalizedCandidate) || queued.has(normalizedCandidate)) return false;
+    queued.add(normalizedCandidate);
+    return true;
+  }).slice(0, MAX_CANDIDATE_URLS);
+
+  while (candidates.length > 0 && pages.length < MAX_PAGES) {
+    const batch = candidates.splice(0, Math.min(
+      PAGE_FETCH_CONCURRENCY,
+      MAX_PAGES - pages.length
+    ));
+    const fetchedPages = await Promise.all(batch.map(async (candidate) => {
+      visited.add(candidate);
+      try {
+        const page = await fetchDocument(candidate, false);
+        return new URL(page.url).origin === new URL(firstPage.url).origin ? page : null;
+      } catch {
+        warnings.push("Website ke kuch additional public pages nahi khul sake; estimate available pages par based hai.");
+        return null;
       }
-    } catch {
-      warnings.push("Website ke kuch additional public pages nahi khul sake; estimate available pages par based hai.");
+    }));
+    for (const page of fetchedPages) {
+      if (!page) continue;
+      pages.push(page);
+      for (const candidate of getCandidateLinks(page.html, page.url)) {
+        const normalizedCandidate = new URL(candidate).toString();
+        if (visited.has(normalizedCandidate) || queued.has(normalizedCandidate)) continue;
+        queued.add(normalizedCandidate);
+        candidates.push(normalizedCandidate);
+      }
     }
+  }
+  if (candidates.length > 0) {
+    warnings.push(`Public scan limit reached (${MAX_PAGES} pages); more same-site pages may contain additional features.`);
+  }
+  if (warnings.length > 1) {
+    warnings.splice(0, warnings.length, ...Array.from(new Set(warnings)));
   }
 
   const text = pages.map(getPageSignalText).join(" ");

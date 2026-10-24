@@ -8,6 +8,53 @@ export const REQUIREMENTS_ANALYST = {
   maxAttempts: 1,
 } as const;
 
+export const INTERNAL_WEBSITE_BUILD_WORKFLOW = {
+  visibility: "internal_admin_only",
+  stages: [
+    {
+      id: "brief_and_scope",
+      status: "available",
+      capability: "Use the admin-triggered Requirements Analyst to structure a project brief and acceptance criteria.",
+    },
+    {
+      id: "website_concept_preview",
+      status: "available_limited",
+      capability: "Generate a deterministic HTML concept preview from an approved project record; this is not a finished or AI-generated website.",
+    },
+    {
+      id: "implementation_proposal",
+      status: "available_limited",
+      capability: "Generate an AI code-change proposal from explicitly approved files and supplied source context in the isolated synthetic fixture; proposals are not executed or applied to customer repositories.",
+    },
+    {
+      id: "reference_to_design_and_code",
+      status: "planned",
+      capability: "Use an approved website reference, screenshot, or mockup to prepare a reviewed design and implementation proposal.",
+    },
+    {
+      id: "build_and_test_customer_site",
+      status: "planned",
+      capability: "Build and test customer website code in a per-project isolated workspace with explicit admin approval and artifact verification.",
+    },
+    {
+      id: "image_and_video_generation",
+      status: "planned",
+      capability: "Prepare customer-approved image, product-image, and video assets through an explicitly configured provider.",
+    },
+    {
+      id: "preview_and_release",
+      status: "planned",
+      capability: "Create a private customer preview and perform a separately approved production release.",
+    },
+  ],
+  guardrails: [
+    "This workflow is internal and is not a customer-facing add-on or public self-serve tool.",
+    "No external lead discovery, unsolicited outreach, calls, payment collection, or autonomous production deployment.",
+    "Human approval is required for scope, code changes, generated assets, and release.",
+    "External model accounts, provider usage, and hosting are not included or provisioned.",
+  ],
+} as const;
+
 export interface RequirementsAgentResult {
   summary: string;
   requirements: string[];
@@ -60,7 +107,9 @@ const WORKFORCE_CAPABILITIES = {
     "Create project requirement summaries",
     "Prepare acceptance criteria and identify unanswered questions",
     "Use a read-only workforce capability catalog",
+    "Use the internal-only website build workflow catalog and distinguish active limited tools from planned capabilities",
   ],
+  internalWebsiteBuildWorkflow: INTERNAL_WEBSITE_BUILD_WORKFLOW,
   restrictions: [
     "No customer project files are created or modified",
     "No shell, dependency installation, database write, or deployment tools are available",

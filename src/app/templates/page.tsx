@@ -28,6 +28,8 @@ import {
 import {
   getTemplateChargeableAddonIds,
   getTemplateIncludedAddonTotals,
+  getPortfolioFeatureLabels,
+  getTemplatePriceBreakdown,
   getTemplateRequestPlans,
 } from "@/lib/template-pricing";
 import { getPortfolioOffer } from "@/lib/portfolio-offers";
@@ -324,8 +326,7 @@ export default function WebsiteTemplatesPage() {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {templates.map((template) => {
                 const startingPlan = getTemplateRequestPlans(template)[0];
-                const includedTotals = getTemplateIncludedAddonTotals(template, addons, startingPlan);
-                const startingTotal = startingPlan.price + includedTotals.oneTime;
+                const startingTotal = getTemplatePriceBreakdown(template, addons, startingPlan).total;
                 return (
                 <article key={template.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                   <div className="relative h-52 bg-gray-900">
@@ -355,7 +356,7 @@ export default function WebsiteTemplatesPage() {
                       </strong>
                     </p>
                     <div className="flex flex-wrap gap-1.5">
-                      {template.technologies.map((feature) => (
+                      {getPortfolioFeatureLabels(template, addons).map((feature) => (
                         <span key={feature} className="rounded bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-600">
                           {feature}
                         </span>
@@ -414,6 +415,10 @@ export default function WebsiteTemplatesPage() {
             .map((id) => addons.find((addon) => addon.id === id))
             .filter((addon): addon is AddonOption => Boolean(addon));
           const templateIncludedAddonIds = new Set(templateIncludedAddons.map((addon) => addon.id));
+          const includedAddonIds = new Set(templateIncludedAddonIds);
+          if (detailsPlan?.adminPanelType === "client_admin") {
+            includedAddonIds.add("admin_dashboard");
+          }
 
           return (
             <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4">
@@ -448,7 +453,7 @@ export default function WebsiteTemplatesPage() {
                 <div className="mt-6">
                   <h3 className="text-sm font-extrabold">Included website features</h3>
                   <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-                    {detailsTemplate.technologies.map((feature) => (
+                    {getPortfolioFeatureLabels(detailsTemplate, addons).map((feature) => (
                       <li key={feature} className="flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-sm">
                         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                         {feature}
@@ -468,27 +473,38 @@ export default function WebsiteTemplatesPage() {
                 </div>
 
                 <div className="mt-6">
-                  <h3 className="text-sm font-extrabold">Optional add-ons and prices</h3>
+                  <h3 className="text-sm font-extrabold">Add-on list and prices</h3>
                   <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                    These are optional custom-quote items, not claims about features already installed in the demo. Select an item to add its listed estimate.
+                    Items marked Included are part of this template. Other items are optional estimates, not claims about features already installed in the demo.
                   </p>
                   <div className="mt-3 max-h-72 space-y-2 overflow-y-auto">
                     {Object.entries(groupedAddons).map(([category, categoryAddons]) => {
-                      const optionalAddons = categoryAddons.filter((addon) => !templateIncludedAddonIds.has(addon.id));
-                      if (optionalAddons.length === 0) return null;
+                      const includedCategoryAddons = categoryAddons.filter((addon) =>
+                        includedAddonIds.has(addon.id)
+                      );
+                      if (categoryAddons.length === 0) return null;
                       return (
-                        <details key={category} className="rounded-lg border border-gray-200">
+                        <details
+                          key={category}
+                          open={includedCategoryAddons.length > 0}
+                          className="rounded-lg border border-gray-200"
+                        >
                           <summary className="cursor-pointer px-3 py-2.5 text-xs font-extrabold">
-                            {category} <span className="font-medium text-gray-500">({optionalAddons.length})</span>
+                            {category} <span className="font-medium text-gray-500">({categoryAddons.length})</span>
                           </summary>
                           <div className="divide-y divide-gray-100 border-t border-gray-200">
-                            {optionalAddons.map((addon) => {
-                              const isSelected = detailsAddonIds.includes(addon.id);
+                            {categoryAddons.map((addon) => {
+                              const isIncluded = includedAddonIds.has(addon.id);
+                              const isSelected = isIncluded || detailsAddonIds.includes(addon.id);
                               return (
-                                <label key={addon.id} className="flex cursor-pointer items-start gap-3 px-3 py-2.5 hover:bg-gray-50">
+                                <label
+                                  key={addon.id}
+                                  className={`flex items-start gap-3 px-3 py-2.5 hover:bg-gray-50 ${isIncluded ? "cursor-not-allowed" : "cursor-pointer"}`}
+                                >
                                   <input
                                     type="checkbox"
                                     checked={isSelected}
+                                    disabled={isIncluded}
                                     onChange={(event) => setDetailsAddonIds((current) =>
                                       event.target.checked
                                         ? [...current, addon.id]
@@ -502,6 +518,7 @@ export default function WebsiteTemplatesPage() {
                                       <strong className="whitespace-nowrap text-xs text-[#E31E36]">
                                         {formatPKR(detailsPriceForAddon(addon))}
                                         {addon.billingPeriod === "monthly" ? " / month" : ""}
+                                        {isIncluded && <span className="text-emerald-700"> (Included)</span>}
                                       </strong>
                                     </span>
                                     <span className="mt-0.5 block text-[10px] leading-relaxed text-gray-500">{addon.description}</span>
@@ -522,6 +539,12 @@ export default function WebsiteTemplatesPage() {
                     <span>{detailsPlan?.name || "Template starting plan"}</span>
                     <strong>{formatPKR(detailsPlan?.price || 0)}</strong>
                   </div>
+                  {detailsPlan?.adminPanelType === "client_admin" && (
+                    <div className="mt-2 flex justify-between gap-3 text-sm text-gray-600">
+                      <span>Client Admin Panel &amp; Dashboard</span>
+                      <strong>Included in plan</strong>
+                    </div>
+                  )}
                   {templateIncludedAddons.map((addon) => (
                     <div key={addon.id} className="mt-2 flex justify-between gap-3 text-sm text-gray-600">
                       <span>{addon.label}</span>

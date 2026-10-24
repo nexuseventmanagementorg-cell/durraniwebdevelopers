@@ -93,6 +93,39 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (templateIncludedAddonIds !== undefined) {
+      const allowedAddonIds = new Set(Object.keys(DataStore.getPricingConfig().addons));
+      if (
+        !Array.isArray(templateIncludedAddonIds) ||
+        templateIncludedAddonIds.some((addonId: unknown) =>
+          typeof addonId !== "string" || !allowedAddonIds.has(addonId)
+        )
+      ) {
+        return NextResponse.json(
+          { success: false, error: "Included template features must use valid public add-on IDs." },
+          { status: 400 }
+        );
+      }
+    }
+    if (templateIncludedAddonPrices !== undefined) {
+      if (
+        typeof templateIncludedAddonPrices !== "object" ||
+        templateIncludedAddonPrices === null ||
+        Array.isArray(templateIncludedAddonPrices) ||
+        Object.entries(templateIncludedAddonPrices).some(([addonId, value]) =>
+          !Array.isArray(templateIncludedAddonIds) ||
+          !templateIncludedAddonIds.includes(addonId) ||
+          typeof value !== "number" ||
+          !Number.isFinite(value) ||
+          value < 0
+        )
+      ) {
+        return NextResponse.json(
+          { success: false, error: "Custom feature prices must be non-negative amounts for selected features." },
+          { status: 400 }
+        );
+      }
+    }
     if (offerEnabled) {
       const discount = Number(offerDiscountPercent);
       const endTime = new Date(offerEndsAt).getTime();
@@ -122,6 +155,7 @@ export async function POST(request: NextRequest) {
     const project: PortfolioProject = {
       ...existingProject,
       id: projectId,
+      templateFeatureVersion: 1,
       title,
       category,
       shortDescription,

@@ -7,6 +7,7 @@ import { Inquiry, OrderStatus, PaymentMethod } from "@/lib/types";
 import { formatPKR, buildWhatsAppLinkTo } from "@/lib/constants";
 import { formatCurrency, isCurrencyCode } from "@/lib/currency";
 import { reviewInquiryScope } from "@/lib/inquiry-review";
+import { buildWebsiteCreationPrompt } from "@/lib/project-brief";
 import {
   Inbox,
   Search,
@@ -40,6 +41,9 @@ export default function AdminInquiriesPage() {
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [briefCopied, setBriefCopied] = useState(false);
   const [briefSaving, setBriefSaving] = useState(false);
+  const [websitePromptDraft, setWebsitePromptDraft] = useState("");
+  const [websitePromptSaving, setWebsitePromptSaving] = useState(false);
+  const [websitePromptCopied, setWebsitePromptCopied] = useState(false);
   const projectBrief = selectedInquiry?.projectBuildBrief?.content || "";
   const selectedScopeReview = selectedInquiry
     ? selectedInquiry.scopeReview || reviewInquiryScope(selectedInquiry)
@@ -98,6 +102,11 @@ export default function AdminInquiriesPage() {
     fetchInquiries();
   }, []);
 
+  useEffect(() => {
+    setWebsitePromptDraft(selectedInquiry?.websiteCreationPrompt || "");
+    setWebsitePromptCopied(false);
+  }, [selectedInquiry?.id, selectedInquiry?.websiteCreationPrompt]);
+
   const handleUpdateStatus = async (inquiryId: string, newStatus: OrderStatus) => {
     try {
       const res = await fetch("/api/admin/inquiries", {
@@ -144,6 +153,41 @@ export default function AdminInquiriesPage() {
       alert(error instanceof Error ? error.message : "Could not save the project brief.");
     } finally {
       setBriefSaving(false);
+    }
+  };
+
+  const handleGenerateWebsitePrompt = () => {
+    if (!selectedInquiry) return;
+    setWebsitePromptDraft(buildWebsiteCreationPrompt(selectedInquiry));
+    setWebsitePromptCopied(false);
+  };
+
+  const handleSaveWebsitePrompt = async () => {
+    if (!selectedInquiry || !websitePromptDraft.trim()) return;
+    setWebsitePromptSaving(true);
+    try {
+      const response = await fetch("/api/admin/inquiries", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedInquiry.id,
+          websiteCreationPrompt: websitePromptDraft,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Could not save the website creation prompt.");
+      }
+      setSelectedInquiry(result.inquiry);
+      setInquiries((previous) => previous.map((inquiry) =>
+        inquiry.id === result.inquiry.id ? result.inquiry : inquiry
+      ));
+      setActionSuccess("Website creation prompt saved to this inquiry.");
+      setTimeout(() => setActionSuccess(""), 3000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Could not save the website creation prompt.");
+    } finally {
+      setWebsitePromptSaving(false);
     }
   };
 
@@ -543,6 +587,79 @@ export default function AdminInquiriesPage() {
                   </ul>
                 </section>
               )}
+
+              <section className="rounded-xl border border-violet-200 bg-violet-50/60 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-extrabold text-sm text-[#101216]">Internal AI workforce — website creation prompt</h3>
+                    <p className="mt-1 max-w-xl text-[11px] leading-relaxed text-gray-600">
+                      Drafts an implementation prompt from this inquiry without customer contact or payment details. Review and edit it before handing it to the internal agency workflow.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGenerateWebsitePrompt}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#101216] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#E31E36]"
+                  >
+                    <FileCheck className="h-3.5 w-3.5" />
+                    {selectedInquiry.websiteCreationPrompt ? "Regenerate prompt" : "Generate prompt"}
+                  </button>
+                </div>
+                <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] leading-relaxed text-amber-950">
+                  Prompt generation is for planning only. It does not authorize development; confirm scope and verify the advance before implementation. Production release needs separate admin approval.
+                </p>
+                <textarea
+                  rows={16}
+                  maxLength={20_000}
+                  value={websitePromptDraft}
+                  onChange={(event) => {
+                    setWebsitePromptDraft(event.target.value);
+                    setWebsitePromptCopied(false);
+                  }}
+                  aria-label="Internal AI website creation prompt"
+                  placeholder="Generate a website creation prompt from this inquiry. You can edit it before saving or copying."
+                  className="mt-3 w-full resize-y rounded-lg border border-gray-300 bg-white p-3 font-mono text-[10px] leading-relaxed text-gray-800"
+                />
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[10px] text-gray-500">
+                    {websitePromptDraft.length.toLocaleString()} / 20,000 characters
+                    {selectedInquiry.websiteCreationPrompt ? " · Saved to this inquiry" : " · Not saved"}
+                  </span>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      disabled={!websitePromptDraft.trim() || websitePromptSaving}
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(websitePromptDraft);
+                          setWebsitePromptCopied(true);
+                        } catch (error) {
+                          console.error("Could not copy website creation prompt", error);
+                          setWebsitePromptCopied(false);
+                          setActionSuccess("Clipboard access was unavailable; select and copy the prompt manually.");
+                          setTimeout(() => setActionSuccess(""), 4000);
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-[11px] font-bold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {websitePromptCopied
+                        ? <CheckCheck className="h-3.5 w-3.5 text-emerald-600" />
+                        : <Copy className="h-3.5 w-3.5" />}
+                      {websitePromptCopied ? "Copied" : "Copy prompt"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!websitePromptDraft.trim() || websitePromptSaving ||
+                        websitePromptDraft === (selectedInquiry.websiteCreationPrompt || "")}
+                      onClick={() => void handleSaveWebsitePrompt()}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-violet-700 px-3 py-2 text-[11px] font-bold text-white hover:bg-violet-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+                    >
+                      <FileCheck className="h-3.5 w-3.5" />
+                      {websitePromptSaving ? "Saving..." : "Save prompt"}
+                    </button>
+                  </div>
+                </div>
+              </section>
 
               <section className="rounded-xl border border-gray-200 bg-white p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">

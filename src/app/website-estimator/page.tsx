@@ -38,7 +38,9 @@ export default function WebsiteEstimatorPage() {
   const [selectedPricingOptionId, setSelectedPricingOptionId] = useState("package_1");
   const [featureScopes, setFeatureScopes] = useState<Record<string, ExistingFeatureScope>>({});
   const [selectedNewBuildAddons, setSelectedNewBuildAddons] = useState<string[]>([]);
+  const [manualNewBuildAddons, setManualNewBuildAddons] = useState<string[]>([]);
   const [ownerConfirmedAddons, setOwnerConfirmedAddons] = useState<string[]>([]);
+  const [scopeReviewed, setScopeReviewed] = useState(false);
   const { currency, locale } = useCurrency();
 
   const addonById = useMemo(
@@ -52,7 +54,7 @@ export default function WebsiteEstimatorPage() {
     ? calculateReviewedWebsiteEstimate(
         estimate,
         scopeMode,
-        selectedNewBuildAddons,
+        [...selectedNewBuildAddons, ...manualNewBuildAddons],
         featureScopes,
         ownerConfirmedAddons,
         selectedPricingOptionId
@@ -74,7 +76,23 @@ export default function WebsiteEstimatorPage() {
             : "Custom web application",
           adminPanel: reviewedEstimate?.adminPanelType || "none",
           addons: chargeableAddonIds.join(","),
-          scanFeatures: JSON.stringify(estimate.features.map(({ title }) => title)),
+          scanFeatures: JSON.stringify([
+            ...estimate.features.slice(0, 30).map((feature) => ({
+              title: feature.title,
+              evidence: `${feature.evidenceStatus === "owner_confirmed"
+                ? "Owner-confirmed from the portfolio project record."
+                : feature.evidenceStatus === "public_signal"
+                  ? "Public scan signal; not verified as a complete workflow."
+                  : "Scope status requires admin/client confirmation."} ${feature.evidence}`.slice(0, 300),
+            })),
+            ...manualNewBuildAddons.map((id) => ({
+              title: `User-requested; not detected by scan: ${addonById.get(id)?.title || id}`,
+              evidence: "Added manually during estimator scope review.",
+            })),
+          ].slice(0, 40)),
+          ...(estimate.matchedTemplateId
+            ? { templateId: estimate.matchedTemplateId }
+            : {}),
           ...(scopeMode === "new_build" && selectedPricingOption
             ? {
                 package: selectedPricingOption.pricingPackage ||
@@ -85,16 +103,16 @@ export default function WebsiteEstimatorPage() {
         return `/calculator?${params.toString()}`;
       })()
     : "/calculator";
-  const nextStepUrl = estimate?.matchedTemplateId
-      ? `/templates?template=${encodeURIComponent(estimate.matchedTemplateId)}`
-      : calculatorUrl;
+  const nextStepUrl = calculatorUrl;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setEstimate(null);
     setSelectedNewBuildAddons([]);
+    setManualNewBuildAddons([]);
     setOwnerConfirmedAddons([]);
+    setScopeReviewed(false);
     setFeatureScopes({});
     setSelectedPricingOptionId("package_1");
     setLoading(true);
@@ -116,6 +134,7 @@ export default function WebsiteEstimatorPage() {
       setEstimate(nextEstimate);
       setSelectedPricingOptionId(nextEstimate.suggestedPricingOptionId);
       setSelectedNewBuildAddons(getDefaultNewBuildAddonIds(nextEstimate));
+      setManualNewBuildAddons([]);
       setFeatureScopes(Object.fromEntries(
         nextEstimate.features.map((feature) => [feature.id, "unknown"])
       ));
@@ -180,7 +199,7 @@ export default function WebsiteEstimatorPage() {
               </button>
             </div>
             <p className="text-[11px] text-gray-400 mt-3">
-              Sirf public HTML pages scan hotay hain; JavaScript-rendered content, login/private pages, source code aur database verify nahi hotay.
+              Scanner sitemap aur internal links se maximum 12 public HTML pages tak check karta hai. JavaScript-only content, login/private pages, source code, aur database verify nahi hotay.
             </p>
           </form>
         </div>
@@ -209,7 +228,7 @@ export default function WebsiteEstimatorPage() {
             <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5 sm:p-6">
               <h2 className="font-extrabold text-base text-blue-950">Estimate kis kaam ke liye hai?</h2>
               <p className="mt-1 text-xs leading-relaxed text-blue-900">
-                Public signals do not prove whether a feature is already implemented. Choose a new build, or review an existing site so existing work is not charged again.
+                Scan public pages and sitemap se signals collect karta hai; yeh complete code audit nahi. Login ke peechay ya JS-only features miss ho sakte hain. New build ya existing site select karke included scope review karein.
               </p>
               <div className="mt-4 flex flex-col sm:flex-row gap-3">
                 <label className="flex flex-1 items-start gap-2 rounded-xl border border-blue-200 bg-white p-3 text-sm">
@@ -220,7 +239,7 @@ export default function WebsiteEstimatorPage() {
                     onChange={() => setScopeMode("new_build")}
                     className="mt-1"
                   />
-                  <span><strong>New build</strong><span className="block text-xs text-gray-600">Detected, priced add-ons start included in the estimate; review them below.</span></span>
+                  <span><strong>New build</strong><span className="block text-xs text-gray-600">Detected add-ons review ke liye selected hain; scan signal ko confirmed implementation na samjhein.</span></span>
                 </label>
                 <label className="flex flex-1 items-start gap-2 rounded-xl border border-blue-200 bg-white p-3 text-sm">
                   <input
@@ -375,7 +394,7 @@ export default function WebsiteEstimatorPage() {
                         <p className="text-sm font-bold text-gray-800">{feature.title}</p>
                         <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{feature.explanation}</p>
                         <p className="text-[10px] text-gray-400 mt-1">
-                          {feature.evidenceStatus === "owner_confirmed" ? "Owner-confirmed scope record" : "Public signal"} · {feature.evidence}
+                          {feature.evidenceStatus === "owner_confirmed" ? "Owner-confirmed scope record" : "Public page signal — not implementation-verified"} · {feature.evidence}
                           {feature.sourcePages.length > 0 && ` Source: ${feature.sourcePages.join(", ")}`}
                         </p>
                         {scopeMode === "new_build" && includedInSelectedPackage && (
@@ -475,6 +494,60 @@ export default function WebsiteEstimatorPage() {
                     })}
                   </div>
                 )}
+                {scopeMode === "new_build" && (
+                  <div className="mt-5 border-t border-gray-100 pt-4">
+                    <label htmlFor="manual-new-build-addon" className="block text-sm font-bold">
+                      Add a feature the scan may have missed
+                    </label>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Private or JavaScript-only features may not appear in a public scan. Select any additional feature you want included; this is your requested scope, not a claim that it was found on the scanned site.
+                    </p>
+                    <select
+                      id="manual-new-build-addon"
+                      value=""
+                      onChange={(event) => {
+                        const id = event.target.value;
+                        if (id) setManualNewBuildAddons((current) => Array.from(new Set([...current, id])));
+                      }}
+                      className="mt-2 max-w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs"
+                    >
+                      <option value="">Choose a feature to add...</option>
+                      {estimate.addonCatalog
+                        .filter((addon) => {
+                          if (
+                            selectedNewBuildAddons.includes(addon.id) ||
+                            manualNewBuildAddons.includes(addon.id)
+                          ) return false;
+                          const packageId = selectedPricingOption?.pricingPackage;
+                          return !packageId || getChargeableAddonIds(
+                            [addon.id],
+                            packageId,
+                            selectedPricingOption.adminPanelType
+                          ).includes(addon.id);
+                        })
+                        .map((addon) => (
+                          <option key={addon.id} value={addon.id}>
+                            {addon.title} — {formatCurrency(addon.price, estimate.currency, locale)}
+                          </option>
+                        ))}
+                    </select>
+                    {manualNewBuildAddons.map((id) => {
+                      const addon = addonById.get(id);
+                      return addon ? (
+                        <label key={id} className="mt-2 flex items-center gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            checked
+                            onChange={() => setManualNewBuildAddons((current) =>
+                              current.filter((item) => item !== id)
+                            )}
+                          />
+                          Requested addition: {addon.title} ({formatCurrency(addon.price, estimate.currency, locale)})
+                        </label>
+                      ) : null;
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
@@ -550,6 +623,17 @@ export default function WebsiteEstimatorPage() {
                   </li>
                 ))}
               </ul>
+              <label className="mt-4 flex items-start gap-2 rounded-xl border border-amber-300 bg-white/70 p-3 text-xs leading-relaxed text-amber-950">
+                <input
+                  type="checkbox"
+                  checked={scopeReviewed}
+                  onChange={(event) => setScopeReviewed(event.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  I reviewed the detected features and selected add-ons. Public scan signals are not proof of full functionality; I added any private or missed features needed for my request.
+                </span>
+              </label>
               {estimate.internationalPricing && (
                 <p className="mt-3 text-[11px] text-amber-900">
                   International base packages use 2x Pakistan rates converted at 1 PKR = {estimate.exchangeRate} {estimate.currency}; each selected one-time add-on is a flat 100 {estimate.currency}. Rates updated {estimate.exchangeRateDate || "by provider"}. Final quotation may differ with rate changes.
@@ -557,13 +641,28 @@ export default function WebsiteEstimatorPage() {
               )}
               <Link
                 href={nextStepUrl}
-                className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#101216] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#E31E36] transition"
+                aria-disabled={!scopeReviewed}
+                onClick={(event) => {
+                  if (!scopeReviewed) event.preventDefault();
+                }}
+                className={`mt-5 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold text-white transition ${
+                  scopeReviewed ? "bg-[#101216] hover:bg-[#E31E36]" : "cursor-not-allowed bg-gray-400"
+                }`}
               >
                 {estimate.matchedTemplateId
-                  ? "Is template ko apne brand ke liye customize karein"
+                  ? "Is estimate ke saath budget calculator kholein"
                   : "Is tarah ki website apne brand ke liye banwayein"}
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
+              {estimate.matchedTemplateId && (
+                <Link
+                  href={`/templates?template=${encodeURIComponent(estimate.matchedTemplateId)}`}
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-xs font-bold text-gray-800 hover:border-[#E31E36]"
+                >
+                  Ya is ready-made template ko request karein
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              )}
             </section>
           </div>
         )}
@@ -573,7 +672,7 @@ export default function WebsiteEstimatorPage() {
             <Globe className="w-8 h-8 text-gray-400 mx-auto" />
             <h2 className="font-bold mt-3">Website URL yahan enter karein</h2>
             <p className="text-xs text-gray-500 mt-1 max-w-xl mx-auto leading-relaxed">
-              Tool public homepage aur usi website ke chand relevant pages check karega. Yeh feature-based estimate hai—website owner ka asal development budget ya invoice maloom karne ka tareeqa nahi.
+              Tool sitemap aur internal links se maximum 12 relevant public pages check karega. Private admin pages ya JavaScript-only features verify nahi hote; result preliminary feature-based estimate hai, final quotation nahi.
             </p>
           </div>
         )}

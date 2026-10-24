@@ -35,42 +35,104 @@ interface DatabaseSchema {
 export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
   {
     id: "grillvi-gtroad",
+    templateFeatureVersion: 1,
     title: "Restaurant Name - Restaurant Website Template",
     category: "Restaurant web applications",
-    shortDescription: "A customizable restaurant website template with an online menu, ordering cart, and WhatsApp ordering.",
-    fullDescription: "A ready-made restaurant website demo with a replaceable restaurant name and tagline, online menu, food categories, cart, WhatsApp ordering, and restaurant information. Customize the branding, menu, images, and content for your own business.",
+    shortDescription: "Customizable restaurant website with a client admin dashboard, menu QR codes, online ordering, order tracking, and daily sales reports.",
+    fullDescription: "A ready-made responsive restaurant website and client admin dashboard. Customers can browse a searchable menu, add items to a cart, check out, track order status, and contact the restaurant through WhatsApp. The eight admin sections manage overview and sales, live orders, daily sales by selected date, menu and prices, per-item QR codes with printable sheets, payment accounts, review moderation, and restaurant settings. Admins can print kitchen tickets and receipts, and export daily sales reports to CSV or print. The comparable new-build estimate is PKR 225,000: the E-Commerce Business package at PKR 150,000 plus the listed restaurant QR, order tracking, kitchen ticket, daily sales record, and sales-calendar add-ons. Supabase persistence is optional; no half-price offer is active for this template.",
     imageUrl: "https://gtroad1.vercel.app/images/family-sharing-thaal.jpg",
-    technologies: ["Next.js", "Responsive Web Design", "Online Menu", "Online Ordering", "WhatsApp Ordering"],
+    technologies: [
+      "Next.js",
+      "Responsive Web Design",
+      "Client Admin Dashboard",
+      "Searchable Menu, Categories & Item Options",
+      "Shopping Cart & Checkout",
+      "WhatsApp Contact",
+      "Customer Order Tracking",
+      "Per-Item QR Code Hub & Printable Sheets",
+      "Kitchen Tickets & Customer Receipts",
+      "Daily Sales Reports by Date",
+      "CSV Export & Printing",
+      "Payment Account Settings & Verification",
+      "Menu & Price Management",
+      "Review Moderation",
+      "Restaurant Settings",
+    ],
     status: "Live",
     availabilityStatus: "Online",
     templateAvailable: true,
     templatePricingPackage: "ecommerce_business",
     templateStartingPrice: 150000,
+    templateIncludedAddonIds: [
+      "restaurant_qr_menu",
+      "order_tracking",
+      "kitchen_order_tickets",
+      "daily_sales_records",
+      "daily_sales_calendar",
+    ],
+    templateIncludedAddonPrices: {
+      restaurant_qr_menu: 10000,
+      order_tracking: 25000,
+      kitchen_order_tickets: 20000,
+      daily_sales_records: 10000,
+      daily_sales_calendar: 10000,
+    },
     demoUrl: "https://gtroad1.vercel.app/",
     isPublic: true,
-    approvedPublicBudget: 150000,
-    budgetLabel: "Template Price",
+    approvedPublicBudget: 225000,
+    budgetLabel: "Estimated Build Price",
     featured: true,
     clientConsentForBudget: false,
   },
   {
     id: "student-burgers-shawarmas",
+    templateFeatureVersion: 1,
     title: "Student Burgers & Shawarmas - Restaurant Website",
     category: "Restaurant web applications",
-    shortDescription: "Restaurant website with a digital menu, WhatsApp ordering, and dine-in table QR access.",
-    fullDescription: "A live restaurant website for Student Burgers & Shawarmas in Ramgarh, Lahore. Customers can browse its menu and student deals, order directly through WhatsApp, or scan a table QR code for dine-in. The comparable new-build estimate is PKR 185,000, based on the E-Commerce Business package plus restaurant digital menu/QR and order-tracking features. The website uses a Vercel subdomain; a personal domain and its registration are not included.",
+    shortDescription: "Restaurant website with WhatsApp ordering, dine-in table QR codes, order tracking, and a nine-page admin panel for sales, customers, menu, and deals.",
+    fullDescription: "A responsive restaurant ordering website with menu and deal browsing, server-validated cart checkout via WhatsApp, dine-in table QR ordering, and customer order-status tracking. Its authenticated client admin panel has nine operational pages: dashboard, orders, daily sales, customers, products, deals, QR tables, menu verification, and business settings. Staff can manage orders and export them to CSV; manage menu items and deal availability; generate, download, and print table QR standees; review completed sales by date with a monthly calendar, item breakdown, purchase expenses, and estimated profit or loss; manage monthly customer credit accounts, payments, and balances; and update restaurant settings. Checkout hands off to WhatsApp; no online payment gateway is included. The comparable new-build estimate is PKR 225,000: the E-Commerce Business package at PKR 150,000 plus Restaurant Digital Menu & QR Codes (PKR 10,000), Order Tracking (PKR 25,000), Daily Sales Records (PKR 10,000), Daily Sales Calendar (PKR 10,000), Customer Monthly Credit Accounts (PKR 10,000), and Order CSV Export (PKR 10,000). The website uses a Vercel subdomain; a personal domain and its registration are not included.",
     imageUrl: "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-1.webp",
-    technologies: ["Next.js", "Responsive Web Design", "Digital Menu", "WhatsApp Ordering", "Dine-In Table QR"],
+    technologies: [
+      "Next.js",
+      "Responsive Web Design",
+      "Authenticated Client Admin Panel",
+      "Dashboard with Live Order and Sales Insights",
+      "Menu & Deals Management",
+      "Server-Validated WhatsApp Checkout",
+      "Customer Order Status Tracking",
+      "Dine-In Table Ordering",
+      "QR Table Management & Printable Standees",
+      "Daily Sales Records & Monthly Calendar",
+      "Sales Item Breakdown, Expenses & Estimated Profit/Loss",
+      "Customer Monthly Credit Accounts & Payment Ledger",
+      "Order CSV Export",
+      "Menu Verification Audit",
+      "Business Settings",
+    ],
     status: "Live",
     availabilityStatus: "Online",
     templateAvailable: true,
     templatePricingPackage: "ecommerce_business",
     templateStartingPrice: 150000,
-    templateIncludedAddonIds: ["restaurant_qr_menu", "order_tracking"],
-    templateIncludedAddonPrices: { restaurant_qr_menu: 10000, order_tracking: 25000 },
+    templateIncludedAddonIds: [
+      "restaurant_qr_menu",
+      "order_tracking",
+      "daily_sales_records",
+      "daily_sales_calendar",
+      "monthly_credit_accounts",
+      "csv_data_export",
+    ],
+    templateIncludedAddonPrices: {
+      restaurant_qr_menu: 10000,
+      order_tracking: 25000,
+      daily_sales_records: 10000,
+      daily_sales_calendar: 10000,
+      monthly_credit_accounts: 10000,
+      csv_data_export: 10000,
+    },
     demoUrl: "https://student-burgers-and-shawarmas.vercel.app/",
     isPublic: true,
-    approvedPublicBudget: 185000,
+    approvedPublicBudget: 225000,
     budgetLabel: "Estimated Build Price",
     offerEnabled: true,
     offerTag: "3-Day Half-Price Deal",
@@ -83,6 +145,26 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
+const INTERNAL_WORKFORCE_ADDON_IDS = new Set([
+  "prompt_to_website_draft",
+  "chat_guided_site_editor",
+  "screenshot_to_website",
+  "ai_model_provider_integration",
+  "social_media_content_studio",
+  "video_asset_library",
+]);
+
+export function sanitizePricingConfigForCustomerUse(
+  config: PricingRuleConfig
+): PricingRuleConfig {
+  return {
+    ...config,
+    addons: Object.fromEntries(
+      Object.entries(config.addons).filter(([id]) => !INTERNAL_WORKFORCE_ADDON_IDS.has(id))
+    ),
+  };
+}
+
 const LEGACY_PORTFOLIO_IMAGE_URLS: Record<string, string[]> = {
   "student-burgers-shawarmas": [
     "https://student-burgers-and-shawarmas.vercel.app/images/hero/hero-shawarma.webp",
@@ -113,6 +195,10 @@ const LEGACY_STUDENT_BURGERS_PORTFOLIO_VALUES: Partial<PortfolioProject> = {
   budgetLabel: "Project Budget",
   clientConsentForBudget: true,
 };
+const PREVIOUS_STUDENT_BURGERS_TEMPLATE_DESCRIPTIONS = [
+  "A live restaurant website for Student Burgers & Shawarmas in Ramgarh, Lahore. Customers can browse its menu and student deals, order directly through WhatsApp, or scan a table QR code for dine-in. The comparable new-build estimate is PKR 185,000, based on the E-Commerce Business package plus restaurant digital menu/QR and order-tracking features. The website uses a Vercel subdomain; a personal domain and its registration are not included.",
+  "A live restaurant website for Student Burgers & Shawarmas in Ramgarh, Lahore. Customers can browse its menu and student deals, order directly through WhatsApp, or scan a table QR code for dine-in. Its responsive client admin panel includes daily sales records and a calendar. The comparable new-build estimate is PKR 205,000, based on the E-Commerce Business package plus restaurant digital menu/QR, order tracking, daily sales records, and daily sales calendar. The website uses a Vercel subdomain; a personal domain and its registration are not included.",
+];
 
 export function mergePortfolioSeedProjects(
   savedProjects: PortfolioProject[],
@@ -130,8 +216,20 @@ export function mergePortfolioSeedProjects(
         ? LEGACY_STUDENT_BURGERS_PORTFOLIO_VALUES
         : undefined;
     const isUnchangedLegacyValue = (field: keyof PortfolioProject) =>
-      legacyValues !== undefined &&
-      JSON.stringify(savedProject[field]) === JSON.stringify(legacyValues[field]);
+      (legacyValues !== undefined &&
+        JSON.stringify(savedProject[field]) === JSON.stringify(legacyValues[field])) ||
+      (savedProject.id === "grillvi-gtroad" &&
+        field === "approvedPublicBudget" &&
+        savedProject.approvedPublicBudget === 150000) ||
+      (savedProject.id === "grillvi-gtroad" &&
+        field === "budgetLabel" &&
+        savedProject.budgetLabel === "Template Price") ||
+      (savedProject.id === "student-burgers-shawarmas" &&
+        field === "fullDescription" &&
+        PREVIOUS_STUDENT_BURGERS_TEMPLATE_DESCRIPTIONS.includes(savedProject.fullDescription || "")) ||
+      (savedProject.id === "student-burgers-shawarmas" &&
+        field === "approvedPublicBudget" &&
+        [185000, 205000].includes(savedProject.approvedPublicBudget || 0));
     const migratedLegacyValue = <K extends keyof PortfolioProject>(field: K) =>
       isUnchangedLegacyValue(field) && seedProject ? seedProject[field] : savedProject[field];
     const imageUrl = seedProject && (
@@ -143,13 +241,33 @@ export function mergePortfolioSeedProjects(
     const demoUrl = seedProject && LEGACY_PORTFOLIO_DEMO_URLS[savedProject.id] === savedProject.demoUrl
       ? seedProject.demoUrl
       : savedProject.demoUrl;
+    const technologies = migratedLegacyValue("technologies");
+    const migrateStudentFeatureCatalog = savedProject.id === "student-burgers-shawarmas" &&
+      (savedProject.templateFeatureVersion || 0) < 1;
+    const templateIncludedAddonIds = migrateStudentFeatureCatalog
+      ? Array.from(new Set([
+          ...(seedProject?.templateIncludedAddonIds || []),
+          ...(savedProject.templateIncludedAddonIds || []),
+        ]))
+      : savedProject.templateIncludedAddonIds ?? seedProject?.templateIncludedAddonIds;
+    const templateIncludedAddonPrices = migrateStudentFeatureCatalog
+      ? {
+          ...(savedProject.templateIncludedAddonPrices || {}),
+          ...(seedProject?.templateIncludedAddonPrices || {}),
+        }
+      : savedProject.templateIncludedAddonPrices ?? seedProject?.templateIncludedAddonPrices;
 
     return {
       ...savedProject,
       title: migratedLegacyValue("title"),
       shortDescription: migratedLegacyValue("shortDescription"),
       fullDescription: migratedLegacyValue("fullDescription"),
-      technologies: migratedLegacyValue("technologies"),
+      technologies: migrateStudentFeatureCatalog
+        ? Array.from(new Set([
+            ...(seedProject?.technologies || []),
+            ...(technologies || []),
+          ]))
+        : technologies,
       imageUrl,
       demoUrl,
       approvedPublicBudget: migratedLegacyValue("approvedPublicBudget"),
@@ -159,8 +277,12 @@ export function mergePortfolioSeedProjects(
       clientConsentForBudget: migratedLegacyValue("clientConsentForBudget"),
       templatePricingPackage: savedProject.templatePricingPackage ?? seedProject?.templatePricingPackage,
       templateStartingPrice: savedProject.templateStartingPrice ?? seedProject?.templateStartingPrice,
-      templateIncludedAddonIds: savedProject.templateIncludedAddonIds ?? seedProject?.templateIncludedAddonIds,
-      templateIncludedAddonPrices: savedProject.templateIncludedAddonPrices ?? seedProject?.templateIncludedAddonPrices,
+      templateIncludedAddonIds,
+      templateIncludedAddonPrices,
+      templateFeatureVersion: Math.max(
+        savedProject.templateFeatureVersion || 0,
+        seedProject?.templateFeatureVersion || 0
+      ),
       offerEnabled: savedProject.offerEnabled ?? seedProject?.offerEnabled ?? false,
       offerTag: savedProject.offerTag ?? seedProject?.offerTag,
       offerDiscountPercent: savedProject.offerDiscountPercent ?? seedProject?.offerDiscountPercent,
@@ -669,12 +791,12 @@ export class DataStore {
   // Pricing configuration
   static getPricingConfig(): PricingRuleConfig {
     const data = this.ensureDataFile();
-    return mergePricingConfigWithDefaults(data.pricingConfig);
+    return sanitizePricingConfigForCustomerUse(mergePricingConfigWithDefaults(data.pricingConfig));
   }
 
   static updatePricingConfig(config: PricingRuleConfig, actor: string = "Admin"): PricingRuleConfig {
     const data = this.ensureDataFile();
-    const mergedConfig = mergePricingConfigWithDefaults(config);
+    const mergedConfig = sanitizePricingConfigForCustomerUse(mergePricingConfigWithDefaults(config));
     data.pricingConfig = mergedConfig;
     this.addAuditLog({
       action: "PRICING_RULES_UPDATED",

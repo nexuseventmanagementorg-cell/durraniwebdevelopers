@@ -34,6 +34,24 @@ export async function PATCH(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: "Inquiry ID is required" }, { status: 400 });
     }
+    if (body.websiteCreationPrompt !== undefined) {
+      if (
+        typeof id !== "string" ||
+        !id.trim() ||
+        typeof body.websiteCreationPrompt !== "string" ||
+        body.websiteCreationPrompt.length > 20_000
+      ) {
+        return NextResponse.json(
+          { success: false, error: "Website creation prompt must be text up to 20,000 characters." },
+          { status: 400 }
+        );
+      }
+      const updated = await updateInquiry(id, {
+        websiteCreationPrompt: body.websiteCreationPrompt,
+      });
+      if (!updated) return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
+      return NextResponse.json({ success: true, inquiry: updated });
+    }
     if (body.projectBuildBrief && typeof body.projectBuildBrief === "object") {
       const current = await getInquiryById(id);
       if (!current) {

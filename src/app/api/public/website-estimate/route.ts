@@ -5,6 +5,7 @@ import { getRegionalPricingConfig, isCurrencyCode } from "@/lib/currency";
 import { getExchangeRateSnapshot } from "@/lib/exchange-rates";
 import { DataStore } from "@/lib/store";
 import { calculateBudget } from "@/lib/constants";
+import { matchesPortfolioProjectUrl } from "@/lib/template-pricing";
 
 export const runtime = "nodejs";
 export const maxDuration = 20;
@@ -58,28 +59,23 @@ export async function POST(request: NextRequest) {
 
   try {
     const snapshot = requestedCurrency === "PKR" ? null : await getExchangeRateSnapshot();
+    const pricingConfig = DataStore.getPricingConfig();
     let estimate = await estimateWebsite(
       url.trim(),
       requestedCurrency,
       snapshot?.rates || { PKR: 1 },
       snapshot?.updatedAt,
       undefined,
-      DataStore.getPricingConfig()
+      pricingConfig
     );
     const sourceHost = new URL(estimate.url).hostname.toLowerCase();
-    const requestedHost = new URL(url.trim()).hostname.toLowerCase();
     const templateProject = DataStore.getPortfolio(false).find((project) => {
       if (
         project.templateAvailable === false ||
         !(project.templateStartingPrice || (project.budgetLabel === "Template Price" && project.approvedPublicBudget)) ||
         !project.demoUrl
       ) return false;
-      const demoHost = new URL(project.demoUrl).hostname.toLowerCase();
-      const legacyHosts: Record<string, string[]> = {
-        "grillvi-gtroad": ["grillvi-gtroad.vercel.app"],
-      };
-      const recognizedHosts = [demoHost, ...(legacyHosts[project.id] || [])];
-      return recognizedHosts.includes(sourceHost) || recognizedHosts.includes(requestedHost);
+      return matchesPortfolioProjectUrl(project, estimate.url);
     });
     const templateStartingPrice = templateProject?.templateStartingPrice ??
       templateProject?.approvedPublicBudget;
@@ -90,7 +86,8 @@ export async function POST(request: NextRequest) {
         estimate,
         templateProject,
         Math.round(templateStartingPrice * rate * 100) / 100,
-        templateProject.templateIncludedAddonIds
+        templateProject.templateIncludedAddonIds,
+        pricingConfig
       );
     }
     const historicalProject = DataStore.getPortfolio(false).find((project) => {

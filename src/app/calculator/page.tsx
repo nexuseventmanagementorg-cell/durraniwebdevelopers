@@ -19,11 +19,16 @@ import {
   isSaasPackageId,
   isEcommerceProjectType,
   isSaasProjectType,
+  mergePricingConfigWithDefaults,
 } from "@/lib/constants";
 import type { PricingPackageId } from "@/lib/constants";
-import type { AddonOption, InquiryScanFeature } from "@/lib/types";
+import type { AddonOption, InquiryScanFeature, PortfolioProject, PricingRuleConfig } from "@/lib/types";
 import { getBeginnerBudgetPlan } from "@/lib/calculator-guide";
 import type { BeginnerBudgetBand, BeginnerProjectGoal, CalculatorGuideLanguage } from "@/lib/calculator-guide";
+import {
+  applyTemplatePricingToCalculator,
+  matchesPortfolioProjectUrl,
+} from "@/lib/template-pricing";
 import { CurrencyCode, formatCurrency, getRegionalPricingConfig, isCurrencyCode } from "@/lib/currency";
 import { useCurrency } from "@/components/CurrencyProvider";
 import CurrencySelector from "@/components/CurrencySelector";
@@ -82,12 +87,26 @@ function parseScanFeatures(value: string | null): InquiryScanFeature[] {
   }
 }
 
+function parsePricingConfig(value: unknown): PricingRuleConfig {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("addons" in value) ||
+    typeof value.addons !== "object" ||
+    value.addons === null
+  ) {
+    throw new Error("The current pricing configuration is unavailable.");
+  }
+  return mergePricingConfigWithDefaults(value as Partial<PricingRuleConfig>);
+}
+
 function CalculatorContent() {
   const searchParams = useSearchParams();
   const initialPackage = searchParams.get("package");
   const initialType = searchParams.get("projectType") || searchParams.get("type");
   const initialCurrency = searchParams.get("currency");
   const initialSourceUrl = searchParams.get("sourceUrl") || "";
+  const initialTemplateId = searchParams.get("templateId");
   const initialScanFeatures = parseScanFeatures(searchParams.get("scanFeatures"));
   const initialConfiguredPackage = isPricingPackageId(initialPackage) ? initialPackage : null;
   const normalizedInitialType = initialType === "E-Commerce Stores"
@@ -225,6 +244,11 @@ function CalculatorContent() {
   const [submittedInquiry, setSubmittedInquiry] = useState<any | null>(null);
   const [copiedRef, setCopiedRef] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [serverPricingConfig, setServerPricingConfig] =
+    useState<PricingRuleConfig>(DEFAULT_PRICING_CONFIG);
+  const [pricingConfigReady, setPricingConfigReady] = useState(false);
+  const [pricingConfigError, setPricingConfigError] = useState("");
+  const [matchedTemplateProject, setMatchedTemplateProject] = useState<PortfolioProject | null>(null);
 
   // Step 1: Customer Info
   const [customerName, setCustomerName] = useState("");
@@ -317,30 +341,83 @@ function CalculatorContent() {
   const [customFeatureNotes, setCustomFeatureNotes] = useState("");
   const [scanFeatures] = useState(initialScanFeatures);
 
+  useEffect(() => {
+    let cancelled = false;
+    setPricingConfigReady(false);
+    setPricingConfigError("");
+    setMatchedTemplateProject(null);
+    const loadCalculatorConfiguration = async () => {
+      try {
+        const pricingResponse = await fetch("/api/public/addons", { cache: "no-store" });
+        const pricingData = await pricingResponse.json();
+        if (!pricingResponse.ok || !pricingData.success) {
+          throw new Error(pricingData.error || "Current calculator prices could not be loaded.");
+        }
+        const config = parsePricingConfig(pricingData.pricingConfig);
+
+        if (initialTemplateId) {
+          const portfolioResponse = await fetch("/api/public/portfolio", { cache: "no-store" });
+          const portfolioData = await portfolioResponse.json();
+          if (!portfolioResponse.ok || !portfolioData.success || !Array.isArray(portfolioData.portfolio)) {
+            throw new Error("The matched template pricing record could not be loaded.");
+          }
+          const matchedTemplate = (portfolioData.portfolio as PortfolioProject[]).find((project) =>
+            project.id === initialTemplateId &&
+            matchesPortfolioProjectUrl(project, initialSourceUrl)
+          );
+          if (!matchedTemplate) {
+            throw new Error("The URL-to-template match could not be confirmed. Restart the website estimate.");
+          }
+          if (!cancelled) setMatchedTemplateProject(matchedTemplate);
+        }
+
+        if (cancelled) return;
+        setServerPricingConfig(config);
+        setPricingConfigError("");
+        setErrorMessage("");
+        setPricingConfigReady(true);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Could not load current calculator pricing or template scope", error);
+        setPricingConfigError(
+          error instanceof Error ? error.message : "Current calculator pricing could not be loaded."
+        );
+      }
+    };
+    void loadCalculatorConfiguration();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialSourceUrl, initialTemplateId]);
+
   // Step 7: Disclaimer
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(true);
 
   // Real-time calculation
   const pricingConfig = useMemo(
     () => currency === "PKR" || rates[currency]
-      ? getRegionalPricingConfig(DEFAULT_PRICING_CONFIG, currency, rates)
-      : DEFAULT_PRICING_CONFIG,
-    [currency, rates]
+      ? getRegionalPricingConfig(serverPricingConfig, currency, rates)
+      : serverPricingConfig,
+    [currency, rates, serverPricingConfig]
   );
   const getPackagePricingConfig = useCallback(
     (packageId: PricingPackageId) => {
-      const packageConfig = getPricingPackageConfig(DEFAULT_PRICING_CONFIG, packageId);
+      const packageConfig = getPricingPackageConfig(serverPricingConfig, packageId);
       return currency === "PKR" || rates[currency]
         ? getRegionalPricingConfig(packageConfig, currency, rates)
         : packageConfig;
     },
-    [currency, rates]
+    [currency, rates, serverPricingConfig]
   );
   const selectedPricingConfig = useMemo(
-    () => selectedPricingPackage
-      ? getPackagePricingConfig(selectedPricingPackage)
-      : pricingConfig,
-    [getPackagePricingConfig, pricingConfig, selectedPricingPackage]
+    () => applyTemplatePricingToCalculator(
+      selectedPricingPackage
+        ? getPackagePricingConfig(selectedPricingPackage)
+        : pricingConfig,
+      matchedTemplateProject,
+      selectedPricingPackage
+    ),
+    [getPackagePricingConfig, matchedTemplateProject, pricingConfig, selectedPricingPackage]
   );
   const calculation = useMemo(
     () => calculateBudget(
@@ -737,6 +814,13 @@ function CalculatorContent() {
   // Validation before proceeding
   const validateStep = (step: number): boolean => {
     setErrorMessage("");
+    if (!pricingConfigReady) {
+      setErrorMessage(
+        pricingConfigError ||
+          "The current add-on pricing is still loading. Please wait and retry."
+      );
+      return false;
+    }
     if (step === 1) {
       const hasEmail = Boolean(email.trim());
       const hasPhone = Boolean(phone.trim());
@@ -1248,6 +1332,16 @@ function CalculatorContent() {
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
             <span>{errorMessage}</span>
           </div>
+        )}
+        {!pricingConfigReady && !pricingConfigError && (
+          <p role="status" className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-xs text-blue-900">
+            Loading the latest approved package and add-on prices…
+          </p>
+        )}
+        {pricingConfigError && (
+          <p role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-800">
+            Current prices could not be loaded, so the calculator cannot continue with potentially outdated rates. {pricingConfigError}
+          </p>
         )}
 
         {/* ============================================================== */}

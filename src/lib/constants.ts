@@ -57,8 +57,10 @@ function defineAddon(
     label,
     category,
     price: billingPeriod === "monthly" ||
-      category === "ecommerce" ||
-      category === "saas"
+    category === "creative" ||
+    category === "ecommerce" ||
+      category === "saas" ||
+      id === "kitchen_order_tickets"
       ? price
       : FEATURE_ADDON_PRICE_PKR,
     description,
@@ -77,6 +79,10 @@ export const EXTENDED_ADDONS: AddonOption[] = [
   defineAddon("theme_switcher", "Dark / Light Mode", "website", 10000, "Selectable color theme with a saved user preference."),
 
   defineAddon("admin_dashboard", "Admin Dashboard", "business", 15000, "Manage website data, records, and settings from a protected dashboard."),
+  defineAddon("daily_sales_records", "Daily Sales Records", "business", 10000, "Record and review daily restaurant sales from the admin panel."),
+  defineAddon("daily_sales_calendar", "Daily Sales Calendar", "business", 10000, "Browse daily sales records by selecting a report date in the admin panel."),
+  defineAddon("monthly_credit_accounts", "Customer Monthly Credit Accounts", "business", FEATURE_ADDON_PRICE_PKR, "Manage monthly customer credit accounts, recorded payments, and outstanding balances."),
+  defineAddon("csv_data_export", "Order CSV Export", "business", FEATURE_ADDON_PRICE_PKR, "Download restaurant order records as CSV files."),
   defineAddon("user_accounts", "User Registration & Login", "business", 10000, "Customer accounts with secure registration and sign-in workflows."),
   defineAddon("role_permissions", "Role-Based Permissions", "business", 15000, "Separate admin, manager, staff, and customer access levels."),
   defineAddon("media_uploads", "File & Media Uploads", "business", 10000, "Upload and manage images, videos, PDFs, and documents."),
@@ -94,7 +100,7 @@ export const EXTENDED_ADDONS: AddonOption[] = [
   defineAddon("wishlist", "Wishlist", "ecommerce", 20000, "Let customers save products to revisit later."),
   defineAddon("product_reviews", "Product Reviews & Ratings", "ecommerce", 25000, "Collect product ratings and provide review moderation."),
   defineAddon("shipping_rules", "Shipping & Delivery Rules", "ecommerce", 40000, "Calculate delivery charges by area, weight, or order total."),
-  defineAddon("order_tracking", "Order Tracking", "ecommerce", 30000, "Show customers order status and tracking information."),
+  defineAddon("order_tracking", "Order Tracking", "ecommerce", 25000, "Show customers order status and tracking information."),
   defineAddon("abandoned_cart", "Abandoned Cart Recovery", "ecommerce", 50000, "Create a recovery workflow for unfinished shopping carts."),
   defineAddon("invoice_receipts", "Invoice & Receipt Generator", "ecommerce", 25000, "Generate downloadable PDF order invoices and receipts."),
   defineAddon("product_qr_codes", "Product QR Codes", "ecommerce", 20000, "Generate product QR codes and printable labels."),
@@ -126,6 +132,12 @@ export const EXTENDED_ADDONS: AddonOption[] = [
   defineAddon("ai_product_recommendations", "AI Product Recommendations", "ai", 25000, "Suggest products based on configured customer interest signals."),
   defineAddon("ai_content_assistant", "AI Content Assistant", "ai", 15000, "Generate product descriptions and content drafts with an AI provider."),
   defineAddon("smart_search", "Smart Search", "ai", 20000, "Improve search relevance across supported site content."),
+  defineAddon("custom_image_editing", "Custom Image Editing & Optimization", "creative", 15000, "Prepare and customize agreed customer-supplied website images, including crop, resize, and web optimization. Image rights and source files must be provided or approved by the customer."),
+  defineAddon("ai_generated_images", "AI-Generated Website Images", "creative", 20000, "Create an agreed set of custom AI-generated website visuals, subject to customer review. Third-party generation and licensing costs, if any, are separate."),
+  defineAddon("ai_product_images", "AI-Generated Product & Menu Images", "creative", 20000, "Create an agreed set of AI-assisted product or menu visuals for the customer's website, subject to product accuracy and customer approval."),
+  defineAddon("ai_generated_video", "AI-Generated Website Video", "creative", 40000, "Create an agreed short AI-assisted video asset for the customer's website, subject to review. Third-party generation and licensing costs, if any, are separate."),
+  defineAddon("promotional_ad_video", "Promotional / Advertisement Video", "creative", 30000, "Produce an agreed short promotional video from approved brand assets and messaging for the customer's campaign."),
+  defineAddon("hero_video_section", "Website Hero Video Section", "creative", 15000, "Add a responsive, performance-conscious hero video section with poster image and reduced-motion fallback. The video asset is separate unless included in scope."),
   defineAddon("automated_email_workflows", "Automated Email Workflows", "automation", 15000, "Send agreed order, reminder, and follow-up email sequences."),
   defineAddon("scheduled_reports", "Scheduled Reports", "automation", 15000, "Generate and deliver recurring daily, weekly, or monthly reports."),
   defineAddon("document_generation", "Document / PDF Generation", "automation", 10000, "Generate project-specific invoices, certificates, and reports."),
@@ -145,7 +157,7 @@ export const EXTENDED_ADDONS: AddonOption[] = [
   defineAddon("maintenance_updates", "Maintenance & Updates", "security", 15000, "Agreed fixes and updates during a monthly maintenance period.", "monthly"),
 
   defineAddon("restaurant_qr_menu", "Restaurant Digital Menu & QR Codes", "industry", 10000, "Publish a digital restaurant menu with scannable item or table QR codes."),
-  defineAddon("kitchen_order_tickets", "Kitchen Order Ticket (KOT)", "industry", 20000, "Route and track restaurant orders through a kitchen ticket workflow."),
+  defineAddon("kitchen_order_tickets", "Kitchen Order Ticket (KOT)", "industry", 20000, "Prepare and print kitchen tickets and customer receipts from order details."),
   defineAddon("table_reservations", "Restaurant Table Reservations", "industry", 15000, "Let customers request and manage table reservations."),
   defineAddon("clinic_appointments", "Clinic Appointment Scheduling", "industry", 15000, "Accept and manage clinic appointments."),
   defineAddon("staff_schedules", "Doctor / Staff Schedules", "industry", 15000, "Manage availability and schedules for doctors or staff."),
@@ -172,6 +184,7 @@ export const ADDON_CATEGORY_LABELS: Record<AddonOption["category"], string> = {
   feature: "Website & Design",
   website: "Website & Design",
   business: "Business Tools & Admin",
+  creative: "Website Images & Video",
   ecommerce: "E-commerce & Payments",
   saas: "SaaS & Multi-Vendor",
   automation: "AI & Automation",
@@ -238,6 +251,11 @@ export const DEFAULT_PRICING_CONFIG: PricingRuleConfig = {
   },
 };
 
+const LEGACY_ADDON_DESCRIPTIONS: Record<string, string> = {
+  kitchen_order_tickets: "Route and track restaurant orders through a kitchen ticket workflow.",
+  daily_sales_calendar: "Review daily sales records by date in the admin panel calendar.",
+};
+
 export function mergePricingConfigWithDefaults(
   config?: Partial<PricingRuleConfig> | null
 ): PricingRuleConfig {
@@ -256,18 +274,30 @@ export function mergePricingConfigWithDefaults(
         addon.price === FEATURE_ADDON_PRICE_PKR &&
         planSpecificAddon &&
         (defaultAddon?.price || 0) > FEATURE_ADDON_PRICE_PKR;
+      const shouldMigrateDescription =
+        defaultAddon && LEGACY_ADDON_DESCRIPTIONS[id] === addon.description;
       return [
         id,
         {
           ...defaultAddon,
           ...addon,
-          ...(addon.billingPeriod === "monthly" || planSpecificAddon
+          ...(shouldMigrateDescription ? { description: defaultAddon.description } : {}),
+          ...(addon.billingPeriod === "monthly" || planSpecificAddon || addon.category === "creative"
             ? isLegacyFlatPrice
               ? { price: defaultAddon.price }
               : planSpecificAddon
-                ? { price: Math.max(addon.price, addon.category === "ecommerce" ? 20000 : 50000) }
+                ? {
+                    price: Math.max(
+                      addon.price,
+                      addon.id === "order_tracking"
+                        ? 25000
+                        : addon.category === "ecommerce" ? 20000 : 50000
+                    ),
+                  }
                 : {}
-            : { price: FEATURE_ADDON_PRICE_PKR }),
+            : addon.id === "kitchen_order_tickets"
+              ? { price: Math.max(addon.price, defaultAddon?.price || 0) }
+              : { price: FEATURE_ADDON_PRICE_PKR }),
         },
       ];
     })),
