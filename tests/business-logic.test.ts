@@ -63,6 +63,7 @@ import {
 } from "../src/lib/website-estimate-review";
 import {
   getTemplateChargeableAddonIds,
+  getTemplateIncludedAddonTotals,
   getTemplateRequestPlans,
 } from "../src/lib/template-pricing";
 import { notifyAdminOfSubmission, sendInquiryWhatsappConfirmation } from "../src/lib/admin-notifications";
@@ -2296,11 +2297,18 @@ test("Template request plans always use the template price as their minimum", ()
   assert.equal(studentPlans[0]?.price, 150000);
   assert.equal(studentPlans[0]?.packageId, "ecommerce_business");
   assert.ok(studentPlans.every((plan) => plan.price >= 150000));
+  const includedTotals = getTemplateIncludedAddonTotals(
+    studentTemplate,
+    EXTENDED_ADDONS,
+    studentPlans[0]
+  );
+  assert.deepEqual(includedTotals, { oneTime: 35000, monthly: 0 });
+  assert.equal(studentPlans[0].price + includedTotals.oneTime, 185000);
   assert.deepEqual(
     getTemplateChargeableAddonIds(
       studentTemplate,
       studentPlans[0],
-      ["restaurant_qr_menu", "order_tracking", "personal_domain"]
+      ["restaurant_qr_menu", "order_tracking", "supabase_db", "personal_domain"]
     ),
     ["personal_domain"]
   );

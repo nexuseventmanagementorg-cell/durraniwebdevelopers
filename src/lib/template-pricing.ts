@@ -1,12 +1,13 @@
 import {
   DEFAULT_PRICING_CONFIG,
   ECOMMERCE_PACKAGES,
+  getAddonPriceForPackage,
   getChargeableAddonIds,
   isPricingPackageId,
   SAAS_PACKAGES,
   type PricingPackageId,
 } from "./constants";
-import type { PortfolioProject } from "./types";
+import type { AddonOption, PortfolioProject } from "./types";
 
 export interface TemplateRequestPlan {
   id: string;
@@ -15,6 +16,11 @@ export interface TemplateRequestPlan {
   note: string;
   packageId?: PricingPackageId;
   adminPanelType: "none" | "client_admin";
+}
+
+export interface TemplateIncludedAddonTotals {
+  oneTime: number;
+  monthly: number;
 }
 
 const BASE_TEMPLATE_PLANS: TemplateRequestPlan[] = [
@@ -88,4 +94,25 @@ export function getTemplateChargeableAddonIds(
   const templateIncludedAddonIds = new Set(template.templateIncludedAddonIds || []);
   return getChargeableAddonIds(addonIds, packageId, plan.adminPanelType)
     .filter((id) => !templateIncludedAddonIds.has(id));
+}
+
+export function getTemplateIncludedAddonTotals(
+  template: PortfolioProject,
+  addons: AddonOption[],
+  plan: TemplateRequestPlan = getTemplateRequestPlans(template)[0]
+): TemplateIncludedAddonTotals {
+  const packageId = plan?.packageId ||
+    (plan && isPricingPackageId(plan.id) ? plan.id : undefined);
+  return (template.templateIncludedAddonIds || []).reduce<TemplateIncludedAddonTotals>(
+    (totals, id) => {
+      const addon = addons.find((entry) => entry.id === id);
+      if (!addon) return totals;
+      const price = template.templateIncludedAddonPrices?.[id] ??
+        getAddonPriceForPackage(addon, packageId);
+      if (addon.billingPeriod === "monthly") totals.monthly += price;
+      else totals.oneTime += price;
+      return totals;
+    },
+    { oneTime: 0, monthly: 0 }
+  );
 }

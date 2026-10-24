@@ -27,6 +27,7 @@ import {
 } from "@/lib/constants";
 import {
   getTemplateChargeableAddonIds,
+  getTemplateIncludedAddonTotals,
   getTemplateRequestPlans,
 } from "@/lib/template-pricing";
 import { getPortfolioOffer } from "@/lib/portfolio-offers";
@@ -146,13 +147,19 @@ export default function WebsiteTemplatesPage() {
   const priceForAddon = (addon: AddonOption) =>
     selectedTemplate?.templateIncludedAddonPrices?.[addon.id] ??
     getAddonPriceForPackage(addon, packageId);
+  const selectedTemplateIncludedTotals = selectedTemplate
+    ? getTemplateIncludedAddonTotals(selectedTemplate, addons, selectedPlan)
+    : { oneTime: 0, monthly: 0 };
   const oneTimeAddonTotal = chargeableAddons
     .filter((addon) => (addon.billingPeriod || "one_time") === "one_time")
     .reduce((total, addon) => total + priceForAddon(addon), 0);
   const monthlyAddonTotal = chargeableAddons
     .filter((addon) => addon.billingPeriod === "monthly")
     .reduce((total, addon) => total + priceForAddon(addon), 0);
-  const estimatedInitialTotal = selectedPlan.price + oneTimeAddonTotal;
+  const estimatedInitialTotal =
+    selectedPlan.price + selectedTemplateIncludedTotals.oneTime + oneTimeAddonTotal;
+  const estimatedMonthlyTotal =
+    selectedTemplateIncludedTotals.monthly + monthlyAddonTotal;
   const detailsPlan = detailsTemplate ? getTemplateRequestPlans(detailsTemplate)[0] : undefined;
   const detailsPackageId = detailsPlan?.packageId ||
     (detailsPlan && isPricingPackageId(detailsPlan.id) ? detailsPlan.id : undefined);
@@ -163,6 +170,9 @@ export default function WebsiteTemplatesPage() {
   const detailsPriceForAddon = (addon: AddonOption) =>
     detailsTemplate?.templateIncludedAddonPrices?.[addon.id] ??
     getAddonPriceForPackage(addon, detailsPackageId);
+  const detailsTemplateIncludedTotals = detailsTemplate
+    ? getTemplateIncludedAddonTotals(detailsTemplate, addons, detailsPlan)
+    : { oneTime: 0, monthly: 0 };
   const detailsOneTimeAddonTotal = detailsSelectedAddons
     .filter((addon) =>
       detailsChargeableAddonIds.includes(addon.id) &&
@@ -175,7 +185,12 @@ export default function WebsiteTemplatesPage() {
       addon.billingPeriod === "monthly"
     )
     .reduce((total, addon) => total + detailsPriceForAddon(addon), 0);
-  const detailsEstimatedInitialTotal = (detailsPlan?.price || 0) + detailsOneTimeAddonTotal;
+  const detailsEstimatedInitialTotal =
+    (detailsPlan?.price || 0) +
+    detailsTemplateIncludedTotals.oneTime +
+    detailsOneTimeAddonTotal;
+  const detailsEstimatedMonthlyTotal =
+    detailsTemplateIncludedTotals.monthly + detailsMonthlyAddonTotal;
   const groupedAddons = addons.reduce<Record<string, AddonOption[]>>((groups, addon) => {
     const category = ADDON_CATEGORY_LABELS[addon.category] || "Other";
     (groups[category] ||= []).push(addon);
@@ -206,9 +221,9 @@ export default function WebsiteTemplatesPage() {
         : []),
       `Requested pricing plan: ${selectedPlan.name} (${formatPKR(selectedPlan.price)} starting price)`,
       `Selected add-ons: ${selectedAddons.length > 0
-        ? selectedAddons.map((addon) => `${addon.label} — ${formatPKR(priceForAddon(addon))}${addon.billingPeriod === "monthly" ? " / month" : ""}${chargeableAddonIds.includes(addon.id) ? "" : " (included in selected plan)"}`).join(", ")
+        ? selectedAddons.map((addon) => `${addon.label} — ${formatPKR(priceForAddon(addon))}${addon.billingPeriod === "monthly" ? " / month" : ""}${chargeableAddonIds.includes(addon.id) ? "" : selectedTemplate.templateIncludedAddonIds?.includes(addon.id) ? " (included in template total)" : " (included in selected plan)"}`).join(", ")
         : "None"}`,
-      `Preliminary price: ${formatPKR(selectedPlan.price)} plan + ${formatPKR(oneTimeAddonTotal)} one-time add-ons = ${formatPKR(estimatedInitialTotal)}${monthlyAddonTotal > 0 ? `, plus ${formatPKR(monthlyAddonTotal)} / month recurring add-ons` : ""}. Final quote depends on confirmed scope.`,
+      `Preliminary price: ${formatPKR(selectedPlan.price)} plan + ${formatPKR(selectedTemplateIncludedTotals.oneTime)} template-included features + ${formatPKR(oneTimeAddonTotal)} optional one-time add-ons = ${formatPKR(estimatedInitialTotal)}${estimatedMonthlyTotal > 0 ? `, plus ${formatPKR(estimatedMonthlyTotal)} / month recurring add-ons` : ""}. Final quote depends on confirmed scope.`,
       `Customization/add-ons requested: ${customization.trim() || "None specified yet"}`,
       "Customer understands this is a request, not a confirmed order. Final price and scope must be agreed; the project is booked only after finalization and payment is received. Delivery period and date will be confirmed after payment.",
     ].join("\n");
@@ -307,7 +322,11 @@ export default function WebsiteTemplatesPage() {
             </p>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {templates.map((template) => (
+              {templates.map((template) => {
+                const startingPlan = getTemplateRequestPlans(template)[0];
+                const includedTotals = getTemplateIncludedAddonTotals(template, addons, startingPlan);
+                const startingTotal = startingPlan.price + includedTotals.oneTime;
+                return (
                 <article key={template.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                   <div className="relative h-52 bg-gray-900">
                     <Image
@@ -332,7 +351,7 @@ export default function WebsiteTemplatesPage() {
                     <p className="text-sm text-gray-700">
                       Starting from{" "}
                       <strong className="font-black text-[#E31E36]">
-                        {formatPKR(getTemplateRequestPlans(template)[0]?.price || 0)}+
+                        {formatPKR(startingTotal)}+
                       </strong>
                     </p>
                     <div className="flex flex-wrap gap-1.5">
@@ -384,16 +403,25 @@ export default function WebsiteTemplatesPage() {
                     )}
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
 
         {detailsTemplate && (() => {
-          const includedAddonIds = (detailsTemplate.templateIncludedAddonIds || [])
+          const templateIncludedAddons = (detailsTemplate.templateIncludedAddonIds || [])
             .map((id) => addons.find((addon) => addon.id === id))
             .filter((addon): addon is AddonOption => Boolean(addon));
-          const optionalAddonIds = new Set(includedAddonIds.map((addon) => addon.id));
+          const templateIncludedAddonIds = new Set(templateIncludedAddons.map((addon) => addon.id));
+          const planIncludedAddons = detailsPlan
+            ? addons.filter((addon) =>
+                !templateIncludedAddonIds.has(addon.id) &&
+                getTemplateChargeableAddonIds(detailsTemplate, detailsPlan, [addon.id]).length === 0
+              )
+            : [];
+          const includedAddons = [...templateIncludedAddons, ...planIncludedAddons];
+          const includedAddonIds = new Set(includedAddons.map((addon) => addon.id));
 
           return (
             <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4">
@@ -434,10 +462,14 @@ export default function WebsiteTemplatesPage() {
                         {feature}
                       </li>
                     ))}
-                    {includedAddonIds.map((addon) => (
+                    {includedAddons.map((addon) => (
                       <li key={addon.id} className="flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-sm">
                         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                        <span>{addon.label} <strong className="text-emerald-700">(Included)</strong></span>
+                        <span>
+                          {addon.label} — {formatPKR(detailsPriceForAddon(addon))}
+                          {addon.billingPeriod === "monthly" ? " / month" : ""}
+                          <strong className="text-emerald-700"> (Included)</strong>
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -450,7 +482,7 @@ export default function WebsiteTemplatesPage() {
                   </p>
                   <div className="mt-3 max-h-72 space-y-2 overflow-y-auto">
                     {Object.entries(groupedAddons).map(([category, categoryAddons]) => {
-                      const optionalAddons = categoryAddons.filter((addon) => !optionalAddonIds.has(addon.id));
+                      const optionalAddons = categoryAddons.filter((addon) => !includedAddonIds.has(addon.id));
                       if (optionalAddons.length === 0) return null;
                       return (
                         <details key={category} className="rounded-lg border border-gray-200">
@@ -498,10 +530,14 @@ export default function WebsiteTemplatesPage() {
                     <span>{detailsPlan?.name || "Template starting plan"}</span>
                     <strong>{formatPKR(detailsPlan?.price || 0)}</strong>
                   </div>
-                  {includedAddonIds.map((addon) => (
+                  {templateIncludedAddons.map((addon) => (
                     <div key={addon.id} className="mt-2 flex justify-between gap-3 text-sm text-gray-600">
                       <span>{addon.label}</span>
-                      <strong>Included</strong>
+                      <strong>
+                        {formatPKR(detailsPriceForAddon(addon))}
+                        {addon.billingPeriod === "monthly" ? " / month" : ""}
+                        {" "}(Included)
+                      </strong>
                     </div>
                   ))}
                   {detailsSelectedAddons
@@ -516,15 +552,15 @@ export default function WebsiteTemplatesPage() {
                     <span>One-time total</span>
                     <strong className="text-[#E31E36]">{formatPKR(detailsEstimatedInitialTotal)}+</strong>
                   </div>
-                  {detailsMonthlyAddonTotal > 0 && (
+                  {detailsEstimatedMonthlyTotal > 0 && (
                     <div className="mt-2 flex justify-between gap-3 text-sm font-bold text-gray-700">
                       <span>Recurring add-ons</span>
-                      <strong>{formatPKR(detailsMonthlyAddonTotal)} / month</strong>
+                      <strong>{formatPKR(detailsEstimatedMonthlyTotal)} / month</strong>
                     </div>
                   )}
                   <p className="mt-2 text-xs leading-relaxed text-gray-500">
-                    Included features above have no additional charge in this starting price. Optional add-ons,
-                    changes, and recurring services are not included; the final quote is confirmed after scope review.
+                    The base plan plus template-included add-ons above make up this total; plan-included features are already covered by the base plan.
+                    Selected optional add-ons are added separately; the final quote is confirmed after scope review.
                   </p>
                 </div>
 
@@ -612,7 +648,7 @@ export default function WebsiteTemplatesPage() {
                 ))}
               </select>
               <p className="mt-1 text-[11px] text-gray-500">
-                Plans below this template&apos;s {formatPKR(templatePlans[0]?.price || 0)} starting price are hidden. Selected plan starts at {formatPKR(selectedPlan.price)}; final amount depends on confirmed features and add-ons.
+                Plans below this template&apos;s {formatPKR(templatePlans[0]?.price || 0)} base plan are hidden. Template-included features are added to the starting total; selected plan starts at {formatPKR(selectedPlan.price)} before add-ons.
               </p>
             </div>
             <fieldset className="space-y-3">
@@ -630,23 +666,27 @@ export default function WebsiteTemplatesPage() {
                       {categoryAddons.map((addon) => {
                         const isSelected = selectedAddonIds.includes(addon.id);
                         const isIncluded = isSelected && !chargeableAddonIds.includes(addon.id);
+                        const isTemplateIncluded = selectedTemplate?.templateIncludedAddonIds?.includes(addon.id) || false;
                         return (
                           <label key={addon.id} className="flex cursor-pointer items-start gap-3 px-3 py-2.5 hover:bg-white">
                             <input
                               type="checkbox"
                               checked={isSelected}
+                              disabled={isTemplateIncluded}
                               onChange={(event) => {
                                 setSelectedAddonIds((current) => event.target.checked
                                   ? [...current, addon.id]
                                   : current.filter((id) => id !== addon.id));
                               }}
-                              className="mt-0.5 h-4 w-4 shrink-0 accent-[#E31E36]"
+                              className="mt-0.5 h-4 w-4 shrink-0 accent-[#E31E36] disabled:cursor-not-allowed"
                             />
                             <span className="min-w-0 flex-1">
                               <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                                 <span className="text-xs font-bold">{addon.label}</span>
                                 <strong className="whitespace-nowrap text-xs text-[#E31E36]">
-                                  {isIncluded ? "Included" : `${formatPKR(priceForAddon(addon))}${addon.billingPeriod === "monthly" ? " / month" : ""}`}
+                                  {isIncluded
+                                    ? `${formatPKR(priceForAddon(addon))}${addon.billingPeriod === "monthly" ? " / month" : ""} (Included)`
+                                    : `${formatPKR(priceForAddon(addon))}${addon.billingPeriod === "monthly" ? " / month" : ""}`}
                                 </strong>
                               </span>
                               <span className="mt-0.5 block text-[10px] leading-relaxed text-gray-500">{addon.description}</span>
@@ -660,12 +700,18 @@ export default function WebsiteTemplatesPage() {
               </div>
               <div className="rounded-xl border border-[#E31E36]/20 bg-[#FFF6F7] p-3 text-xs">
                 <div className="flex justify-between gap-3"><span>Selected plan starting price</span><strong>{formatPKR(selectedPlan.price)}</strong></div>
-                <div className="mt-1 flex justify-between gap-3"><span>Selected one-time add-ons</span><strong>{formatPKR(oneTimeAddonTotal)}</strong></div>
+                {selectedTemplateIncludedTotals.oneTime > 0 && (
+                  <div className="mt-1 flex justify-between gap-3">
+                    <span>Template-included features</span>
+                    <strong>{formatPKR(selectedTemplateIncludedTotals.oneTime)}</strong>
+                  </div>
+                )}
+                <div className="mt-1 flex justify-between gap-3"><span>Selected optional one-time add-ons</span><strong>{formatPKR(oneTimeAddonTotal)}</strong></div>
                 <div className="mt-2 flex justify-between gap-3 border-t border-[#E31E36]/20 pt-2 font-extrabold">
                   <span>Preliminary starting total</span><strong className="text-[#E31E36]">{formatPKR(estimatedInitialTotal)}</strong>
                 </div>
-                {monthlyAddonTotal > 0 && (
-                  <div className="mt-1 flex justify-between gap-3 text-gray-600"><span>Recurring add-ons</span><strong>{formatPKR(monthlyAddonTotal)} / month</strong></div>
+                {estimatedMonthlyTotal > 0 && (
+                  <div className="mt-1 flex justify-between gap-3 text-gray-600"><span>Recurring add-ons</span><strong>{formatPKR(estimatedMonthlyTotal)} / month</strong></div>
                 )}
                 {selectedOffer && selectedTemplate && (
                   <div className="mt-3">
