@@ -22,7 +22,7 @@ import {
   mergePricingConfigWithDefaults,
 } from "@/lib/constants";
 import type { PricingPackageId } from "@/lib/constants";
-import type { AddonOption, CalculationBreakdown, InquiryScanFeature, PortfolioProject, PricingRuleConfig } from "@/lib/types";
+import type { AddonOption, InquiryScanFeature, PortfolioProject, PricingRuleConfig } from "@/lib/types";
 import { getBeginnerBudgetPlan } from "@/lib/calculator-guide";
 import type { BeginnerBudgetBand, BeginnerProjectGoal, CalculatorGuideLanguage } from "@/lib/calculator-guide";
 import {
@@ -61,28 +61,6 @@ import {
   Copy,
   CheckCheck,
 } from "lucide-react";
-
-// ==============================================================================
-// AI AGENCY BRIDGE CONFIGURATION
-// ==============================================================================
-// ⚠️ YAHAN APNA LOCALTUNNEL LINK DALIEN
-const BRIDGE_URL = "https://seven-rice-show.loca.lt"; 
-
-async function fetchRealBudgetFromAI(baseType: string, plan: string, addons: string[], isInternational: boolean) {
-  try {
-    const addonsString = addons.join(",");
-    const response = await fetch(
-      `${BRIDGE_URL}/calculate?base_type=${baseType}&plan=${plan}&addons=${addonsString}&international=${isInternational}`
-    );
-    if (!response.ok) throw new Error("API connection failed");
-    const data = await response.json();
-    return data.final_budget;
-  } catch (error) {
-    console.error("Bridge Error:", error);
-    return null;
-  }
-}
-// ==============================================================================
 
 function parseScanFeatures(value: string | null): InquiryScanFeature[] {
   if (!value || value.length > 6000) return [];
@@ -311,7 +289,7 @@ function CalculatorContent() {
       ? "ecommerce-starter"
       : initialConfiguredPackage === "ecommerce_advanced"
         ? "ecommerce-advanced"
-        : initialConfiguredPackage === "ecommerce_business" ||
+      : initialConfiguredPackage === "ecommerce_business" ||
           (initialType ? isEcommerceProjectType(initialType) : false)
         ? "ecommerce-business"
         : initialConfiguredPackage === "saas_business"
@@ -415,6 +393,7 @@ function CalculatorContent() {
   // Step 7: Disclaimer
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(true);
 
+  // Real-time calculation
   const pricingConfig = useMemo(
     () => currency === "PKR" || rates[currency]
       ? getRegionalPricingConfig(serverPricingConfig, currency, rates)
@@ -430,57 +409,29 @@ function CalculatorContent() {
     },
     [currency, rates, serverPricingConfig]
   );
-
-  // ==============================================================================
-  // REAL-TIME AI API INTEGRATION
-  // ==============================================================================
-  const [realBudget, setRealBudget] = useState<number | null>(null);
-  const [isCalculating, setIsCalculating] = useState(false);
-
-  useEffect(() => {
-    const updateRealBudget = async () => {
-      setIsCalculating(true);
-      
-      // Map internal state to API parameters
-      const baseType = selectedProjectTypes.includes("E-commerce store") ? "ecommerce" : 
-                       selectedProjectTypes.includes("SaaS application") ? "saas" : "web_app";
-      
-      const plan = selectedPricingPackage || (baseType === "ecommerce" ? "business" : baseType === "saas" ? "starter" : "managed");
-      const isInternational = currency !== "PKR";
-
-      const budget = await fetchRealBudgetFromAI(baseType, plan, selectedAddons, isInternational);
-      
-      if (budget !== null) {
-        setRealBudget(budget);
-      }
-      setIsCalculating(false);
-    };
-
-    updateRealBudget();
-  }, [selectedProjectTypes, selectedPricingPackage, selectedAddons, currency]);
-
-  // Helper to calculate advance and installments based on real budget
-  const calculation = useMemo(() => {
-    const total = realBudget || 0;
-    return {
-      estimatedTotal: total,
-      advanceAmount: total * 0.2, // 20% advance
-      remainingBalance: total * 0.8,
-      regularInstallment: (total * 0.8) / 11,
-      finalInstallment: (total * 0.8) / 11,
-      dailyCost: Number((total / 365).toFixed(2)),
-      monthlyAddonTotal: 0, // This can be expanded in API
-      selectedAddonDetails: [] as CalculationBreakdown["selectedAddonDetails"],
-      basePrice: total, 
-    };
-  }, [realBudget]);
+  const selectedPricingConfig = useMemo(
+    () => applyTemplatePricingToCalculator(
+      selectedPricingPackage
+        ? getPackagePricingConfig(selectedPricingPackage)
+        : pricingConfig,
+      matchedTemplateProject,
+      selectedPricingPackage
+    ),
+    [getPackagePricingConfig, matchedTemplateProject, pricingConfig, selectedPricingPackage]
+  );
+  const calculation = useMemo(
+    () => calculateBudget(
+      adminPanelType,
+      getChargeableAddonIds(selectedAddons, selectedPricingPackage, adminPanelType),
+      selectedPricingConfig
+    ),
+    [adminPanelType, selectedAddons, selectedPricingPackage, selectedPricingConfig]
+  );
   const guidePlan = useMemo(
     () => getBeginnerBudgetPlan(guideGoal, guideBudget, currency, rates, guideLanguage),
     [guideGoal, guideBudget, currency, rates, guideLanguage]
   );
   const guideCalculation = guidePlan.calculation;
-  // ==============================================================================
-
   const formatEstimate = useCallback(
     (amount: number) => currency === "PKR" || rates[currency]
       ? formatCurrency(amount, currency, locale)
@@ -490,12 +441,12 @@ function CalculatorContent() {
     [currency, rates, rateError, locale]
   );
   const package1Calculation = useMemo(
-    () => ({ estimatedTotal: 35000, advanceAmount: 10000, remainingBalance: 25000, regularInstallment: 2273, finalInstallment: 2273 }),
-    []
+    () => calculateBudget("none", [], pricingConfig),
+    [pricingConfig]
   );
   const package2Calculation = useMemo(
-    () => ({ estimatedTotal: 45000, advanceAmount: 10000, remainingBalance: 35000, regularInstallment: 3182, finalInstallment: 3182 }),
-    []
+    () => calculateBudget("client_admin", [], pricingConfig),
+    [pricingConfig]
   );
   const budgetRangeOptions = useMemo(
     () => [
@@ -787,7 +738,6 @@ function CalculatorContent() {
     customerIntro,
     selectedProjectTypes,
     problemToSolve,
-    plainLanguageNeed,
     targetAudience,
     productsServices,
     inspirationUrl,
@@ -966,7 +916,9 @@ function CalculatorContent() {
   const handleSkipGuide = async () => {
     if (leadContactConsent) {
       if (!leadContactEmail.trim() && !leadContactPhone.trim() && !calculatorLeadSession) {
-        setLeadSaveMessage(guideLanguage === "roman-ur" ? "Lead save karne ke liye email ya WhatsApp number dein." : "Enter an email or WhatsApp number to save your lead.");
+        setLeadSaveMessage(guideLanguage === "roman-ur"
+          ? "Lead save karne ke liye email ya WhatsApp number dein."
+          : "Enter an email or WhatsApp number to save your lead.");
         return;
       }
       const savedSession = await handleSaveCalculatorLead();
@@ -1343,17 +1295,13 @@ function CalculatorContent() {
               <div className="w-10 h-10 rounded-lg bg-[#E31E36] flex items-center justify-center text-white">
                 <Calculator className="w-5 h-5" />
               </div>
-              <div className="relative">
+              <div>
                 <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">
                   Live Dynamic Estimate
                 </span>
-                {isCalculating ? (
-                  <span className="text-xl font-black text-white animate-pulse">Calculating...</span>
-                ) : (
-                  <span className="text-xl font-black text-white">
-                    {formatEstimate(calculation.estimatedTotal)}
-                  </span>
-                )}
+                <span className="text-xl font-black text-white">
+                  {formatEstimate(calculation.estimatedTotal)}
+                </span>
                 {calculation.monthlyAddonTotal > 0 && (
                   <span className="block text-[10px] text-amber-300">
                     + {formatEstimate(calculation.monthlyAddonTotal)} / month recurring
@@ -1453,8 +1401,6 @@ function CalculatorContent() {
                   placeholder="e.g. client@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  maxLength={254}
-                  autoComplete="email"
                   className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
                   required
                 />
@@ -1469,8 +1415,6 @@ function CalculatorContent() {
                   placeholder="e.g. 03001234567"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  maxLength={32}
-                  autoComplete="tel"
                   className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
                   required
                 />
@@ -1915,8 +1859,8 @@ function CalculatorContent() {
                               : packageId === "saas_starter"
                                 ? "Multi-vendor marketplace, vendor registration and dashboard, main admin panel, authentication, basic analytics, and responsive design."
                                 : packageId === "saas_business"
-                                ? "Everything in Starter, plus vendor permissions, commission and order management, sales analytics, payment integration, and advanced administration."
-                                : "Enterprise multi-tenant SaaS with advanced vendor/customer management, subscriptions, billing, complex orders, security, integrations, and dedicated support."}
+                                  ? "Everything in Starter, plus vendor permissions, commission and order management, sales analytics, payment integration, and advanced administration."
+                                  : "Enterprise multi-tenant SaaS with advanced vendor/customer management, subscriptions, billing, complex orders, security, integrations, and dedicated support."}
                         </p>
                       </div>
                       <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
@@ -1979,7 +1923,7 @@ function CalculatorContent() {
                     </span>
                     <strong className="text-base font-black text-[#E31E36]">{formatEstimate(pricingConfig.baseWithAdmin)} base</strong>
                   </div>
-                  <h3 className="font-black text-sm text-[#E31E36]">
+                  <h3 className="font-black text-sm text-[#101216]">
                     With Client Admin Panel Support
                   </h3>
                   <p className="text-xs text-gray-600 mt-2 leading-relaxed">
@@ -2034,7 +1978,7 @@ function CalculatorContent() {
                 Optional Advanced Features & Add-ons
               </h2>
               <p className="text-xs text-gray-600 mt-1">
-                Add-on prices vary by feature complexity and selected e-commerce or SaaS plan. E-commerce add-ons start at PKR 20,000. Personal domain setup is PKR 10,000; registrar purchase and renewal fees are separate. Monthly maintenance is priced separately.
+                Add-on prices vary by feature complexity and selected e-commerce or SaaS plan. E-commerce add-ons start at PKR 20,000. Personal domain setup is PKR 10,000; registrar purchase and renewal fees are separate. Monthly maintenance is shown separately.
               </p>
             </div>
 
@@ -2180,7 +2124,7 @@ function CalculatorContent() {
               )}
               {calculation.monthlyAddonTotal > 0 && (
                 <div className="flex justify-between items-center text-xs text-amber-800">
-                  <span className="text-gray-500">Recurring add-ons (billed monthly)</span>
+                  <span>Recurring add-ons (billed monthly)</span>
                   <strong>+{formatEstimate(calculation.monthlyAddonTotal)} / month</strong>
                 </div>
               )}
@@ -2227,7 +2171,7 @@ function CalculatorContent() {
 
                 <div className="bg-[#181B20] p-4 rounded-xl border border-gray-700">
                   <span className="text-gray-400 block mb-1">10 Monthly Installments:</span>
-                  <strong className="text-[#E31E36] font-bold">
+                  <strong className="text-lg font-black text-[#E31E36]">
                     {formatEstimate(calculation.regularInstallment)} / mo
                   </strong>
                   <span className="text-[10px] text-gray-400 block mt-1">
@@ -2405,7 +2349,7 @@ function CalculatorContent() {
                 className="inline-flex items-center gap-2 text-xs font-bold text-white bg-[#E31E36] hover:bg-[#C8162D] px-6 py-3 rounded-xl shadow-glow transition"
               >
                 Continue to Step {currentStep + 1}
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="w-4 h-4" />
               </button>
             ) : (
               <button
