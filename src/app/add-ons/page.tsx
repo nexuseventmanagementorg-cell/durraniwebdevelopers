@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Check, Search, ShoppingBag } from "lucide-react";
+import { Info, Search, ShoppingBag } from "lucide-react";
 
 type Level = "basic" | "expanded" | "complex" | "shared";
 type CatalogItem = {
@@ -14,6 +13,7 @@ type CatalogItem = {
   categoryId: string;
   categoryLabel: string;
   businessTypes: string[];
+  businessCategories?: string[];
   origin: "existing" | "new";
   requiresCustomQuote: boolean;
   relatedAddOnIds: string[];
@@ -31,7 +31,9 @@ type SharedAddon = {
   description: string;
   price: number;
   billingPeriod: "one_time" | "monthly";
-};
+  businessCategories?: string[];
+  businessTypes?: string[];
+}
 
 const LEVELS: { id: "all" | Level; label: string }[] = [
   { id: "all", label: "All levels" },
@@ -52,7 +54,6 @@ export default function AddOnsPage() {
   const [level, setLevel] = useState<"all" | Level>("all");
   const [query, setQuery] = useState("");
   const [showShared, setShowShared] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -114,50 +115,19 @@ export default function AddOnsPage() {
     return Array.from(new Map(filtered.map((item) => [item.id, item])).values());
   }, [businessTypeId, catalog, categoryId, level, query, sharedAddons, showShared]);
 
-  const selectedAddons = useMemo(() => {
-    const byId = new Map<string, { id: string; label: string; price: number; requiresCustomQuote: boolean; billingPeriod: "one_time" | "monthly" }>();
-    for (const addon of [...catalog, ...sharedAddons.map((item) => ({
-      ...item,
-      requiresCustomQuote: false,
-    }))]) {
-      if (selectedIds.includes(addon.id) && !byId.has(addon.id)) {
-        byId.set(addon.id, {
-          id: addon.id,
-          label: addon.label,
-          price: addon.price,
-          requiresCustomQuote: "requiresCustomQuote" in addon && addon.requiresCustomQuote,
-          billingPeriod: "billingPeriod" in addon ? addon.billingPeriod : "one_time",
-        });
-      }
-    }
-    return Array.from(byId.values());
-  }, [catalog, selectedIds, sharedAddons]);
-  const total = selectedAddons.filter((addon) => addon.billingPeriod !== "monthly").reduce((sum, addon) => sum + addon.price, 0);
-  const monthlyTotal = selectedAddons.filter((addon) => addon.billingPeriod === "monthly").reduce((sum, addon) => sum + addon.price, 0);
-  const needsQuote = selectedAddons.some((addon) => addon.requiresCustomQuote);
-  const calculatorHref = selectedAddons.length
-    ? `/calculator?addons=${encodeURIComponent(selectedAddons.map((addon) => addon.id).join(","))}`
-    : "/calculator";
-
-  function toggleAddon(id: string) {
-    setSelectedIds((current) =>
-      current.includes(id) ? current.filter((selectedId) => selectedId !== id) : [...current, id]
-    );
-  }
-
   return (
     <main className="min-h-screen bg-[#F4F5F7] text-[#101216]">
       <section className="bg-[#101216] py-14 text-white">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#E31E36]">Feature catalog</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">Choose business add-ons</h1>
+          <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">Business Add-on Specifications</h1>
           <p className="mt-4 max-w-3xl text-sm leading-6 text-gray-300">
-            Browse features for your business type, compare scope and indicative PKR prices, then review your selections in the existing budget calculator. Nothing is selected automatically.
+            Yeh page sirf features ki maloomat aur specifications ke liye hai. Yahan koi add-on select, order, ya purchase nahi hota. Har card mein feature ka kaam, kis business ke liye hai, aur andazati qeemat dekhein.
           </p>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-8 pb-32 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         {error && (
           <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
             {error}
@@ -243,9 +213,8 @@ export default function AddOnsPage() {
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {displayedItems.map((addon) => {
-            const selected = selectedIds.includes(addon.id);
             return (
-              <article key={addon.id} className={`flex flex-col rounded-2xl border bg-white p-5 shadow-sm ${selected ? "border-[#E31E36] ring-1 ring-[#E31E36]" : "border-gray-200"}`}>
+              <article key={addon.id} className="flex flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#E31E36]">
@@ -254,60 +223,57 @@ export default function AddOnsPage() {
                     </span>
                     <h2 className="mt-2 font-extrabold leading-5">{addon.label}</h2>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${addon.origin === "existing" ? "bg-gray-100 text-gray-600" : "bg-emerald-50 text-emerald-700"}`}>
-                    {addon.origin === "existing" ? "Existing" : "New"}
-                  </span>
                 </div>
-                <p className="mt-3 flex-1 text-xs leading-5 text-gray-600">{addon.description}</p>
-                <div className="mt-5 flex items-center justify-between gap-3 border-t border-gray-100 pt-4">
+                <div className="mt-4 flex-1 rounded-xl border border-gray-100 bg-gray-50 p-3.5">
+                  <h3 className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wide text-gray-700">
+                    <Info className="h-3.5 w-3.5 text-[#E31E36]" aria-hidden="true" />
+                    Specification
+                  </h3>
+                  <p className="mt-2 text-xs leading-5 text-gray-700">{addon.description}</p>
+                  <dl className="mt-3 space-y-2 border-t border-gray-200 pt-3 text-[11px] leading-4">
+                    <div>
+                      <dt className="font-bold text-gray-700">Applicable business</dt>
+                      <dd className="mt-0.5 text-gray-600">
+                        {(() => {
+                          const businessTypes = categories.flatMap((category) =>
+                            category.businessTypes
+                              .filter((type) => addon.businessTypes?.includes(type.id))
+                              .map((type) => type.label)
+                          );
+                          if (businessTypes.length) return businessTypes.join(", ");
+                          const businessCategories = (addon.businessCategories || [])
+                            .map((id) => categories.find((category) => category.id === id)?.label || id);
+                          if (businessCategories.length) return businessCategories.join(", ");
+                          return showShared
+                            ? "Shared feature; suitability depends on the project requirements."
+                            : selectedCategory?.label || "Business-specific use confirmed during project discussion.";
+                        })()}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="font-bold text-gray-700">Scope & pricing</dt>
+                      <dd className="mt-0.5 text-gray-600">
+                        {addon.requiresCustomQuote
+                          ? "Complex scope: exact integrations, requirements, and final price are confirmed after project discussion."
+                          : "Indicative starting price; exact screens, fields, and workflow are agreed for the project."}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+                <div className="mt-4 border-t border-gray-100 pt-4">
                   <div>
-                    <strong className="block text-sm font-black text-[#101216]">{formatPkr(addon.price)}</strong>
-                    <span className="text-[10px] text-gray-500">
+                    <span className="block text-[10px] font-bold uppercase tracking-wide text-gray-500">Indicative price</span>
+                    <strong className="mt-1 block text-sm font-black text-[#101216]">{formatPkr(addon.price)}</strong>
+                    <span className="mt-0.5 block text-[10px] text-gray-500">
                       {"billingPeriod" in addon && addon.billingPeriod === "monthly" ? "per month" : "one-time estimate"}
-                      {addon.requiresCustomQuote ? " · scope confirmation required" : ""}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleAddon(addon.id)}
-                    aria-pressed={selected}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold ${
-                      selected ? "bg-[#101216] text-white" : "bg-red-50 text-[#C8162D] hover:bg-red-100"
-                    }`}
-                  >
-                    {selected ? <Check className="h-3.5 w-3.5" /> : null}
-                    {selected ? "Selected" : "Add"}
-                  </button>
                 </div>
               </article>
             );
           })}
         </div>
       </section>
-
-      <aside className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 shadow-[0_-8px_24px_rgba(16,18,22,0.08)] backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <div>
-            <p className="text-xs font-bold text-gray-500">
-              {selectedAddons.length} selected feature{selectedAddons.length === 1 ? "" : "s"}
-              {needsQuote ? " · custom scope quotation required" : ""}
-            </p>
-            <p className="mt-0.5 text-lg font-black text-[#101216]">
-              Estimate: <span className="text-[#E31E36]">{formatPkr(total)}</span>
-              {monthlyTotal > 0 && <span className="ml-2 text-sm text-gray-600">+ {formatPkr(monthlyTotal)}/month</span>}
-            </p>
-          </div>
-          <Link
-            href={calculatorHref}
-            aria-disabled={!selectedAddons.length}
-            className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-xs font-extrabold ${
-              selectedAddons.length ? "bg-[#E31E36] text-white hover:bg-[#C8162D]" : "pointer-events-none bg-gray-200 text-gray-500"
-            }`}
-          >
-            Review in budget calculator <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-      </aside>
     </main>
   );
 }
