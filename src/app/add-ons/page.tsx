@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Info, Search, ShoppingBag } from "lucide-react";
+import { Search, ShoppingBag } from "lucide-react";
+import { getRomanUrduAddonExplanation } from "@/lib/addon-roman-urdu";
 
 type Level = "basic" | "expanded" | "complex" | "shared";
 type CatalogItem = {
@@ -122,7 +123,7 @@ export default function AddOnsPage() {
           <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#E31E36]">Feature catalog</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">Business Add-on Specifications</h1>
           <p className="mt-4 max-w-3xl text-sm leading-6 text-gray-300">
-            Yeh page sirf features ki maloomat aur specifications ke liye hai. Yahan koi add-on select, order, ya purchase nahi hota. Har card mein feature ka kaam, kis business ke liye hai, aur andazati qeemat dekhein.
+            Yeh page sirf features ki maloomat ke liye hai. Har card mein English specification ke neeche Roman Urdu mein samjhaya gaya hai ke feature add karne se kya hoga. Saath andazati qeemat bhi dekhein.
           </p>
         </div>
       </section>
@@ -224,41 +225,12 @@ export default function AddOnsPage() {
                     <h2 className="mt-2 font-extrabold leading-5">{addon.label}</h2>
                   </div>
                 </div>
-                <div className="mt-4 flex-1 rounded-xl border border-gray-100 bg-gray-50 p-3.5">
-                  <h3 className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wide text-gray-700">
-                    <Info className="h-3.5 w-3.5 text-[#E31E36]" aria-hidden="true" />
-                    Specification
-                  </h3>
-                  <p className="mt-2 text-xs leading-5 text-gray-700">{addon.description}</p>
-                  <dl className="mt-3 space-y-2 border-t border-gray-200 pt-3 text-[11px] leading-4">
-                    <div>
-                      <dt className="font-bold text-gray-700">Applicable business</dt>
-                      <dd className="mt-0.5 text-gray-600">
-                        {(() => {
-                          const businessTypes = categories.flatMap((category) =>
-                            category.businessTypes
-                              .filter((type) => addon.businessTypes?.includes(type.id))
-                              .map((type) => type.label)
-                          );
-                          if (businessTypes.length) return businessTypes.join(", ");
-                          const businessCategories = (addon.businessCategories || [])
-                            .map((id) => categories.find((category) => category.id === id)?.label || id);
-                          if (businessCategories.length) return businessCategories.join(", ");
-                          return showShared
-                            ? "Shared feature; suitability depends on the project requirements."
-                            : selectedCategory?.label || "Business-specific use confirmed during project discussion.";
-                        })()}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="font-bold text-gray-700">Scope & pricing</dt>
-                      <dd className="mt-0.5 text-gray-600">
-                        {addon.requiresCustomQuote
-                          ? "Complex scope: exact integrations, requirements, and final price are confirmed after project discussion."
-                          : "Indicative starting price; exact screens, fields, and workflow are agreed for the project."}
-                      </dd>
-                    </div>
-                  </dl>
+                <div className="mt-3 flex-1">
+                  <p className="text-xs leading-5 text-gray-700">{addon.description}</p>
+                  <p className="mt-2 border-t border-gray-100 pt-2 text-xs leading-5 text-gray-600">
+                    <span className="font-bold text-[#101216]">Roman Urdu: </span>
+                    {getRomanUrduAddonExplanation(addon.id, addon.label, addon.description, addon.level)}
+                  </p>
                 </div>
                 <div className="mt-4 border-t border-gray-100 pt-4">
                   <div>
