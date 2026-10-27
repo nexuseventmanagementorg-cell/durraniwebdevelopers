@@ -56,6 +56,7 @@ Do not set provider credentials in client-side environment variables. The batch 
 
 ### Current DW-944529 run status (2026-10-28)
 
+- Agency app is deployed on Vercel Production from GitHub commit `da7e3c96b465811adc7c042d801840d8614d53c9`. The hosted `/admin/workforce` page is available, but worker execution/artifacts require the local Windows PC; the Vercel API intentionally reports local-only and does not connect to Ollama.
 - Latest run `agent-build-2026-10-27T22-21-11-980Z-16740` failed; it is not a completed website. The designer and architect completed with `llama3:latest`. The storefront coder (`qwen2.5-coder:7b`) failed after three attempts: the generated storefront did not pass product catalog and explicit international 2x price disclosure checks. Admin Dashboard Coder and QA Reviewer were not run.
 - Current `ollama list` shows `llama3:latest` and `qwen2.5-coder:7b`; `qwen2.5-coder:14b` is not installed. Check available D: space and model status before any large pull.
 - Run record and rejected attempt files are under `D:\website-projects-backup\Durrani_AI-Agents\projects\DW-944529-ahlam-collections-preview\agent-generated-store\agent-build-2026-10-27T22-21-11-980Z-16740\`. The top-level `latest-agent-run.json` points to this failure.
