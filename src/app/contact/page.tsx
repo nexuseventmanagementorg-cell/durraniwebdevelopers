@@ -84,7 +84,14 @@ export default function ContactPage() {
     setSuccessMsg("");
     setErrorMsg("");
 
+    // -----------------------------------------------------------------------
+    // 🚀 KALEEM BHAI: YAHAN APNA LOCALTUNNEL LINK DALIEN 🚀
+    // Example: "https://bright-cats-jump.localtunnel.me"
+    const aiAgencyBridgeUrl = "https://gentle-moles-help.loca.lt"; 
+    // -----------------------------------------------------------------------
+
     try {
+      // 1. Original Backend Call (Taaki aapko notification milti rahe)
       const res = await fetch("/api/public/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -96,7 +103,20 @@ export default function ContactPage() {
         throw new Error(data.error || "Failed to submit message.");
       }
 
-      setSuccessMsg(data.message || "Thank you! We will reach out shortly.");
+      // 2. AI Agency Call (Ye data aapke local PC par bhejega)
+      // Hum isay 'async' chalayenge taaki agar AI server off ho, toh website crash na ho
+      fetch(`${aiAgencyBridgeUrl}/submit-inquiry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: name, 
+          email: email, 
+          message: `${subject}\n\n${message}`,
+          phone: phone 
+        }),
+      }).catch(err => console.log("AI Agency is currently offline, but lead saved in DB."));
+
+      setSuccessMsg(data.message || "Thank you! Our AI Agents are now processing your request. We will reach out shortly.");
       setName("");
       setEmail("");
       setPhone("");
@@ -311,7 +331,7 @@ export default function ContactPage() {
                 </label>
                 <textarea
                   rows={5}
-                  placeholder="Misal: Hamein apne kapron ke business ke liye online store chahiye. Customer products ki tasveerain, sizes aur prices dekh sake, cart mein items dale aur WhatsApp par order bhej sake. Admin panel ki zaroorat hai taake hum khud naye products aur stock update kar saken."
+                  placeholder="Misal: Hamein apne kapron ke business ke liye online store chahiye..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
