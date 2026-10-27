@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "workforce:worker": "tsx scripts/workforce-worker.ts",
+    "workforce:activate": "tsx scripts/workforce-agent-readiness.ts",
+    "workforce:inquiry": "tsx scripts/workforce-inquiry-agent.ts",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsx --test tests/business-logic.test.ts"
+    "test": "tsx --test tests/business-logic.test.ts tests/workforce-pipeline.test.ts tests/workforce-state.test.ts"
   },
   "dependencies": {
     "@sfpy/node-core": "^0.3.5",

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#262322">
+  <title>Studio dashboard preview — Ahlam Collections</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="admin.css">
+  <script src="admin.js" defer></script>
+</head>
+<body class="admin-body">
+  <div class="admin-preview-notice"><strong>ADMIN PREVIEW · NOT A LIVE ADMIN SYSTEM</strong><a href="index.html">← Return to storefront</a></div>
+  <div class="admin-shell">
+    <aside class="admin-sidebar">
+      <a class="wordmark admin-mark" href="admin.html">AHLAM<span>STUDIO · LAHORE</span></a>
+      <div class="admin-user"><div class="admin-avatar">A</div><div><strong>Studio workspace</strong><small>Sample dashboard</small></div></div>
+      <nav class="admin-nav"><a class="selected" href="#overview">◫ &nbsp; Overview</a><a href="#orders">▤ &nbsp; Orders <b>3</b></a><a href="#designs">✳ &nbsp; Custom designs <b>1</b></a><a href="#catalog">▧ &nbsp; Product catalog</a><a href="#delivery">⌁ &nbsp; Delivery</a><a href="#insights">◷ &nbsp; Analytics</a></nav>
+      <div class="admin-sidebar-bottom"><span>DEMO DATA ONLY</span><small>No customer records or live courier data are connected.</small></div>
+    </aside>
+    <main class="admin-main" id="overview">
+      <header class="admin-header"><div><p class="eyebrow"><span class="eyebrow-line"></span> TUESDAY, 28 OCTOBER 2026</p><h1>Your studio, <em>at a glance.</em></h1><p>Sample operations dashboard — figures and orders below are illustrative.</p></div><button class="admin-button" id="dateButton">LAST 30 DAYS⌄</button></header>
+      <div class="admin-alert"><span>ⓘ</span><p><strong>Preview environment.</strong> Sales, analytics, custom requests and delivery statuses on this page are sample data. No live orders or tracking numbers are connected.</p></div>
+      <section class="metric-grid" id="insights">
+        <article class="metric-card"><span>GROSS SALES · SAMPLE</span><strong>PKR 486,500</strong><small class="metric-up">↗ 12% <i>illustrative comparison</i></small><div class="mini-chart chart-rose"><i style="height:25%"></i><i style="height:45%"></i><i style="height:38%"></i><i style="height:70%"></i><i style="height:52%"></i><i style="height:86%"></i><i style="height:68%"></i><i style="height:100%"></i></div></article>
+        <article class="metric-card"><span>ORDERS · SAMPLE</span><strong>28</strong><small>21 ready to wear · 7 custom</small><div class="metric-icon">▤</div></article>
+        <article class="metric-card"><span>AVERAGE ORDER · SAMPLE</span><strong>PKR 17,375</strong><small>Product + stitching, sample only</small><div class="metric-icon">◈</div></article>
+        <article class="metric-card"><span>NEEDS YOUR ATTENTION</span><strong>4 <small>items</small></strong><small>2 custom · 2 delivery, illustrative</small><div class="metric-icon attention-icon">✳</div></article>
+      </section>
+      <section class="admin-content-grid">
+        <article class="panel orders-panel" id="orders"><div class="panel-heading"><div><span class="panel-kicker">STUDIO WORKFLOW</span><h2>Recent orders</h2></div><span class="sample-pill">SAMPLE</span></div>
+          <div class="table-wrap"><table><thead><tr><th>ORDER</th><th>PIECE</th><th>DESTINATION</th><th>STATUS</th></tr></thead><tbody>
+            <tr><td><strong>AH-1048</strong><small>Today · 10:42</small></td><td>Gulnaar Garden<small>Custom stitched · 1 piece</small></td><td>Lahore, PK<small>TCS · sample service</small></td><td><select class="status-select" aria-label="Sample order AH-1048 status"><option>Stitching</option><option>Design review</option><option>Ready to dispatch</option><option>In transit (sample)</option></select></td></tr>
+            <tr><td><strong>AH-1047</strong><small>Yesterday · 16:20</small></td><td>Mehr Embroidered<small>Unstitched · 2 pieces</small></td><td>London, UK<small>DHL · sample service</small></td><td><select class="status-select" aria-label="Sample order AH-1047 status"><option>In transit (sample)</option><option>Stitching</option><option>Design review</option><option>Ready to dispatch</option></select></td></tr>
+            <tr><td><strong>AH-1046</strong><small>27 Oct · 12:05</small></td><td>Custom design request<small>Reference received · sample</small></td><td>Karachi, PK<small>Courier not booked</small></td><td><select class="status-select" aria-label="Sample order AH-1046 status"><option>Design review</option><option>Waiting for details</option><option>Approved</option></select></td></tr>
+          </tbody></table></div><p class="panel-footnote">Changing sample statuses only changes this page. Real order management needs a secured backend.</p>
+        </article>
+        <article class="panel fulfillment-panel" id="delivery"><div class="panel-heading"><div><span class="panel-kicker">FULFILMENT</span><h2>Delivery overview</h2></div><span class="sample-pill">SAMPLE</span></div><div class="delivery-stat"><div class="delivery-icon">⌁</div><div><strong>5</strong><span>Sample shipments this month</span></div></div><div class="delivery-route"><span>LAHORE</span><i></i><b>UK</b><div><strong>DHL Express</strong><small>Example route · no live tracking</small></div><span class="route-status">IN TRANSIT</span></div><div class="delivery-route"><span>LAHORE</span><i></i><b>KHI</b><div><strong>TCS Nationwide</strong><small>Example route · no live tracking</small></div><span class="route-status route-ready">DISPATCHED</span></div><div class="delivery-coverage"><span>PAKISTAN</span><span>TCS · Leopards</span><span>INTERNATIONAL</span><span>DHL · UPS</span></div></article>
+      </section>
+      <section class="admin-content-grid lower-grid">
+        <article class="panel design-panel" id="designs"><div class="panel-heading"><div><span class="panel-kicker">MADE FOR YOU</span><h2>Custom design requests</h2></div><span class="count-badge">01</span></div><div class="design-request"><div class="design-swatch">✳<small>LOCAL IMAGE<br>UPLOAD DEMO</small></div><div><strong>Inspiration received</strong><span>Sample request · custom stitched outfit</span><small>Image uploads and customer notes require secure, private storage in a real system.</small></div></div><button class="admin-outline" id="designReview">Mark sample as reviewed</button></article>
+        <article class="panel chart-panel" id="catalog"><div class="panel-heading"><div><span class="panel-kicker">COLLECTION PERFORMANCE</span><h2>Best-loved pieces</h2></div><span class="sample-pill">SAMPLE</span></div><div class="popular-row"><span class="popular-thumb thumb-one"></span><span><strong>Gulnaar Garden</strong><small>Unstitched · sample data</small></span><b>12</b></div><div class="popular-row"><span class="popular-thumb thumb-two"></span><span><strong>Mehr Embroidered</strong><small>Unstitched · sample data</small></span><b>09</b></div><div class="popular-row"><span class="popular-thumb thumb-three"></span><span><strong>Sahar-e-Gul</strong><small>Custom stitched · sample data</small></span><b>07</b></div><p class="panel-footnote">Product orders and sales metrics are mock data, not customer analytics.</p></article>
+      </section>
+      <footer class="admin-footer">LOCAL SAMPLE PROJECT · DW-944529 <a href="index.html">VIEW STOREFRONT ↗</a></footer>
+    </main>
+  </div>
+</body>
+</html>

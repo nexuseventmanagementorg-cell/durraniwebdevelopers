@@ -10,6 +10,7 @@ import {
   getAddonPriceForPackage,
   buildWhatsAppLink,
 } from "@/lib/constants";
+import { getBusinessAddonCatalog, BUSINESS_CATEGORIES } from "@/lib/business-addon-catalog";
 import RegionalPrice from "@/components/RegionalPrice";
 import PricingPackageImage from "@/components/PricingPackageImage";
 import {
@@ -47,6 +48,11 @@ export default function PricingPage() {
     },
     {}
   );
+  const businessAddonCatalog = getBusinessAddonCatalog(DEFAULT_PRICING_CONFIG.addons);
+  const businessAddonGroups = BUSINESS_CATEGORIES.map((category) => ({
+    ...category,
+    addons: businessAddonCatalog.filter((addon) => addon.categoryId === category.id),
+  })).filter((category) => category.addons.length > 0);
   const ecommercePackages = [
     {
       title: ECOMMERCE_PACKAGES.ecommerce_starter.label,
@@ -678,6 +684,80 @@ export default function PricingPage() {
                           ) : (
                             <><RegionalPrice pkrAmount={addon.price} conversion="international-addon" />{addon.billingPeriod === "monthly" ? " / month" : " per add-on"}</>
                           )}
+                        </strong>
+                        <Link
+                          href={`/calculator?addon=${addon.id}`}
+                          className="text-xs font-bold text-[#E31E36] hover:underline"
+                        >
+                          Add to estimate
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
+
+          <div className="max-w-2xl mt-12 mb-6">
+            <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
+              Industry-specific modules
+            </span>
+            <h3 className="text-xl sm:text-2xl font-black text-[#101216] mt-1">
+              Business category ke mutabiq mazeed add-ons
+            </h3>
+            <p className="text-xs text-gray-600 mt-2">
+              Har category khol kar us business ke features, unki tafseel aur starting estimate dekhein. Complex integrations ki final scope aur price requirements discuss karne ke baad confirm hoti hai.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {businessAddonGroups.map((group) => (
+              <details
+                key={group.id}
+                className="rounded-lg border border-gray-200 bg-white"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 font-bold text-sm text-[#101216]">
+                  <span>{group.label}</span>
+                  <span className="text-xs font-semibold text-gray-500">
+                    {group.addons.length} add-ons
+                  </span>
+                </summary>
+                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                  {group.addons.map((addon) => (
+                    <div
+                      key={`${group.id}-${addon.id}`}
+                      className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <h4 className="font-bold text-xs text-[#101216]">{addon.label}</h4>
+                          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-gray-500">
+                            {addon.level}
+                          </span>
+                          {addon.requiresCustomQuote && (
+                            <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
+                              Scope review required
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-[11px] leading-relaxed text-gray-600">
+                          {addon.description}
+                        </p>
+                        <p className="mt-1 text-[10px] leading-relaxed text-gray-500">
+                          For: {addon.businessTypes
+                            .map((typeId) => group.businessTypes.find((type) => type.id === typeId)?.label)
+                            .filter((label): label is string => Boolean(label))
+                            .join(", ") || group.label}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center justify-between gap-4 sm:justify-end">
+                        <strong className="text-xs font-black text-[#E31E36]">
+                          <RegionalPrice
+                            pkrAmount={addon.price}
+                            conversion="international-addon"
+                          />
+                          +
                         </strong>
                         <Link
                           href={`/calculator?addon=${addon.id}`}

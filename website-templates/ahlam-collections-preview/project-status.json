@@ -1,0 +1,110 @@
+{
+  "inquiryId": "DW-944529",
+  "business": "Ahlam Collections",
+  "projectName": "Ahlam Collections local website preview",
+  "updatedAt": "2026-10-28T03:24:00+05:00",
+  "status": "agent_build_failed",
+  "authorization": {
+    "source": "Explicit admin authorization in conversation for a sample project test",
+    "advancePaymentVerified": false,
+    "productionReleaseApproved": false
+  },
+  "execution": {
+    "mode": "Manual visual prototype is separate from the inquiry-specific local agent run",
+    "localModelUsedForWebsiteCode": false,
+    "imageGenerationServiceUsed": false,
+    "imageGenerationServiceAvailable": false
+  },
+  "agentExecution": {
+    "taskId": "DW-944529-requirements-analysis-001",
+    "role": "Requirements Analyst",
+    "model": "llama3:latest",
+    "provider": "Local Ollama at 127.0.0.1",
+    "status": "completed",
+    "resultFile": "agent-runs/requirements-analyst-001.json",
+    "websiteBuildStatus": "failed_acceptance_checks",
+    "latestWebsiteRunId": "agent-build-2026-10-27T22-21-11-980Z-16740",
+    "latestWebsiteRunStatus": "failed",
+    "planningModel": "llama3:latest",
+    "codingModel": "qwen2.5-coder:7b",
+    "completedRoles": [
+      "Fashion UX Designer",
+      "Ecommerce Architect"
+    ],
+    "failedRole": "Storefront Coder",
+    "failure": "After three attempts, generated storefront failed product catalog and explicit international 2x price disclosure acceptance checks.",
+    "waitingRoles": [
+      "Admin Dashboard Coder",
+      "QA Reviewer"
+    ],
+    "previousManualPrototype": "not_an_agent_deliverable"
+  },
+  "localSourceSnapshot": {
+    "path": "D:/website-projects-backup/Durrani_AI-Agents/projects/DW-944529-ahlam-collections-preview/project-source",
+    "updatedAt": "2026-10-28T03:24:00+05:00",
+    "includes": [
+      "src",
+      "public",
+      "scripts",
+      "tests",
+      "website-templates",
+      "generated-templates",
+      "supabase",
+      ".vscode",
+      "package.json",
+      "package-lock.json",
+      "project configuration files and safe .env.example",
+      "README.md and project documentation",
+      "PROJECT_HANDOFF.md",
+      "WORKFORCE.md"
+    ],
+    "excludes": [
+      ".git",
+      "node_modules",
+      ".next and other build caches",
+      "local environment files",
+      "data (local inquiry/workforce data)"
+    ]
+  },
+  "deliverables": [
+    "Responsive Pakistani traditional fashion storefront prototype",
+    "Stitched and unstitched selection with illustrative prices",
+    "Destination and currency selector with explicit 2x international clothing multiplier",
+    "Local-only design reference image preview with file type and size validation",
+    "Illustrative TCS, Leopards, DHL and UPS delivery choices",
+    "Mock cart and checkout interaction that collects no personal or payment data",
+    "Sample admin dashboard for orders, custom designs, analytics and delivery",
+    "README documenting run steps, scope, limitations and approval boundaries"
+  ],
+  "validation": {
+    "javascriptSyntax": "passed",
+    "localHttp": "passed",
+    "previewUrl": "http://localhost:3001",
+    "adminPreviewUrl": "http://localhost:3001/admin.html",
+    "workforceDashboardRoute": "http://localhost:3000/admin/workforce (HTTP 200 after restarting the local dev server)",
+    "workforceDashboardPreviewLinks": "added",
+    "externalFashionImageHost": "reachable at validation time",
+    "browserVisualReview": "pending"
+  },
+  "notImplemented": [
+    "Inquiry watcher or event-triggered approved-inquiry worker",
+    "Independent persistent autonomous AI agents",
+    "Real order/customer database and secured admin authentication",
+    "Server-side design image storage",
+    "Live exchange rates, payment capture or advance verification",
+    "Courier account integration, booking or tracking",
+    "Live sales analytics, inventory, customer messaging or review collection",
+    "Production build, deployment, GitHub push or customer delivery"
+  ],
+  "nextSteps": [
+    "Keep the failed agent run separate from the manually authored visual prototype",
+    "Confirm/install an appropriate stronger local coder model and inspect its run outputs",
+    "Rerun the inquiry agent and continue until storefront, admin, and QA acceptance gates pass",
+    "Admin reviews the agent-generated local ecommerce build and its QA evidence",
+    "Implement the approval-triggered inquiry job queue and honest real-time worker status in the agency app",
+    "Install/configure a local image generation service and verify GPU-backed generation",
+    "Design isolated project generation and run build/test/preview checks",
+    "Integrate secure storage, payment/courier providers and current currency data only after configuration",
+    "Obtain explicit production release approval before deploying any customer project"
+  ]
+}
