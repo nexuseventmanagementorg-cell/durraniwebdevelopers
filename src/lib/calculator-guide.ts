@@ -59,19 +59,21 @@ export function getBeginnerBudgetPlan(
 ): BeginnerBudgetPlan {
   const hasAdminBudget = budget !== "under-50k" && budget !== "not-sure";
   const isHigherBudget = budget === "150-300k" || budget === "300k-plus";
-  let title = "Business website starter";
+  let title = "Simple business website starter";
   let projectType = "Custom web application";
-  let adminPanelType: BeginnerBudgetPlan["adminPanelType"] = hasAdminBudget ? "client_admin" : "none";
+  let adminPanelType: BeginnerBudgetPlan["adminPanelType"] =
+    hasAdminBudget && goal !== "business-site" && goal !== "not-sure" ? "client_admin" : "none";
   let pricingPackage: PricingPackageId | null = null;
   let selectedAddons: string[] = [];
   let expectedBudgetRange = hasAdminBudget ? "admin" : "standard";
   let problemToSolve = "I want a clear website for my business that explains what I offer and helps customers contact me.";
   let included = [
-    "Business information and service pages planned around your customers.",
+    "A landing page or a few focused business pages, based on the scope you choose.",
     "A layout that works on phones and computers.",
     "A clear contact path for customer enquiries.",
   ];
   let notIncluded = [
+    "An admin panel is optional, not included by default, and only needed if you want to update content yourself.",
     "Online checkout, customer accounts, and custom integrations are not included unless agreed in the final scope.",
     "Domain, hosting, and third-party service fees are separate where applicable.",
   ];
@@ -309,14 +311,17 @@ export function getBeginnerBudgetPlan(
             "Domain, hosting aur third-party services ki fees jahan laagu hon alag hongi.",
           ];
     } else {
-      title = goal === "not-sure" ? "Pehle aik seedhe business website plan se shuru karein" : "Business ki basic website";
+      title = goal === "not-sure"
+        ? "Pehle aik seedhe business website plan se shuru karein"
+        : "Business ki simple website (landing page ya chand pages)";
       problemToSolve = "Main apne business ki maloomat aur services online dikhana chahta/chahti hoon taake customers asani se rabta kar saken.";
       included = [
-        "Aapke business aur services ki maloomat ke pages.",
+        "Aik landing page ya aapki zaroorat ke mutabiq chand business pages.",
         "Mobile aur computer dono par kaam karne wala layout.",
         "Customers ke liye wazeh contact option.",
       ];
       notIncluded = [
+        "Admin panel default mein shamil nahi aur lazmi bhi nahi; content khud update karna ho to add kar sakte hain.",
         "Online checkout, customer accounts aur custom integrations final scope mein shamil kiye baghair included nahi.",
         "Domain, hosting aur third-party services ki fees jahan laagu hon alag hongi.",
       ];

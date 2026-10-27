@@ -850,7 +850,7 @@ test("Student Burgers & Shawarmas template includes its priced admin-panel featu
   );
   assert.ok(project);
   assert.equal(project.isPublic, true);
-  assert.equal(project.demoUrl, "https://student-burgers-and-shawarmas.vercel.app/");
+  assert.equal(project.demoUrl, "https://dwdtemplate1.vercel.app/");
   assert.equal(project.approvedPublicBudget, 225000);
   assert.equal(project.budgetLabel, "Estimated Build Price");
   assert.equal(project.clientConsentForBudget, false);
@@ -887,7 +887,7 @@ test("Student Burgers & Shawarmas template includes its priced admin-panel featu
   );
   assert.equal(
     project.imageUrl,
-    "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-1.webp"
+    "https://dwdtemplate1.vercel.app/images/deals/deal-1.webp"
   );
   assert.match(project.fullDescription, /personal domain and its registration are not included/i);
   assert.match(project.fullDescription, /PKR 225,000/);
@@ -941,7 +941,7 @@ test("URL estimator and calculator use the same confirmed template identity and 
   const student = INITIAL_PORTFOLIO_PROJECTS.find((item) => item.id === "student-burgers-shawarmas");
   assert.ok(student);
   assert.equal(
-    matchesPortfolioProjectUrl(student, "https://student-burgers-and-shawarmas.vercel.app/menu"),
+    matchesPortfolioProjectUrl(student, "https://dwdtemplate1.vercel.app/menu"),
     true
   );
   assert.equal(matchesPortfolioProjectUrl(student, "https://different.example/"), false);
@@ -1013,6 +1013,11 @@ test("Student Burgers portfolio updates the old seeded image but preserves admin
 
   assert.deepEqual(migratedImages, [project.imageUrl, project.imageUrl, project.imageUrl]);
   assert.equal(preservedImage, customImage.imageUrl);
+  const migratedDemo = mergePortfolioSeedProjects([{
+    ...project,
+    demoUrl: "https://student-burgers-and-shawarmas.vercel.app/",
+  }]).find((item) => item.id === project.id)?.demoUrl;
+  assert.equal(migratedDemo, project.demoUrl);
 });
 
 test("Student Burgers legacy portfolio price migrates to its estimate and template package metadata", () => {
@@ -1129,8 +1134,8 @@ test("GRILLVI portfolio entry migrates to the unbranded listing and complete fea
   const seed = INITIAL_PORTFOLIO_PROJECTS.find((project) => project.id === "grillvi-gtroad");
   assert.ok(seed);
   assert.equal(seed.title, "Restaurant Name - Restaurant Website Template");
-  assert.equal(seed.demoUrl, "https://gtroad1.vercel.app/");
-  assert.equal(seed.imageUrl, "https://gtroad1.vercel.app/images/family-sharing-thaal.jpg");
+  assert.equal(seed.demoUrl, "https://dwdtemplate2.vercel.app/");
+  assert.equal(seed.imageUrl, "https://dwdtemplate2.vercel.app/images/family-sharing-thaal.jpg");
   assert.equal(seed.approvedPublicBudget, 225000);
   assert.equal(seed.budgetLabel, "Estimated Build Price");
   assert.equal(seed.clientConsentForBudget, false);
@@ -1153,7 +1158,7 @@ test("GRILLVI portfolio entry migrates to the unbranded listing and complete fea
   );
   assert.equal(migratedProject?.title, "Restaurant Name - Restaurant Website Template");
   assert.equal(migratedProject?.imageUrl, seed.imageUrl);
-  assert.equal(migratedProject?.demoUrl, "https://gtroad1.vercel.app/");
+  assert.equal(migratedProject?.demoUrl, "https://dwdtemplate2.vercel.app/");
   assert.equal(migratedProject?.approvedPublicBudget, 225000);
   assert.equal(migratedProject?.budgetLabel, "Estimated Build Price");
   assert.equal(migratedProject?.clientConsentForBudget, false);
@@ -1165,6 +1170,11 @@ test("GRILLVI portfolio entry migrates to the unbranded listing and complete fea
     "daily_sales_records",
     "daily_sales_calendar",
   ]);
+  const migratedTemplateAddress = mergePortfolioSeedProjects([{
+    ...seed,
+    demoUrl: "https://gtroad1.vercel.app/",
+  }]).find((project) => project.id === seed.id);
+  assert.equal(migratedTemplateAddress?.demoUrl, seed.demoUrl);
   assert.deepEqual(migratedProject?.templateIncludedAddonPrices, {
     restaurant_qr_menu: 10000,
     order_tracking: 25000,
@@ -2470,7 +2480,13 @@ test("Every inquiry receives a scope review with missing details and safety flag
 test("Beginner calculator plans fit the selected budget without forced extras", () => {
   const businessStarter = getBeginnerBudgetPlan("business-site", "under-50k");
   assert.equal(businessStarter.calculation.estimatedTotal, 35000);
+  assert.equal(businessStarter.adminPanelType, "none");
+  assert.ok(businessStarter.included.some((item) => item.includes("landing page")));
+  assert.ok(businessStarter.notIncluded.some((item) => item.includes("admin panel is optional")));
   assert.equal(businessStarter.selectedAddons.length, 0);
+
+  const businessWithLargerBudget = getBeginnerBudgetPlan("business-site", "50-150k");
+  assert.equal(businessWithLargerBudget.adminPanelType, "none");
 
   const bookingStarter = getBeginnerBudgetPlan("bookings", "under-50k");
   assert.equal(bookingStarter.calculation.estimatedTotal, 45000);
@@ -3254,7 +3270,7 @@ test("Known template URL estimates stay anchored to the published starting price
   const template = INITIAL_PORTFOLIO_PROJECTS.find((project) => project.id === "grillvi-gtroad");
   assert.ok(template);
   const withoutQr = await estimateWebsite(
-    "https://gtroad1.vercel.app/",
+    "https://dwdtemplate2.vercel.app/",
     "PKR",
     { PKR: 1 },
     undefined,
@@ -3264,7 +3280,7 @@ test("Known template URL estimates stay anchored to the published starting price
     })
   );
   const withQr = await estimateWebsite(
-    "https://gtroad1.vercel.app/",
+    "https://dwdtemplate2.vercel.app/",
     "PKR",
     { PKR: 1 },
     undefined,
@@ -3336,7 +3352,7 @@ test("Student Burgers template estimator uses its Business package and fixed fea
   );
   assert.ok(template);
   const estimate = await estimateWebsite(
-    "https://student-burgers-and-shawarmas.vercel.app/",
+    "https://dwdtemplate1.vercel.app/",
     "PKR",
     { PKR: 1 },
     undefined,
@@ -3733,7 +3749,7 @@ test("E-commerce packages use their published starting prices and advances", () 
   assert.equal(isEcommerceProjectType("Fashion Stores"), true);
   assert.equal(isEcommerceProjectType("Grocery Stores"), true);
   assert.equal(isEcommerceProjectType("Custom web application"), false);
-  assert.equal(getDefaultPricingPackageForProjectType("E-Commerce Stores"), "ecommerce_business");
+  assert.equal(getDefaultPricingPackageForProjectType("E-Commerce Stores"), "ecommerce_starter");
   assert.equal(getDefaultPricingPackageForProjectType("SaaS Projects"), "saas_starter");
 
   const business = calculateBudget(

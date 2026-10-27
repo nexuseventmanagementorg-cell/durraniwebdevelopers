@@ -65,7 +65,144 @@ import {
   MessageSquare,
   Copy,
   CheckCheck,
+  Package,
+  TrendingUp,
+  Workflow,
+  Lightbulb,
+  CreditCard,
 } from "lucide-react";
+
+interface CalculatorAddonRecommendation {
+  id: string;
+  label: string;
+  description: string;
+  price: number;
+  level: "basic" | "expanded" | "complex";
+  categoryId: string;
+  categoryLabel: string;
+  businessTypes: string[];
+  origin: string;
+  enabled: boolean;
+  requiresCustomQuote: boolean;
+  billingPeriod?: AddonOption["billingPeriod"];
+}
+
+const RECOMMENDED_BUSINESS_ADDONS: Record<string, Record<"basic" | "expanded" | "complex", string[]>> = {
+  "ecommerce-retail": {
+    basic: ["advanced_product_management", "back_in_stock_notifications"],
+    expanded: ["product_bundles", "returns_exchanges_workflow"],
+    complex: ["pos_synchronization", "multi_store_inventory_orchestration"],
+  },
+  "food-hospitality": {
+    basic: ["menu_filters", "meal_customization"],
+    expanded: ["kitchen_display_system", "customer_waitlist"],
+    complex: ["multi_branch_operations", "kitchen_delivery_orchestration"],
+  },
+  "health-wellness-beauty": {
+    basic: ["service_catalog", "consultation_inquiry"],
+    expanded: ["clinic_queue_management", "staff_commission_calculator"],
+    complex: ["multi_location_operations", "practice_management_integration"],
+  },
+  "professional-services": {
+    basic: ["service_catalog", "consultation_inquiry"],
+    expanded: ["client_portal", "document_workflow"],
+    complex: ["multi_branch_operations", "custom_workflow_automation"],
+  },
+  "education-elearning": {
+    basic: ["course_catalog", "class_timetable"],
+    expanded: ["student_progress_tracking", "online_assessment"],
+    complex: ["learning_management_integration", "multi_campus_management"],
+  },
+  "home-construction": {
+    basic: ["service_catalog", "quote_request"],
+    expanded: ["job_scheduling", "work_order_management"],
+    complex: ["fleet_dispatch_optimization", "field_service_orchestration"],
+  },
+  "technology-digital": {
+    basic: ["service_catalog", "consultation_inquiry"],
+    expanded: ["automated_onboarding", "team_invitations"],
+    complex: ["multi_tenant_architecture", "usage_based_billing"],
+  },
+  "real-estate-propertytech": {
+    basic: ["property_listing_management", "property_inquiry"],
+    expanded: ["rental_application_workflow", "lease_management"],
+    complex: ["property_portal_monitoring_backups", "multi_property_operations"],
+  },
+  "entertainment-events": {
+    basic: ["event_listing", "guest_rsvp"],
+    expanded: ["ticket_sales_management", "event_planning_workflow"],
+    complex: ["multi_venue_operations", "ticketing_platform_integration"],
+  },
+  "niche-specialized": {
+    basic: ["service_catalog", "customer_inquiry"],
+    expanded: ["courier_exception_dashboard", "order_tracking"],
+    complex: ["fleet_dispatch_optimization", "multi_branch_operations"],
+  },
+};
+
+const GENERAL_ADDON_RECOMMENDATIONS: Record<"basic" | "expanded" | "complex", string[]> = {
+  basic: ["advanced_seo", "email_notifications"],
+  expanded: ["cms", "search_filter_sort"],
+  complex: ["api_integration", "automated_backups"],
+};
+
+const ROMAN_URDU_ADDON_BENEFITS: Record<string, string> = {
+  advanced_seo: "Google par aapki website dhoondhna asaan banane aur pages ki bunyadi search settings behtar karne mein madad deta hai.",
+  email_notifications: "Nayi inquiry ya form submit hone par aapko email milti hai, taake customer ka message miss na ho.",
+  cms: "Text, tasveerain aur banners chhoti updates ke liye developer ke baghair badal sakte hain.",
+  search_filter_sort: "Customers ko products ya records jaldi dhoondhne aur zaroorat ke mutabiq chhanne mein madad milti hai.",
+  api_integration: "Website ko aapki chuni hui doosri service ke saath data share karne mein madad deta hai; integration ka scope alag confirm hota hai.",
+  automated_backups: "Data ki scheduled copies aur restore planning se data loss ke risk ko kam karne mein madad milti hai.",
+  advanced_product_management: "Products ke size, rang, SKU aur stock ko behtar tareeqe se manage karne mein madad deta hai.",
+  back_in_stock_notifications: "Out-of-stock product wapas aaye to interested customer ko inform karne ka option milta hai.",
+  product_bundles: "Related products ko aik deal mein dikhakar average order barhane ka mauqa milta hai.",
+  returns_exchanges_workflow: "Return aur exchange requests ko aik jagah record aur track karna asaan hota hai.",
+  menu_filters: "Customers menu ko meal ya category ke mutabiq filter karke apni pasand jaldi dhoond sakte hain.",
+  meal_customization: "Customer order ke saath apni choices ya khaas instructions bhej sakta hai.",
+  kitchen_display_system: "Kitchen team incoming orders aur unki tayyari ka status aik screen par dekh sakti hai.",
+  customer_waitlist: "Walk-in customers ki bari aur wait status staff ke liye track karna asaan hota hai.",
+  service_catalog: "Aapki services, unki tafseel aur duration aik jagah saaf dikhte hain, jis se customer ko samajhne mein asani hoti hai.",
+  consultation_inquiry: "Interested customer consultation ki request bhej sakta hai aur aap follow-up kar sakte hain.",
+  class_timetable: "Customers ko classes, instructors aur timing dekhne mein asani hoti hai.",
+  property_listing_management: "Available properties ko details aur tasveeron ke saath update karna asaan hota hai.",
+  property_inquiry: "Har property ke liye customer ki inquiry record hoti hai, jis se follow-up behtar hota hai.",
+  event_listing: "Aane wale events ki date aur tafseel customer ko aik jagah nazar aati hai.",
+  guest_rsvp: "Mehman online apni shirkat confirm kar sakte hain, jis se headcount sambhalna asaan hota hai.",
+  inventory_management: "Stock ki quantity aur kam hotay stock par nazar rakhne mein madad deta hai.",
+  discount_coupons: "Aap promotional codes bana kar offers chala sakte hain aur discount rules set kar sakte hain.",
+  product_reviews: "Customer reviews aur ratings se naye buyers ko product samajhne aur bharosa karne mein madad milti hai.",
+  shipping_rules: "Ilaqay ya order ke hisaab se delivery charges tay karna asaan hota hai.",
+  order_tracking: "Customers apne order ka status dekh sakte hain, jis se baar baar poochne ki zaroorat kam hoti hai.",
+  ai_chatbot: "Aam sawalon ke jawab foran dene mein madad karta hai; jawab approved business maloomat par mabni honge.",
+  personal_domain: "Aapki website ko apne domain naam par chalane mein madad deta hai; domain ki renewal fees alag hoti hain.",
+  responsive_design: "Mobile, tablet aur computer par website ka layout behtar dikhne mein madad deta hai.",
+  multilingual_support: "Mukhtalif zubanon ke customers ko unki pasand ki zuban mein content dekhne ka option deta hai.",
+  user_accounts: "Customers apna account bana kar login kar sakte hain, agar aapke business ko account features chahiye hon.",
+  order_invoice_management: "Orders ka status aur customer invoices aik jagah manage karne mein madad deta hai.",
+  csv_data_export: "Business records ko spreadsheet mein download karke reports ya hisaab mein istemal kar sakte hain.",
+  pdf_excel_export: "Reports ko PDF ya spreadsheet mein nikal kar share aur review karna asaan hota hai.",
+  payment_gateway: "Customer ko online payment ka tareeqa deta hai; provider account aur transaction fees alag ho sakti hain.",
+  advanced_dashboard: "Charts aur reports se sales aur business activity ko aik jagah samajhne mein madad milti hai.",
+  subscription_plans: "Software ke mukhtalif plans, limits aur subscription status manage karne mein madad deta hai.",
+  vendor_management: "Marketplace mein sellers ke profiles, listings aur orders manage karne ka nizaam deta hai.",
+  role_permissions: "Har staff member ko uske kaam ke mutabiq access dene mein madad karta hai.",
+  automated_onboarding: "Naye users ko account setup ke zaroori steps samajhne aur poore karne mein guide karta hai.",
+  multi_branch_operations: "Mukhtalif branches ke kaam aur reports ko aik system mein manage karne mein madad deta hai.",
+};
+
+function getRomanUrduAddonBenefit(id: string, label: string, level: string): string {
+  return ROMAN_URDU_ADDON_BENEFITS[id] ||
+    `${label} se ${level === "complex" ? "advanced ya multiple-step" : level === "expanded" ? "mazeed" : "buniyadi"} business kaam ko website par manage karna asaan ho sakta hai. Isay sirf tab shamil karein jab yeh aapki zaroorat ho.`;
+}
+
+function getAddonIcon(id: string) {
+  if (/payment|billing|invoice|coupon|commission|payout/i.test(id)) return CreditCard;
+  if (/user|customer|vendor|team|member|staff|role|account/i.test(id)) return Users;
+  if (/workflow|automation|integration|synchron|orchestration|process/i.test(id)) return Workflow;
+  if (/report|analytics|sales|forecast|seo|search/i.test(id)) return TrendingUp;
+  if (/product|stock|inventory|catalog|menu|property|listing|event/i.test(id)) return Package;
+  return Lightbulb;
+}
 
 function parseScanFeatures(value: string | null): InquiryScanFeature[] {
   if (!value || value.length > 6000) return [];
@@ -154,6 +291,7 @@ function CalculatorContent() {
               : "not-sure";
   const [guideGoal, setGuideGoal] = useState<BeginnerProjectGoal>(initialGuideGoal);
   const [guideBudget, setGuideBudget] = useState<BeginnerBudgetBand>(initialGuideBudget);
+  const [isDetailedProjectPath, setIsDetailedProjectPath] = useState(false);
   const [guideLanguage, setGuideLanguage] = useState<CalculatorGuideLanguage>("roman-ur");
   const [languageOverridden, setLanguageOverridden] = useState(false);
   const [plainLanguageNeed, setPlainLanguageNeed] = useState(
@@ -227,8 +365,8 @@ function CalculatorContent() {
   }, [initialCurrency, setCurrency]);
 
   useEffect(() => {
-    if (!languageOverridden) setGuideLanguage(currency === "PKR" ? "roman-ur" : "en");
-  }, [currency, languageOverridden]);
+    if (!languageOverridden) setGuideLanguage(locale.toUpperCase().endsWith("-PK") ? "roman-ur" : "en");
+  }, [locale, languageOverridden]);
 
   useEffect(() => {
     try {
@@ -449,16 +587,12 @@ function CalculatorContent() {
         : "Loading regional rate…",
     [currency, rates, rateError, locale]
   );
-  const package1Calculation = useMemo(
-    () => calculateBudget("none", [], pricingConfig),
-    [pricingConfig]
-  );
-  const package2Calculation = useMemo(
-    () => calculateBudget("client_admin", [], pricingConfig),
-    [pricingConfig]
-  );
   const budgetRangeOptions = useMemo(
     () => [
+      {
+        value: "not-sure",
+        label: guideLanguage === "roman-ur" ? "Mujhe abhi nahi pata" : "I'm not sure yet",
+      },
       { value: "standard", label: `${formatPrice(35000)} - ${formatPrice(45000)} (Standard starting)` },
       { value: "admin", label: `${formatPrice(45000)} - ${formatPrice(65000)} (Client Admin & Add-ons)` },
       { value: "advanced", label: `${formatPrice(65000)} - ${formatPrice(95000)} (Advanced / Custom)` },
@@ -479,7 +613,7 @@ function CalculatorContent() {
       { value: "saas-business", label: `${formatPrice(500000)} (SaaS Business)` },
       { value: "saas-enterprise", label: `${formatPrice(1000000)}+ (SaaS Enterprise)` },
     ],
-    [formatPrice]
+    [formatPrice, guideLanguage]
   );
 
   // Project Type Catalog
@@ -564,13 +698,15 @@ function CalculatorContent() {
   const selectedBusinessCategory = BUSINESS_CATEGORIES.find(
     (category) => category.id === effectiveBusinessCategoryId
   );
-  const filteredBusinessAddons = getBusinessAddonCatalog(selectedPricingConfig.addons)
+  const businessAddonCatalog = getBusinessAddonCatalog(selectedPricingConfig.addons);
+  const relevantBusinessAddons = businessAddonCatalog
     .filter((addon) =>
       !effectiveBusinessCategoryId || addon.categoryId === effectiveBusinessCategoryId
     )
     .filter((addon) =>
       businessTypeFilter === "all" || addon.businessTypes.includes(businessTypeFilter)
-    )
+    );
+  const filteredBusinessAddons = relevantBusinessAddons
     .filter((addon) =>
       businessLevelFilter === "all" || addon.level === businessLevelFilter
     )
@@ -578,6 +714,47 @@ function CalculatorContent() {
       !businessAddonSearch.trim() ||
       `${addon.label} ${addon.description}`.toLowerCase().includes(businessAddonSearch.trim().toLowerCase())
     );
+  const recommendedAddonsByLevel = (["basic", "expanded", "complex"] as const).map((level) => {
+    const preferredIds = effectiveBusinessCategoryId
+      ? RECOMMENDED_BUSINESS_ADDONS[effectiveBusinessCategoryId]?.[level] || []
+      : GENERAL_ADDON_RECOMMENDATIONS[level];
+    const preferred: CalculatorAddonRecommendation[] = preferredIds.flatMap((id): CalculatorAddonRecommendation[] => {
+      const businessAddon = relevantBusinessAddons.find((addon) => addon.id === id && addon.level === level);
+      if (businessAddon) return [{
+        ...businessAddon,
+        billingPeriod: selectedPricingConfig.addons[id]?.billingPeriod,
+      }];
+      const sharedAddon = selectedPricingConfig.addons[id];
+      return sharedAddon?.enabled
+        ? [{
+            id: sharedAddon.id,
+            label: sharedAddon.label,
+            description: sharedAddon.description,
+            price: sharedAddon.price,
+            level,
+            categoryId: effectiveBusinessCategoryId || "general",
+            categoryLabel: effectiveBusinessCategoryId || "general",
+            businessTypes: [],
+            origin: sharedAddon.origin || "existing",
+            enabled: sharedAddon.enabled,
+            requiresCustomQuote: sharedAddon.requiresCustomQuote || false,
+            billingPeriod: sharedAddon.billingPeriod,
+          }]
+        : [];
+    });
+    const candidates = relevantBusinessAddons.filter((addon) => addon.level === level);
+    const recommendationSet: CalculatorAddonRecommendation[] = [...preferred];
+    for (const candidate of candidates) {
+      if (recommendationSet.length >= 2) break;
+      if (!recommendationSet.some((addon) => addon.id === candidate.id)) {
+        recommendationSet.push({
+          ...candidate,
+          billingPeriod: selectedPricingConfig.addons[candidate.id]?.billingPeriod,
+        });
+      }
+    }
+    return { level, addons: recommendationSet.slice(0, 2) };
+  });
 
   // Toggle helpers
   const toggleProjectType = (type: string) => {
@@ -587,13 +764,33 @@ function CalculatorContent() {
         : selectedProjectTypes)
       : [...selectedProjectTypes, type];
     setSelectedProjectTypes(next);
+    setBusinessCategoryFilter("");
+    setBusinessTypeFilter("all");
+    const applicableBusinessCategories = next
+      .map((projectType) => inferBusinessCategoryForLabels([projectType]))
+      .filter((categoryId): categoryId is string => Boolean(categoryId));
+    if (applicableBusinessCategories.length > 0) {
+      const currentBusinessAddonIds = new Set(
+        getBusinessAddonCatalog(selectedPricingConfig.addons).map((addon) => addon.id)
+      );
+      setSelectedAddons((current) => current.filter((addonId) => {
+        if (!currentBusinessAddonIds.has(addonId)) return true;
+        const categories = getBusinessAddonCatalog(selectedPricingConfig.addons)
+          .filter((addon) => addon.id === addonId)
+          .map((addon) => addon.categoryId);
+        return categories.some((categoryId) => applicableBusinessCategories.includes(categoryId));
+      }));
+    }
     const projectPackage = next
       .map(getDefaultPricingPackageForProjectType)
       .find((packageId) => packageId !== null) || null;
     if (projectPackage?.startsWith("ecommerce_")) {
-      setSelectedPricingPackage((current) => current?.startsWith("ecommerce_") ? current : projectPackage);
+      const activePackage = selectedPricingPackage?.startsWith("ecommerce_")
+        ? selectedPricingPackage
+        : projectPackage;
+      setSelectedPricingPackage(activePackage);
       setAdminPanelType("client_admin");
-      setExpectedBudgetRange((current) => current === "ecommerce-advanced" ? current : "ecommerce-business");
+      setExpectedBudgetRange(activePackage.replace("_", "-"));
     } else if (projectPackage?.startsWith("saas_")) {
       setSelectedPricingPackage((current) => current?.startsWith("saas_") ? current : projectPackage);
       setAdminPanelType("client_admin");
@@ -850,7 +1047,7 @@ function CalculatorContent() {
       );
       return false;
     }
-    if (step === 1) {
+    if (step === 7) {
       const hasEmail = Boolean(email.trim());
       const hasPhone = Boolean(phone.trim());
       if (!hasEmail && !hasPhone) {
@@ -868,7 +1065,7 @@ function CalculatorContent() {
         return false;
       }
     }
-    if (step === 2) {
+    if (step === 1) {
       if (selectedProjectTypes.length === 0) {
         setErrorMessage("Please select at least one relevant project category.");
         return false;
@@ -908,6 +1105,38 @@ function CalculatorContent() {
   };
 
   const handleStartWithGuidePlan = async () => {
+    if (isDetailedProjectPath) {
+      if (leadContactConsent) {
+        if (!leadContactEmail.trim() && !leadContactPhone.trim() && !calculatorLeadSession) {
+          setLeadSaveMessage(guideLanguage === "roman-ur"
+            ? "Lead save karne ke liye email ya WhatsApp number dein."
+            : "Enter an email or WhatsApp number to save your lead.");
+          return;
+        }
+        const savedSession = await handleSaveCalculatorLead();
+        if (!savedSession) return;
+      }
+      setCustomerName(leadContactName);
+      setEmail(leadContactEmail);
+      setPhone(leadContactPhone);
+      const needsStoreCatalog = selectedProjectTypes.some((type) =>
+        isEcommerceProjectType(type) || type.toLowerCase().includes("restaurant")
+      );
+      setNeedsProductCatalog(needsStoreCatalog);
+      setDisplayFixedOnly(!needsStoreCatalog);
+      setAcceptOrdersOnline(needsStoreCatalog);
+      setProductFeatures(needsStoreCatalog ? ["categories", "images", "pricing"] : []);
+      setOrderFeatures(needsStoreCatalog ? ["cart", "checkout", "delivery_fees"] : []);
+      if (selectedProjectTypes.length === 0) {
+        setSelectedPricingPackage(null);
+        setSelectedAddons([]);
+        setAdminPanelType("none");
+      }
+      setCurrentStep(1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     if (leadContactConsent) {
       if (!leadContactEmail.trim() && !leadContactPhone.trim() && !calculatorLeadSession) {
         setLeadSaveMessage(guideLanguage === "roman-ur" ? "Lead save karne ke liye email ya WhatsApp number dein." : "Enter an email or WhatsApp number to save your lead.");
@@ -1045,11 +1274,11 @@ function CalculatorContent() {
 
   const stepsList = [
     ...(guideLanguage === "roman-ur"
-      ? ["Rabtay ki maloomat", "Project ki qisam", "Zaroorat aur masla", "Products aur orders", "Admin panel", "Mazeed options", "Andazati budget", "Tasdeeq"]
-      : ["Customer Info", "Project Type", "Scope & Problem", "Products & Orders", "Admin Panel", "Advanced Add-ons", "Estimated Budget", "Confirmation"]),
+      ? ["Project ki qisam", "Zaroorat aur masla", "Products aur orders", "Ab tak ka andaza", "Mazeed options", "Andazati budget", "Rabtay ki maloomat"]
+      : ["What you need", "Your project idea", "Products & orders", "Estimate so far", "Optional extras", "Your estimate", "Your contact details"]),
   ];
   const guideGoalOptions = [
-    { id: "business-site" as const, title: "Show my business and get enquiries", titleRoman: "Business dikhana aur customers se rabta lena", detail: "Tell people what you do and let them contact you.", detailRoman: "Logon ko apni services batayein aur rabtay ka rasta dein.", icon: Briefcase },
+    { id: "business-site" as const, title: "Show my business and get enquiries", titleRoman: "Business dikhana aur customers se rabta lena", detail: "A landing page or a few pages to explain your services and help people contact you.", detailRoman: "Aik landing page ya chand pages par apni services dikhayein aur rabtay ka rasta dein.", icon: Briefcase },
     { id: "restaurant" as const, title: "Show my menu and get food orders", titleRoman: "Menu dikhana aur food orders lena", detail: "Start with menu and WhatsApp orders, or choose full online ordering.", detailRoman: "Menu aur WhatsApp orders se shuru karein, ya poori online ordering chunen.", icon: Utensils },
     { id: "online-store" as const, title: "Show products or take orders", titleRoman: "Products dikhana ya orders lena", detail: "Start with a catalog, or choose a full online store.", detailRoman: "Product list se shuru karein ya mukammal online store chunen.", icon: ShoppingBag },
     { id: "bookings" as const, title: "Let people request appointments", titleRoman: "Appointments ki requests lena", detail: "Share services and collect booking requests.", detailRoman: "Apni services dikhayein aur booking requests hasil karein.", icon: Calendar },
@@ -1074,22 +1303,19 @@ function CalculatorContent() {
   )
     ? submittedInquiry.pricingPackage
     : null;
-  const selectedIsEcommerce = selectedPricingPackage?.startsWith("ecommerce_") ?? false;
-  const selectablePricingPackages: PricingPackageId[] = selectedIsEcommerce
-    ? Object.keys(ECOMMERCE_PACKAGES) as PricingPackageId[]
-    : Object.keys(SAAS_PACKAGES) as PricingPackageId[];
-
   if (currentStep === 0) {
     return (
       <div className="min-h-screen bg-white text-[#101216]">
         <section className="border-b border-[#242830] bg-[#101216] py-10 text-white sm:py-14">
           <div className="mx-auto max-w-5xl space-y-4 px-4 text-center sm:px-6 lg:px-8">
-            <span className="inline-flex rounded-md border border-[#E31E36]/40 bg-[#242830] px-3 py-1 text-[11px] font-bold uppercase text-red-300">
+            <span className="inline-flex rounded-full border border-[#E31E36]/40 bg-[#242830] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-red-300">
               {guideCopy.start}
             </span>
-            <h1 className="text-3xl font-black sm:text-4xl">{guideCopy.headline}</h1>
-            <p className="mx-auto max-w-2xl text-sm leading-relaxed text-gray-300">
-              {guideCopy.intro}
+            <h1 className="text-3xl font-black tracking-tight sm:text-5xl">{guideCopy.headline}</h1>
+            <p className="mx-auto max-w-2xl text-sm leading-relaxed text-gray-300 sm:text-base">
+              {guideLanguage === "roman-ur"
+                ? "Apna maqsad chunein, project ki tafseel dein, aur phir andazati budget dekhein."
+                : "Choose what you need, share your project details, then review the estimated budget."}
             </p>
             <div role="group" aria-label="Guide language" className="inline-flex overflow-hidden rounded-md border border-gray-600">
               <button type="button" aria-pressed={guideLanguage === "roman-ur"} onClick={() => { setGuideLanguage("roman-ur"); setLanguageOverridden(true); }} className={`px-3 py-1.5 text-[11px] font-bold ${guideLanguage === "roman-ur" ? "bg-white text-[#101216]" : "text-gray-300 hover:bg-white/10"}`}>Roman Urdu</button>
@@ -1098,21 +1324,40 @@ function CalculatorContent() {
           </div>
         </section>
 
-        <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        <main className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
+          <div className="mb-7 grid grid-cols-3 gap-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:gap-4 sm:p-4">
+            {[
+              guideLanguage === "roman-ur" ? "1. Maqsad chunein" : "1. Choose your goal",
+              guideLanguage === "roman-ur" ? "2. Budget batayein" : "2. Set your budget",
+              guideLanguage === "roman-ur" ? "3. Plan dekhein" : "3. Review your plan",
+            ].map((label, index) => (
+              <div key={label} className="flex items-center gap-2 text-[10px] font-bold text-gray-600 sm:text-xs">
+                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${index === 0 ? "bg-[#E31E36] text-white" : "bg-gray-100 text-gray-500"}`}>
+                  {index + 1}
+                </span>
+                <span>{label.substring(label.indexOf(" ") + 1)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="grid items-start gap-8 lg:grid-cols-2">
+          <div className="space-y-8">
           <section>
-            <h2 className="text-lg font-extrabold">{guideCopy.goalHeading}</h2>
+            <h2 className="text-xl font-extrabold">{guideCopy.goalHeading}</h2>
             <p className="mt-1 text-xs text-gray-600">{guideCopy.goalHint}</p>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {guideGoalOptions.map((option) => {
                 const Icon = option.icon;
-                const selected = guideGoal === option.id;
+                const selected = !isDetailedProjectPath && guideGoal === option.id;
                 return (
                   <button
                     key={option.id}
                     type="button"
                     aria-pressed={selected}
-                    onClick={() => setGuideGoal(option.id)}
-                    className={`flex min-h-24 items-start gap-3 rounded-xl border p-4 text-left transition ${selected ? "border-[#E31E36] bg-red-50 ring-1 ring-[#E31E36]" : "border-gray-200 bg-white hover:border-gray-400"}`}
+                    onClick={() => {
+                      setGuideGoal(option.id);
+                      setIsDetailedProjectPath(false);
+                    }}
+                    className={`flex min-h-24 items-start gap-3 rounded-2xl border p-4 text-left transition sm:p-5 ${selected ? "border-[#E31E36] bg-red-50 ring-1 ring-[#E31E36] shadow-sm" : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm"}`}
                   >
                     <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${selected ? "bg-[#E31E36] text-white" : "bg-gray-100 text-gray-600"}`}>
                       <Icon className="h-4 w-4" />
@@ -1124,17 +1369,44 @@ function CalculatorContent() {
                   </button>
                 );
               })}
+              <button
+                type="button"
+                aria-pressed={isDetailedProjectPath}
+                onClick={() => setIsDetailedProjectPath(true)}
+                className={`flex min-h-24 items-start gap-3 rounded-2xl border p-4 text-left transition sm:p-5 ${isDetailedProjectPath ? "border-[#E31E36] bg-red-50 ring-1 ring-[#E31E36] shadow-sm" : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm"}`}
+              >
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${isDetailedProjectPath ? "bg-[#E31E36] text-white" : "bg-gray-100 text-gray-600"}`}>
+                  <Layers className="h-4 w-4" />
+                </span>
+                <span>
+                  <strong className="block text-sm">
+                    {guideLanguage === "roman-ur"
+                      ? "Mujhe pata hai mujhe kis qisam ka project chahiye"
+                      : "I already know what type of project I need"}
+                  </strong>
+                  <span className="mt-1 block text-xs leading-relaxed text-gray-600">
+                    {guideLanguage === "roman-ur"
+                      ? "Website, e-commerce ya SaaS chunein aur project ki tafseel dein."
+                      : "Choose a website, e-commerce store or SaaS project and tell us the details."}
+                  </span>
+                  <span className="mt-2 block text-[11px] font-extrabold text-[#E31E36]">
+                    {guideLanguage === "roman-ur"
+                      ? `E-commerce ${formatPrice(ECOMMERCE_PACKAGES.ecommerce_starter.basePrice)} se · SaaS ${formatPrice(SAAS_PACKAGES.saas_starter.basePrice)} se`
+                      : `E-commerce from ${formatPrice(ECOMMERCE_PACKAGES.ecommerce_starter.basePrice)} · SaaS from ${formatPrice(SAAS_PACKAGES.saas_starter.basePrice)}`}
+                  </span>
+                </span>
+              </button>
             </div>
           </section>
 
           <section>
-            <h2 className="text-lg font-extrabold">{guideCopy.budgetHeading}</h2>
+            <h2 className="text-xl font-extrabold">{guideCopy.budgetHeading}</h2>
             <p className="mt-1 text-xs text-gray-600">{guideCopy.help}</p>
             <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {guideBudgetOptions.map((option) => {
                 const selected = guideBudget === option.id;
                 return (
-                  <label key={option.id} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition ${selected ? "border-[#E31E36] bg-red-50" : "border-gray-200 bg-white hover:border-gray-400"}`}>
+                  <label key={option.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${selected ? "border-[#E31E36] bg-red-50 shadow-sm" : "border-gray-200 bg-white hover:border-gray-400"}`}>
                     <input
                       type="radio"
                       name="beginner-project-budget"
@@ -1165,14 +1437,86 @@ function CalculatorContent() {
             />
           </section>
 
-          <section className="border-y border-gray-200 py-6">
+          </div>
+          <div className="space-y-6 lg:sticky lg:top-6">
+          <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+            {isDetailedProjectPath ? (
+              <>
+                <span className="text-[11px] font-bold uppercase text-gray-500">
+                  {guideLanguage === "roman-ur" ? "Project packages" : "Project package starting prices"}
+                </span>
+                <h2 className="mt-1 text-xl font-black">
+                  {guideLanguage === "roman-ur" ? "Apni website ya software ki qisam chunein" : "Choose your website or software type"}
+                </h2>
+                <p className="mt-2 text-xs leading-relaxed text-gray-600">
+                  {guideLanguage === "roman-ur"
+                    ? `E-commerce starter ${formatPrice(ECOMMERCE_PACKAGES.ecommerce_starter.basePrice)} se shuru hota hai; SaaS starter ${formatPrice(SAAS_PACKAGES.saas_starter.basePrice)} se. Business website ya landing page ka admin panel lazmi nahi—sirf zaroorat par add karein.`
+                    : `E-commerce packages start at ${formatPrice(ECOMMERCE_PACKAGES.ecommerce_starter.basePrice)} and SaaS packages at ${formatPrice(SAAS_PACKAGES.saas_starter.basePrice)}. A business landing page does not automatically need an admin panel.`}
+                </p>
+                <p className="mt-4 text-[11px] font-semibold text-gray-700">
+                  {guideLanguage === "roman-ur"
+                    ? "Package chunne ke liye card par click karein:"
+                    : "Select a starting package to continue:"}
+                </p>
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    aria-pressed={selectedPricingPackage?.startsWith("ecommerce_") || false}
+                    onClick={() => {
+                      setIsDetailedProjectPath(true);
+                      setSelectedProjectTypes(["E-commerce store"]);
+                      setSelectedPricingPackage("ecommerce_starter");
+                      setAdminPanelType("client_admin");
+                      setSelectedAddons([]);
+                      setExpectedBudgetRange("ecommerce-starter");
+                    }}
+                    className={`rounded-xl border p-4 text-left transition ${
+                      selectedPricingPackage?.startsWith("ecommerce_")
+                        ? "border-[#E31E36] bg-red-50 ring-1 ring-[#E31E36]"
+                        : "border-gray-200 bg-gray-50 hover:border-[#E31E36]"
+                    }`}
+                  >
+                    <strong className="block text-xs">{guideLanguage === "roman-ur" ? "E-commerce store" : "E-commerce store"}</strong>
+                    <span className="mt-1 block text-lg font-black text-[#E31E36]">{formatPrice(ECOMMERCE_PACKAGES.ecommerce_starter.basePrice)}+</span>
+                    <span className="mt-1 block text-[11px] text-gray-600">{guideLanguage === "roman-ur" ? "Starter package ki qeemat" : "Starter package"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={selectedPricingPackage?.startsWith("saas_") || false}
+                    onClick={() => {
+                      setIsDetailedProjectPath(true);
+                      setSelectedProjectTypes(["SaaS application"]);
+                      setSelectedPricingPackage("saas_starter");
+                      setAdminPanelType("client_admin");
+                      setSelectedAddons([]);
+                      setExpectedBudgetRange("saas-starter");
+                    }}
+                    className={`rounded-xl border p-4 text-left transition ${
+                      selectedPricingPackage?.startsWith("saas_")
+                        ? "border-[#E31E36] bg-red-50 ring-1 ring-[#E31E36]"
+                        : "border-gray-200 bg-gray-50 hover:border-[#E31E36]"
+                    }`}
+                  >
+                    <strong className="block text-xs">SaaS</strong>
+                    <span className="mt-1 block text-lg font-black text-[#E31E36]">{formatPrice(SAAS_PACKAGES.saas_starter.basePrice)}+</span>
+                    <span className="mt-1 block text-[11px] text-gray-600">{guideLanguage === "roman-ur" ? "Starter package ki qeemat" : "Starter package"}</span>
+                  </button>
+                </div>
+                <p className="mt-4 text-[11px] leading-relaxed text-gray-500">
+                  {guideLanguage === "roman-ur"
+                    ? "Final qeemat aapki requirements dekh kar confirm hogi. Aagay barhne par aap project ki tafseel bhar sakte hain."
+                    : "Final pricing is confirmed against your requirements. Continue to share your project details."}
+                </p>
+              </>
+            ) : (
+            <>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <span className="text-[11px] font-bold uppercase text-gray-500">{guideCopy.recommendation}</span>
                 <h2 className="mt-1 text-xl font-black">{guidePlan.title}</h2>
                 <p className="mt-1 text-xs text-gray-600">{guideCopy.confirm}</p>
               </div>
-              <div className="min-w-44 rounded-lg bg-[#101216] px-4 py-3 text-white">
+              <div className="min-w-44 rounded-2xl bg-[#101216] px-5 py-4 text-white shadow-lg">
                 <span className="block text-[10px] font-bold uppercase text-gray-300">{guideCopy.total}</span>
                 <strong className="mt-1 block text-2xl font-black">{formatEstimate(guideCalculation.estimatedTotal)}</strong>
                 <span className="mt-1 block text-[11px] text-gray-300">{guideCopy.advance}: {formatEstimate(guideCalculation.advanceAmount)}</span>
@@ -1201,11 +1545,26 @@ function CalculatorContent() {
             <p className="mt-5 border-t border-gray-200 pt-3 text-[11px] leading-relaxed text-gray-500">
               {guideCopy.budgetNote}
             </p>
+            <p className="mt-3 rounded-lg bg-gray-50 p-3 text-[11px] leading-relaxed text-gray-600">
+              {guideLanguage === "roman-ur"
+                ? "Landing page aam tor par aik page hota hai; business website aik ya zyada pages ki ho sakti hai. Admin panel lazmi nahi—sirf tab add karein jab aap khud content update karna chahein."
+                : "A landing page is usually one focused page; a business website may have one or more pages. An admin panel is optional and only needed if you want to update content yourself."}
+            </p>
+            </>
+            )}
           </section>
 
-          <section className="border-b border-gray-200 pb-6">
-            <h2 className="text-base font-extrabold">{guideCopy.contactHeading}</h2>
-            <p className="mt-1 text-xs leading-relaxed text-gray-600">{guideCopy.contactHint}</p>
+          <details className="group rounded-2xl border border-gray-200 bg-white">
+            <summary className="cursor-pointer list-none rounded-2xl p-4 text-sm font-extrabold marker:hidden hover:bg-gray-50 sm:p-5">
+              <span className="flex items-center justify-between gap-3">
+                <span>{guideCopy.contactHeading}</span>
+                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-600">
+                  {guideLanguage === "roman-ur" ? "Ikhtiyari" : "Optional"}
+                </span>
+              </span>
+              <span className="mt-1 block text-xs font-normal leading-relaxed text-gray-600">{guideCopy.contactHint}</span>
+            </summary>
+            <div className="border-t border-gray-100 p-4 sm:p-5">
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <label className="text-[11px] font-semibold text-gray-700">{guideCopy.name}
                 <input value={leadContactName} onChange={(event) => setLeadContactName(event.target.value)} maxLength={120} autoComplete="name" className="mt-1.5 w-full rounded-md border border-gray-300 px-3 py-2.5 text-xs" />
@@ -1227,15 +1586,19 @@ function CalculatorContent() {
               </button>
               <span role="status" className="text-[11px] text-gray-600">{leadSaveMessage}</span>
             </div>
-          </section>
+            </div>
+          </details>
 
           <div className="flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
             <button type="button" onClick={() => void handleSkipGuide()} className="px-2 py-3 text-xs font-bold text-gray-600 underline decoration-gray-300 underline-offset-4 hover:text-[#101216]">
               {guideCopy.skip}
             </button>
             <button type="button" onClick={handleStartWithGuidePlan} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#E31E36] px-6 py-3.5 text-sm font-extrabold text-white transition hover:bg-[#C8162D]">
-              {guideCopy.continue} <ArrowRight className="h-4 w-4" />
+              {guideLanguage === "roman-ur" ? "Project ki tafseel dein" : "Continue to project details"}
+              <ArrowRight className="h-4 w-4" />
             </button>
+          </div>
+          </div>
           </div>
         </main>
       </div>
@@ -1251,12 +1614,12 @@ function CalculatorContent() {
             {guideLanguage === "roman-ur" ? "Aapki project zaroorat" : "Multi-Step Requirements Questionnaire"}
           </span>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
-            {guideLanguage === "roman-ur" ? "Website ka budget aur zaroorat" : "Interactive Web App Budget Calculator"}
+          {guideLanguage === "roman-ur" ? "Apna project plan karein" : "Plan your website or app"}
           </h1>
           <p className="text-xs sm:text-sm text-gray-300 max-w-xl mx-auto">
             {guideLanguage === "roman-ur"
-              ? "Chand sawalon ke jawab dein. Andazati total, advance aur mahana qist saamne aa jayegi."
-              : "Answer a few quick questions to see a transparent project estimate and payment schedule."}
+            ? "Pehle apni zaroorat chunein. Andaza dekhne ke baad akhir mein rabtay ki maloomat dein."
+            : "Start with what you need, review a clear estimate, and share your contact details at the end."}
           </p>
         </div>
       </section>
@@ -1293,18 +1656,21 @@ function CalculatorContent() {
         {/* Progress Bar & Steps Tracker */}
         <div className="mb-10">
           <div className="flex items-center justify-between text-xs font-bold text-gray-500 mb-2">
-            <span>Step {currentStep} of 8: <strong className="text-[#101216]">{stepsList[currentStep - 1]}</strong></span>
-            <span>{Math.round((currentStep / 8) * 100)}% Completed</span>
+            <span>
+              {guideLanguage === "roman-ur" ? `Qadam ${currentStep} / 7:` : `Step ${currentStep} of 7:`}{" "}
+              <strong className="text-[#101216]">{stepsList[currentStep - 1]}</strong>
+            </span>
+            <span>{Math.round((currentStep / 7) * 100)}%</span>
           </div>
           <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden">
             <div
               className="bg-gradient-to-r from-[#E31E36] to-red-500 h-full transition-all duration-300 ease-out"
-              style={{ width: `${(currentStep / 8) * 100}%` }}
+              style={{ width: `${(currentStep / 7) * 100}%` }}
             />
           </div>
 
           {/* Step Pill Indicators */}
-          <div className="hidden md:flex justify-between mt-3 text-[10px] font-semibold text-gray-400">
+          <div className="hidden lg:flex justify-between mt-3 gap-3 text-[10px] font-semibold text-gray-400">
             {stepsList.map((stepName, idx) => (
               <span
                 key={idx}
@@ -1318,40 +1684,46 @@ function CalculatorContent() {
 
         {/* Live Estimate Sidebar Ribbon */}
         {currentStep < 8 && (
-          <div className="bg-[#101216] text-white p-4 rounded-xl border border-gray-800 mb-8 flex flex-wrap items-center justify-between gap-4 shadow-card-dark">
+          <div className="bg-[#101216] text-white p-4 sm:p-5 rounded-2xl border border-gray-800 mb-8 flex flex-wrap items-center justify-between gap-4 shadow-card-dark">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[#E31E36] flex items-center justify-center text-white">
                 <Calculator className="w-5 h-5" />
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">
-                  Live Dynamic Estimate
+                  {guideLanguage === "roman-ur" ? "Aapka chalta andaza" : "Your running estimate"}
                 </span>
-                <span className="text-xl font-black text-white">
-                  {formatEstimate(calculation.estimatedTotal)}
-                </span>
-                {calculation.monthlyAddonTotal > 0 && (
+                {currentStep === 1 && selectedProjectTypes.length === 0 ? (
+                  <span className="text-sm font-bold text-gray-200">
+                    {guideLanguage === "roman-ur" ? "Project ki qisam chunein" : "Choose a project type to see pricing"}
+                  </span>
+                ) : (
+                  <span className="text-xl font-black text-white">
+                    {formatEstimate(calculation.estimatedTotal)}
+                  </span>
+                )}
+                {!(currentStep === 1 && selectedProjectTypes.length === 0) && calculation.monthlyAddonTotal > 0 && (
                   <span className="block text-[10px] text-amber-300">
-                    + {formatEstimate(calculation.monthlyAddonTotal)} / month recurring
+                    + {formatEstimate(calculation.monthlyAddonTotal)} {guideLanguage === "roman-ur" ? "/ mahana" : "/ month recurring"}
                   </span>
                 )}
               </div>
             </div>
 
+            {!(currentStep === 1 && selectedProjectTypes.length === 0) && (
             <div className="flex flex-wrap items-center gap-4 text-xs">
               <div className="bg-[#181B20] px-3 py-1.5 rounded-lg border border-gray-700">
-                <span className="text-gray-400">Advance: </span>
+                <span className="text-gray-400">{guideLanguage === "roman-ur" ? "Shuruati raqam: " : "Advance: "}</span>
                 <strong className="text-white font-bold">{formatEstimate(calculation.advanceAmount)}</strong>
               </div>
-              <div className="bg-[#181B20] px-3 py-1.5 rounded-lg border border-gray-700">
-                <span className="text-gray-400">11 Installments: </span>
-                <strong className="text-[#E31E36] font-bold">{formatEstimate(calculation.regularInstallment)}/mo</strong>
-              </div>
               <div className="bg-[#181B20] px-3 py-1.5 rounded-lg border border-gray-700 hidden sm:block">
-                <span className="text-gray-400">Daily: </span>
-                <strong className="text-gray-200">{formatEstimate(calculation.dailyCost)}/day</strong>
+                <span className="text-gray-400">{guideLanguage === "roman-ur" ? "Rozana: " : "Daily: "}</span>
+                <strong className="text-gray-200">
+                  {formatEstimate(calculation.dailyCost)}{guideLanguage === "roman-ur" ? "/roz" : "/day"}
+                </strong>
               </div>
             </div>
+            )}
           </div>
         )}
 
@@ -1376,14 +1748,14 @@ function CalculatorContent() {
         {/* ============================================================== */}
         {/* STEP 1: CUSTOMER INFORMATION */}
         {/* ============================================================== */}
-        {currentStep === 1 && (
-          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+        {currentStep === 7 && (
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-6 animate-fadeIn sm:p-8">
             <div>
               <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
-                {guideLanguage === "roman-ur" ? "Qadam 1 / 8" : "Step 1 of 8"}
+                {guideLanguage === "roman-ur" ? "Aakhri qadam / 7" : "Step 7 of 7"}
               </span>
               <h2 className="text-2xl font-black text-[#101216] mt-1">
-                {guideLanguage === "roman-ur" ? "Aap aur aapke business ki maloomat" : "Your Contact & Business Details"}
+                {guideLanguage === "roman-ur" ? "Aap se rabta kaise karein?" : "Where should we send your project reply?"}
               </h2>
               <p className="text-xs text-gray-600 mt-1">
                 {guideLanguage === "roman-ur"
@@ -1505,11 +1877,11 @@ function CalculatorContent() {
         {/* ============================================================== */}
         {/* STEP 2: PROJECT TYPE */}
         {/* ============================================================== */}
-        {currentStep === 2 && (
-          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+        {currentStep === 1 && (
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-6 animate-fadeIn sm:p-8">
             <div>
               <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
-                {guideLanguage === "roman-ur" ? "Qadam 2 / 8" : "Step 2 of 8"}
+                {guideLanguage === "roman-ur" ? "Qadam 1 / 7" : "Step 1 of 7"}
               </span>
               <h2 className="text-2xl font-black text-[#101216] mt-1">
                 {guideLanguage === "roman-ur" ? "Aap kis qisam ki website chahte hain?" : "Select Your Project Category"}
@@ -1560,11 +1932,11 @@ function CalculatorContent() {
         {/* ============================================================== */}
         {/* STEP 3: PROJECT DESCRIPTION */}
         {/* ============================================================== */}
-        {currentStep === 3 && (
-          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+        {currentStep === 2 && (
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-6 animate-fadeIn sm:p-8">
             <div>
               <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
-                {guideLanguage === "roman-ur" ? "Qadam 3 / 8" : "Step 3 of 8"}
+                {guideLanguage === "roman-ur" ? "Qadam 2 / 7" : "Step 2 of 7"}
               </span>
               <h2 className="text-2xl font-black text-[#101216] mt-1">
                 {guideLanguage === "roman-ur" ? "Aapki zaroorat aur business ka maqsad" : "Project Scope & Business Goals"}
@@ -1677,17 +2049,19 @@ function CalculatorContent() {
         {/* ============================================================== */}
         {/* STEP 4: WEBSITE AND PRODUCT MANAGEMENT */}
         {/* ============================================================== */}
-        {currentStep === 4 && (
-          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+        {currentStep === 3 && (
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-6 animate-fadeIn sm:p-8">
             <div>
               <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
-                Step 4 of 8
+                {guideLanguage === "roman-ur" ? "Qadam 3 / 7" : "Step 3 of 7"}
               </span>
               <h2 className="text-2xl font-black text-[#101216] mt-1">
-                Website Content & Product Management
+                {guideLanguage === "roman-ur" ? "Products aur online orders" : "Website Content & Product Management"}
               </h2>
               <p className="text-xs text-gray-600 mt-1">
-                Configure whether you need active product catalogs, shopping carts, or fixed informational layouts.
+                {guideLanguage === "roman-ur"
+                  ? "Sirf woh cheezein chunein jo aapko chahiye. Yaqeen na ho to abhi chhor dein—hum baad mein mil kar tay kar lenge."
+                  : "Choose only what you need. If you are unsure, leave the options as they are and we can confirm them together later."}
               </p>
             </div>
 
@@ -1695,7 +2069,9 @@ function CalculatorContent() {
               {/* Question A */}
               <div className="bg-white p-4 rounded-xl border border-gray-200">
                 <span className="text-xs font-bold text-[#101216] block mb-2">
-                  Will the application display fixed content only or need editable products?
+                  {guideLanguage === "roman-ur"
+                    ? "Kya aap khud products ya menu website par update karna chahenge?"
+                    : "Would you like to update products or your menu on the website yourself?"}
                 </span>
                 <div className="flex flex-wrap gap-3">
                   <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
@@ -1709,7 +2085,11 @@ function CalculatorContent() {
                       }}
                       className="accent-[#E31E36]"
                     />
-                    <span>Yes, business will add and manage products / catalog items</span>
+                    <span>
+                      {guideLanguage === "roman-ur"
+                        ? "Haan, main khud products ya menu add aur update karunga/karungi"
+                        : "Yes, I will add and update products or menu items"}
+                    </span>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
                     <input
@@ -1722,7 +2102,11 @@ function CalculatorContent() {
                       }}
                       className="accent-[#E31E36]"
                     />
-                    <span>No, static portfolio / informational content only</span>
+                    <span>
+                      {guideLanguage === "roman-ur"
+                        ? "Nahi, sirf business ki maloomat aur tasveerain dikhani hain"
+                        : "No, I only need to show business information and images"}
+                    </span>
                   </label>
                 </div>
               </div>
@@ -1731,15 +2115,17 @@ function CalculatorContent() {
               {needsProductCatalog && (
                 <div className="bg-white p-4 rounded-xl border border-gray-200 space-y-3">
                   <span className="text-xs font-bold text-[#101216] block">
-                    Which product attributes do you need?
+                    {guideLanguage === "roman-ur"
+                      ? "Products ke saath kaunsi maloomat dikhani hai? (ikhtiyari)"
+                      : "What product details should customers see? (optional)"}
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                     {[
-                      { id: "categories", label: "Categories & tags" },
-                      { id: "variants", label: "Variants (Size, Color, Weight)" },
-                      { id: "stock", label: "Stock & inventory tracking" },
-                      { id: "images", label: "Multi-image gallery upload" },
-                      { id: "pricing", label: "Discounted & sale prices" },
+                      { id: "categories", label: guideLanguage === "roman-ur" ? "Products ki categories" : "Categories & tags" },
+                      { id: "variants", label: guideLanguage === "roman-ur" ? "Size, rang ya doosre options" : "Options (size, colour, weight)" },
+                      { id: "stock", label: guideLanguage === "roman-ur" ? "Kitna stock baqi hai" : "Stock tracking" },
+                      { id: "images", label: guideLanguage === "roman-ur" ? "Products ki zyada tasveerain" : "Multiple product images" },
+                      { id: "pricing", label: guideLanguage === "roman-ur" ? "Qeemat aur discount" : "Prices and discounts" },
                     ].map((feat) => (
                       <label
                         key={feat.id}
@@ -1761,7 +2147,9 @@ function CalculatorContent() {
               {/* Order management questions */}
               <div className="bg-white p-4 rounded-xl border border-gray-200 space-y-3">
                 <span className="text-xs font-bold text-[#101216] block">
-                  Will customers place orders or request quotes online?
+                  {guideLanguage === "roman-ur"
+                    ? "Kya customers website se order bhej sakein?"
+                    : "Should customers be able to place orders on the website?"}
                 </span>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
@@ -1772,7 +2160,11 @@ function CalculatorContent() {
                       onChange={() => setAcceptOrdersOnline(true)}
                       className="accent-[#E31E36]"
                     />
-                    <span>Yes, customers will order directly online</span>
+                    <span>
+                      {guideLanguage === "roman-ur"
+                        ? "Haan, customer website par order bhejein"
+                        : "Yes, customers can place orders online"}
+                    </span>
                   </label>
                   <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
                     <input
@@ -1782,21 +2174,25 @@ function CalculatorContent() {
                       onChange={() => setAcceptOrdersOnline(false)}
                       className="accent-[#E31E36]"
                     />
-                    <span>No, inquiries/calls only</span>
+                    <span>
+                      {guideLanguage === "roman-ur"
+                        ? "Nahi, customer call ya WhatsApp par rabta karein"
+                        : "No, customers will contact us by phone or message"}
+                    </span>
                   </label>
                 </div>
 
                 {acceptOrdersOnline && (
                   <div className="pt-3 border-t border-gray-100">
                     <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2">
-                      Ordering & Checkout Features Needed:
+                      {guideLanguage === "roman-ur" ? "Order ke liye kya chahiye?" : "Order options"}
                     </span>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                       {[
-                        { id: "cart", label: "Shopping cart" },
-                        { id: "checkout", label: "Online checkout" },
-                        { id: "coupons", label: "Coupons & discounts" },
-                        { id: "delivery_fees", label: "Delivery fees & areas" },
+                        { id: "cart", label: guideLanguage === "roman-ur" ? "Order ki list (cart)" : "Shopping cart" },
+                        { id: "checkout", label: guideLanguage === "roman-ur" ? "Online payment" : "Online checkout" },
+                        { id: "coupons", label: guideLanguage === "roman-ur" ? "Coupons aur discounts" : "Coupons & discounts" },
+                        { id: "delivery_fees", label: guideLanguage === "roman-ur" ? "Delivery charges aur ilaqay" : "Delivery fees & areas" },
                       ].map((ofeat) => (
                         <label
                           key={ofeat.id}
@@ -1820,204 +2216,527 @@ function CalculatorContent() {
         )}
 
         {/* ============================================================== */}
-        {/* STEP 5: ADMIN PANEL REQUIREMENTS */}
+        {/* STEP 5: ESTIMATE SO FAR */}
         {/* ============================================================== */}
-        {currentStep === 5 && (
-          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+        {currentStep === 4 && (
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-6 animate-fadeIn sm:p-8">
             <div>
               <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
-                Step 5 of 8
+                {guideLanguage === "roman-ur" ? "Qadam 4 / 7" : "Step 4 of 7"}
               </span>
               <h2 className="text-2xl font-black text-[#101216] mt-1">
-                {selectedPricingPackage
-                  ? `Choose Your ${selectedIsEcommerce ? "E-Commerce" : "SaaS"} Package`
-                  : "Admin Panel & System Management Access"}
+                {guideLanguage === "roman-ur" ? "Aapka ab tak ka andaza" : "Your estimate so far"}
               </h2>
               <p className="text-xs text-gray-600 mt-1">
-                {selectedPricingPackage
-                  ? selectedIsEcommerce
-                    ? "Each store plan includes a client admin dashboard and core shopping workflows; included features and add-on rates vary by plan."
-                    : "Choose a SaaS marketplace plan. Each plan includes its listed platform, vendor-management, and administration features; Enterprise is a starting price."
-                  : "Choose whether you need a dedicated client dashboard or prefer our team to manage backend updates exclusively."}
+                {guideLanguage === "roman-ur"
+                  ? "Yeh ab tak aapke chune huay project aur zarooriyat ka andaza hai. Neeche dekhein yeh raqam kis bunyaad par bani hai."
+                  : "This is the estimate for the project and requirements you have selected so far. Here is what the estimate is based on."}
               </p>
             </div>
 
-            {selectedPricingPackage ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {selectablePricingPackages.map((packageId) => {
-                  const packageDetails = selectedIsEcommerce
-                    ? ECOMMERCE_PACKAGES[packageId as keyof typeof ECOMMERCE_PACKAGES]
-                    : SAAS_PACKAGES[packageId as keyof typeof SAAS_PACKAGES];
-                  const packageConfig = getPackagePricingConfig(packageId);
-                  const packageCalculation = calculateBudget("client_admin", [], packageConfig);
-                  const isSelected = selectedPricingPackage === packageId;
-                  return (
-                    <button
-                      key={packageId}
-                      type="button"
-                      onClick={() => {
-                        setSelectedPricingPackage(packageId);
-                        setAdminPanelType("client_admin");
-                        setExpectedBudgetRange(packageId.replace("_", "-"));
-                      }}
-                      className={`text-left p-5 rounded-2xl border-2 transition flex flex-col justify-between ${
-                        isSelected
-                          ? "bg-white border-[#E31E36] shadow-glow ring-1 ring-[#E31E36]"
-                          : "bg-white/60 hover:bg-white border-gray-200"
-                      }`}
-                    >
-                      <div>
-                        <div className="flex justify-between items-center mb-3 gap-2">
-                          <span className="text-xs font-black uppercase tracking-wider text-[#E31E36] bg-red-100 px-3 py-0.5 rounded-full">
-                            {packageDetails.label}
-                          </span>
-                          <strong className="text-base font-black text-[#E31E36]">
-                            {formatEstimate(packageConfig.baseWithAdmin)}
-                            {packageId === "ecommerce_advanced" && <> – {formatPrice(ECOMMERCE_PACKAGES.ecommerce_advanced.maximumPrice)}</>}
-                            {"startingAt" in packageDetails && packageDetails.startingAt && "+"}
-                          </strong>
-                        </div>
-                        <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                          {packageId === "ecommerce_starter"
-                            ? "A focused online store with an essential catalog, cart, checkout, admin dashboard, and order workflow."
-                            : packageId === "ecommerce_business"
-                            ? "Professional online store, shopping cart, secure checkout, client admin dashboard, inventory, and order management. Starting package price."
-                            : packageId === "ecommerce_advanced"
-                              ? "Advanced store workflows, analytics, gateway and courier integrations, and custom features. Starting price; final scope is PKR 200,000–300,000."
-                              : packageId === "saas_starter"
-                                ? "Multi-vendor marketplace, vendor registration and dashboard, main admin panel, authentication, basic analytics, and responsive design."
-                                : packageId === "saas_business"
-                                  ? "Everything in Starter, plus vendor permissions, commission and order management, sales analytics, payment integration, and advanced administration."
-                                  : "Enterprise multi-tenant SaaS with advanced vendor/customer management, subscriptions, billing, complex orders, security, integrations, and dedicated support."}
-                        </p>
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
-                        <span className="text-gray-500">
-                          Advance {formatEstimate(packageConfig.advanceDefault)}; then 11 installments from:
-                        </span>
-                        <strong className="text-[#E31E36] font-bold">
-                          {formatEstimate(packageCalculation.regularInstallment)} / mo
-                        </strong>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-            /* Comparison Cards */
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Option A: No Admin Panel */}
-              <div
-                onClick={() => setAdminPanelType("none")}
-                className={`p-5 rounded-2xl border-2 cursor-pointer transition flex flex-col justify-between ${
-                  adminPanelType === "none"
-                    ? "bg-white border-[#101216] shadow-md ring-1 ring-[#101216]"
-                    : "bg-white/60 hover:bg-white border-gray-200"
-                }`}
-              >
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-xs font-black uppercase tracking-wider text-gray-500 bg-gray-100 px-3 py-0.5 rounded-full">
-                      Package 1
-                    </span>
-                    <strong className="text-base font-black text-[#101216]">{formatEstimate(pricingConfig.baseWithoutAdmin)} base</strong>
-                  </div>
-                  <h3 className="font-black text-sm text-[#101216]">
-                    Without Client Admin Panel Support
-                  </h3>
-                  <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                    Durrani Web Developers maintains the backend administration exclusively for you. You do not receive admin dashboard credentials. Product updates and catalog adjustments are not included and may incur additional charges; request them via developer support.
-                  </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
-                  <span className="text-gray-500">11 monthly installments of:</span>
-                  <strong className="text-[#101216] font-bold">{formatEstimate(package1Calculation.regularInstallment)} / mo</strong>
-                </div>
-              </div>
-
-              {/* Option B: With Client Admin Panel */}
-              <div
-                onClick={() => setAdminPanelType("client_admin")}
-                className={`p-5 rounded-2xl border-2 cursor-pointer transition flex flex-col justify-between ${
-                  adminPanelType === "client_admin"
-                    ? "bg-white border-[#E31E36] shadow-glow ring-1 ring-[#E31E36]"
-                    : "bg-white/60 hover:bg-white border-gray-200"
-                }`}
-              >
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-xs font-black uppercase tracking-wider text-[#E31E36] bg-red-100 px-3 py-0.5 rounded-full">
-                      Package 2 (Recommended)
-                    </span>
-                    <strong className="text-base font-black text-[#E31E36]">{formatEstimate(pricingConfig.baseWithAdmin)} base</strong>
-                  </div>
-                  <h3 className="font-black text-sm text-[#101216]">
-                    With Client Admin Panel Support
-                  </h3>
-                  <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                    You receive full, independent client dashboard credentials. Add/edit products, manage orders, update inventory stock, view customer records, and export reports autonomously.
-                  </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
-                  <span className="text-gray-500">11 monthly installments of:</span>
-                  <strong className="text-[#E31E36] font-bold">{formatEstimate(package2Calculation.regularInstallment)} / mo</strong>
-                </div>
-              </div>
-            </div>
-            )}
-
-            {/* Dashboard Feature Picker if Client Admin chosen */}
-            {!selectedPricingPackage && adminPanelType === "client_admin" && (
-              <div className="bg-white p-5 rounded-xl border border-gray-200 space-y-3">
-                <span className="text-xs font-bold text-[#101216] block">
-                  Select Dashboard Modules Required:
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 text-xs">
-                  {adminFeatureOptions.map((opt) => (
-                    <label
-                      key={opt.id}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 border border-gray-200 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={adminFeatures.includes(opt.id)}
-                        onChange={() => toggleAdminFeature(opt.id)}
-                        className="accent-[#E31E36]"
-                      />
-                      <span className="text-gray-700">{opt.label}</span>
-                    </label>
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.8fr)]">
+              <section className="rounded-xl border border-gray-200 bg-gray-50 p-4 sm:p-5">
+                <h3 className="text-sm font-extrabold text-[#101216]">
+                  {guideLanguage === "roman-ur" ? "Yeh andaza in cheezon ki bunyaad par hai" : "What this estimate is based on"}
+                </h3>
+                <ul className="mt-3 space-y-3 text-xs leading-relaxed text-gray-700">
+                  <li>
+                    <strong>{guideLanguage === "roman-ur" ? "Project: " : "Project: "}</strong>
+                    {selectedProjectTypes.length > 0
+                      ? selectedProjectTypes.join(", ")
+                      : guideLanguage === "roman-ur" ? "Abhi select nahi kiya" : "Not selected yet"}
+                  </li>
+                  {(problemToSolve || plainLanguageNeed).trim() && (
+                    <li>
+                      <strong>{guideLanguage === "roman-ur" ? "Aapka maqsad: " : "Your goal: "}</strong>
+                      {problemToSolve || plainLanguageNeed}
+                    </li>
+                  )}
+                  {targetAudience.trim() && (
+                    <li>
+                      <strong>{guideLanguage === "roman-ur" ? "Customers: " : "Customers: "}</strong>
+                      {targetAudience}
+                    </li>
+                  )}
+                  {productsServices.trim() && (
+                    <li>
+                      <strong>{guideLanguage === "roman-ur" ? "Products / services: " : "Products / services: "}</strong>
+                      {productsServices}
+                    </li>
+                  )}
+                  {selectedPricingPackage && (
+                    <li>
+                      <strong>{guideLanguage === "roman-ur" ? "Shuruati scope: " : "Starting scope: "}</strong>
+                      {isSaasPackageId(selectedPricingPackage)
+                        ? SAAS_PACKAGES[selectedPricingPackage].label
+                        : ECOMMERCE_PACKAGES[selectedPricingPackage].label}
+                      {" · "}
+                      {guideLanguage === "roman-ur"
+                        ? selectedPricingPackage === "ecommerce_starter"
+                          ? "Is starting scope mein product catalog, cart, checkout, admin dashboard aur order workflow shamil hain. Inventory aur advanced integrations alag scope ho sakte hain."
+                          : selectedPricingPackage === "ecommerce_business"
+                            ? "Starter features ke saath inventory aur advanced product management shamil hain. Custom integrations alag price par hain."
+                            : selectedPricingPackage === "ecommerce_advanced"
+                              ? "Advanced store workflows shamil hain; final scope ke mutabiq price PKR 200,000 se PKR 300,000 tak ho sakti hai."
+                              : selectedPricingPackage === "saas_starter"
+                                ? "Multi-vendor marketplace, vendor dashboard, main admin panel, login aur bunyadi analytics shamil hain."
+                                : selectedPricingPackage === "saas_business"
+                                  ? "Starter ke saath vendor permissions, commission aur order management, sales reports aur payment integration shamil hain."
+                                  : "Multi-tenant SaaS, subscriptions, billing, advanced security aur integrations ka scope; final quote tafseel ke baad confirm hoga."
+                        : selectedPricingPackage === "ecommerce_starter"
+                          ? "Includes a product catalog, cart, checkout, admin dashboard, and order workflow. Inventory and advanced integrations may need extra scope."
+                          : selectedPricingPackage === "ecommerce_business"
+                            ? "Includes Starter features plus inventory and advanced product management. Custom integrations cost extra."
+                            : selectedPricingPackage === "ecommerce_advanced"
+                              ? "Advanced store workflows are included; the final scope may range from PKR 200,000 to PKR 300,000."
+                              : selectedPricingPackage === "saas_starter"
+                                ? "Includes a multi-vendor marketplace, vendor dashboard, main admin panel, login, and basic analytics."
+                                : selectedPricingPackage === "saas_business"
+                                  ? "Includes Starter scope plus vendor permissions, commission and order management, sales reports, and payment integration."
+                                  : "Includes multi-tenant SaaS, subscriptions, billing, advanced security, and integrations; the final quote follows scope review."}
+                    </li>
+                  )}
+                  {selectedProjectTypes.some((type) =>
+                    isEcommerceProjectType(type) || type.toLowerCase().includes("restaurant")
+                  ) && (
+                    <>
+                      <li>
+                        <strong>{guideLanguage === "roman-ur" ? "Products / menu: " : "Products / menu: "}</strong>
+                        {needsProductCatalog
+                          ? guideLanguage === "roman-ur"
+                            ? `Aap khud update karenge${productFeatures.length
+                              ? `; aapne yeh details chuni hain: ${productFeatures.map((feature) => ({
+                                categories: "categories",
+                                variants: "size/rang ke options",
+                                stock: "stock",
+                                images: "tasveerain",
+                                pricing: "qeemat aur discount",
+                              }[feature] || feature)).join(", ")}`
+                              : ""}.`
+                            : `You will manage the catalog${productFeatures.length
+                              ? `; selected details: ${productFeatures.map((feature) => ({
+                                categories: "categories",
+                                variants: "size/colour options",
+                                stock: "stock",
+                                images: "images",
+                                pricing: "prices and discounts",
+                              }[feature] || feature)).join(", ")}`
+                              : ""}.`
+                          : guideLanguage === "roman-ur"
+                            ? "Sirf maloomat aur tasveerain dikhani hain."
+                            : "Display business information and images only."}
+                      </li>
+                      <li>
+                        <strong>{guideLanguage === "roman-ur" ? "Online orders: " : "Online orders: "}</strong>
+                        {acceptOrdersOnline
+                          ? guideLanguage === "roman-ur"
+                            ? `Haan${orderFeatures.length
+                              ? `; aapne yeh options chune hain: ${orderFeatures.map((feature) => ({
+                                cart: "cart",
+                                checkout: "online payment",
+                                coupons: "coupons aur discounts",
+                                delivery_fees: "delivery charges aur ilaqay",
+                              }[feature] || feature)).join(", ")}`
+                              : ""}.`
+                            : `Yes${orderFeatures.length
+                              ? `, with ${orderFeatures.map((feature) => ({
+                                cart: "a cart",
+                                checkout: "online payment",
+                                coupons: "coupons and discounts",
+                                delivery_fees: "delivery charges and areas",
+                              }[feature] || feature)).join(", ")}`
+                              : ""}.`
+                          : guideLanguage === "roman-ur" ? "Nahi; customer phone ya WhatsApp par rabta karega." : "No; customers will contact you by phone or message."}
+                      </li>
+                    </>
+                  )}
+                  {!selectedPricingPackage && (
+                    <li>
+                      <strong>{guideLanguage === "roman-ur" ? "Admin dashboard: " : "Admin dashboard: "}</strong>
+                      {adminPanelType === "client_admin"
+                        ? guideLanguage === "roman-ur"
+                          ? "Is andazay mein shamil hai; aglay qadam par aap isay rakh ya hata sakte hain."
+                          : "Included in this estimate; you can keep or remove it in the next step."
+                        : guideLanguage === "roman-ur"
+                          ? "Filhal shamil nahi; aglay qadam par admin dashboard add kar sakte hain."
+                          : "Not included yet; you can add an admin dashboard in the next step."}
+                    </li>
+                  )}
+                  {calculation.selectedAddonDetails.map((addon) => (
+                    <li key={addon.id}>
+                      <strong>{guideLanguage === "roman-ur" ? "Pehle se chuna gaya add-on: " : "Preselected add-on: "}</strong>
+                      {addon.label}
+                      {addon.billingPeriod === "monthly"
+                        ? ` · ${guideLanguage === "roman-ur" ? "mahana" : "monthly"}`
+                        : ""}
+                    </li>
                   ))}
+                </ul>
+              </section>
+
+              <section className="rounded-xl border border-[#E31E36]/20 bg-red-50/50 p-4 sm:p-5">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">
+                  {guideLanguage === "roman-ur" ? "Ab tak ka andazati budget" : "Estimated budget so far"}
+                </span>
+                <strong className="mt-1 block text-3xl font-black text-[#E31E36]">
+                  {formatEstimate(calculation.estimatedTotal)}
+                </strong>
+                <div className="mt-4 space-y-2 border-t border-red-100 pt-3 text-xs">
+                  <div className="flex justify-between gap-3 text-gray-700">
+                    <span>{selectedPricingPackage
+                      ? guideLanguage === "roman-ur" ? "Shuruati package" : "Starting package"
+                      : guideLanguage === "roman-ur" ? "Bunyadi website" : "Base website"}</span>
+                    <strong>{formatEstimate(calculation.basePrice)}</strong>
+                  </div>
+                  {calculation.selectedAddonDetails.filter((addon) => addon.billingPeriod !== "monthly").map((addon) => (
+                    <div key={addon.id} className="flex justify-between gap-3 text-gray-700">
+                      <span>{addon.label}</span>
+                      <strong>+{formatEstimate(addon.price)}</strong>
+                    </div>
+                  ))}
+                  {calculation.contingencyAmount > 0 && (
+                    <div className="flex justify-between gap-3 text-gray-700">
+                      <span>{guideLanguage === "roman-ur" ? "Andazati scope margin" : "Estimated scope allowance"}</span>
+                      <strong>+{formatEstimate(calculation.contingencyAmount)}</strong>
+                    </div>
+                  )}
+                  {calculation.monthlyAddonTotal > 0 && (
+                    <div className="flex justify-between gap-3 border-t border-red-100 pt-2 text-amber-800">
+                      <span>{guideLanguage === "roman-ur" ? "Har mahine ke add-ons" : "Recurring monthly add-ons"}</span>
+                      <strong>{formatEstimate(calculation.monthlyAddonTotal)} / {guideLanguage === "roman-ur" ? "mah" : "month"}</strong>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              </section>
+            </div>
+
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">
+              {guideLanguage === "roman-ur"
+                ? "Yeh abhi tak ke intikhabat ka andaza hai, final quote nahi. Aapki requirements review hongi; package mein shamil na hone wali cheezon ki alag price ho sakti hai. Budget zyada lag raha hai to Back ja kar options kam karein. Theek lagay to aglay qadam par mazeed features aur unki prices dekhein—koi extra cheez khud-ba-khud add nahi hogi."
+                : "This is an estimate based on your choices so far, not a final quote. Your requirements will be reviewed; features outside the selected package may cost extra. If it is too high, go Back and reduce earlier choices. If acceptable, continue to see optional features and their prices—nothing extra is added automatically."}
+            </div>
           </div>
         )}
 
         {/* ============================================================== */}
-        {/* STEP 6: ADVANCED FEATURES (ADD-ONS) */}
+        {/* STEP 6: OPTIONAL FEATURES (ADD-ONS) */}
         {/* ============================================================== */}
-        {currentStep === 6 && (
-          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+        {currentStep === 5 && (
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-6 animate-fadeIn sm:p-8">
             <div>
               <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
-                Step 6 of 8
+                {guideLanguage === "roman-ur" ? "Qadam 5 / 7" : "Step 5 of 7"}
               </span>
               <h2 className="text-2xl font-black text-[#101216] mt-1">
-                Optional Advanced Features & Add-ons
+                {guideLanguage === "roman-ur" ? "Mazeed options" : "Optional features"}
               </h2>
               <p className="text-xs text-gray-600 mt-1">
-                Add-on prices vary by feature complexity and selected e-commerce or SaaS plan. E-commerce add-ons start at PKR 20,000. Personal domain setup is PKR 10,000; registrar purchase and renewal fees are separate. Monthly maintenance is shown separately.
+                {guideLanguage === "roman-ur"
+                  ? "Sirf woh extra features chunein jo waqai chahiye. Har option ki price alag dikhai gayi hai; select karne par aapka andaza update hoga."
+                  : "Choose only the extras you need. Each option shows its own price, and selecting it updates your estimate."}
               </p>
             </div>
 
+            <section className="rounded-2xl border border-[#E31E36]/20 bg-red-50/40 p-4 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-extrabold text-[#101216]">
+                    {guideLanguage === "roman-ur" ? "Aapke business ke liye munasib suggestions" : "Suggestions that may fit your business"}
+                  </h3>
+                  <p className="mt-1 text-[11px] leading-relaxed text-gray-600">
+                    {guideLanguage === "roman-ur"
+                      ? `${selectedBusinessCategory?.label || "Aapke project"} ko dekh kar yeh options dikhaye gaye hain. Yeh sirf mashware hain—kuch bhi khud se add nahi hoga. Zaroorat ke mutabiq chunen ya chhor dein.`
+                      : `Based on ${selectedBusinessCategory?.label || "your project"}, these optional features may help. Nothing is added automatically; choose only what you need.`}
+                  </p>
+                </div>
+                <div className="shrink-0 rounded-xl bg-[#101216] px-4 py-3 text-white">
+                  <span className="block text-[10px] font-bold uppercase text-gray-300">
+                    {guideLanguage === "roman-ur" ? "Ab tak ka andaza" : "Estimate so far"}
+                  </span>
+                  <strong className="mt-0.5 block text-lg font-black">{formatEstimate(calculation.estimatedTotal)}</strong>
+                  {calculation.monthlyAddonTotal > 0 && (
+                    <span className="mt-1 block text-[10px] text-amber-200">
+                      + {formatEstimate(calculation.monthlyAddonTotal)} / {guideLanguage === "roman-ur" ? "mah" : "month"}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                {recommendedAddonsByLevel.map(({ level, addons }) => {
+                  const levelDetails = {
+                    basic: {
+                      title: guideLanguage === "roman-ur" ? "Basic — zaroori sahulat" : "Basic — useful essentials",
+                      advice: guideLanguage === "roman-ur"
+                        ? "Rozmarra ke bunyadi kaam asaan karne ke liye. Shuruat ke liye in mein se sirf zaroori cheez chunein."
+                        : "For everyday essentials. Pick only what would help you get started.",
+                    },
+                    expanded: {
+                      title: guideLanguage === "roman-ur" ? "Expanded — business barhane ke liye" : "Expanded — for a growing business",
+                      advice: guideLanguage === "roman-ur"
+                        ? "Jab orders, customers ya team barh rahi ho to process sambhalne mein madadgar ho sakte hain."
+                        : "May help when your orders, customers, or team are growing.",
+                    },
+                    complex: {
+                      title: guideLanguage === "roman-ur" ? "Complex — advanced zarooriyat" : "Complex — advanced needs",
+                      advice: guideLanguage === "roman-ur"
+                        ? "Multiple branches ya doosri services ke saath integration jaisi zarooriyat ke liye. Aksar final scope discuss karna hota hai."
+                        : "For needs such as multiple branches or integrations; final scope usually needs discussion.",
+                    },
+                  }[level];
+                  const selectedTierTotal = addons.reduce((total, addon) => {
+                    const included = getChargeableAddonIds([addon.id], selectedPricingPackage, adminPanelType).length === 0;
+                    return total + (selectedAddons.includes(addon.id) && !included ? addon.price : 0);
+                  }, 0);
+
+                  return (
+                    <section key={level} className="flex flex-col rounded-xl border border-gray-200 bg-white p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="text-xs font-extrabold text-[#101216]">{levelDetails.title}</h4>
+                          <p className="mt-1 text-[10px] leading-relaxed text-gray-600">{levelDetails.advice}</p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-amber-50 px-2 py-1 text-[9px] font-extrabold uppercase text-amber-800">
+                          {guideLanguage === "roman-ur" ? "Mashwara" : "Suggested"}
+                        </span>
+                      </div>
+
+                      {addons.length > 0 ? (
+                        <div className="mt-3 space-y-2">
+                          {addons.map((addon) => {
+                            const included = getChargeableAddonIds([addon.id], selectedPricingPackage, adminPanelType).length === 0;
+                            const selected = included || selectedAddons.includes(addon.id);
+                            const AddonIcon = getAddonIcon(addon.id);
+                            return (
+                              <label
+                                key={addon.id}
+                                className={`flex cursor-pointer gap-2.5 rounded-lg border p-2.5 transition ${
+                                  included
+                                    ? "border-emerald-200 bg-emerald-50"
+                                    : selected
+                                      ? "border-[#E31E36] bg-red-50/50"
+                                      : "border-gray-200 bg-white hover:border-[#E31E36]"
+                                }`}
+                              >
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-[#E31E36]">
+                                  <AddonIcon className="h-4 w-4" aria-hidden="true" />
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="flex items-start justify-between gap-2">
+                                    <strong className="text-[11px] leading-4 text-[#101216]">{addon.label}</strong>
+                                    <strong className={`shrink-0 text-[10px] ${included ? "text-emerald-700" : "text-[#E31E36]"}`}>
+                                      {included ? (guideLanguage === "roman-ur" ? "Package mein shamil" : "Included") : `+${formatEstimate(addon.price)}${addon.billingPeriod === "monthly" ? (guideLanguage === "roman-ur" ? "/mah" : "/mo") : ""}`}
+                                    </strong>
+                                  </span>
+                                  <span className="mt-1 block text-[10px] leading-relaxed text-gray-600">
+                                    {guideLanguage === "roman-ur"
+                                      ? getRomanUrduAddonBenefit(addon.id, addon.label, level)
+                                      : addon.description}
+                                  </span>
+                                  {addon.requiresCustomQuote && (
+                                    <span className="mt-1 block text-[9px] font-semibold text-amber-800">
+                                      {guideLanguage === "roman-ur"
+                                        ? "Is feature ki final price details discuss karne ke baad confirm hogi."
+                                        : "Final price for this feature is confirmed after scope discussion."}
+                                    </span>
+                                  )}
+                                  <span className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
+                                    <span className="text-[9px] font-bold text-gray-500">
+                                      {included
+                                        ? guideLanguage === "roman-ur" ? "Package mein pehle se hai" : "Already in package"
+                                        : selected
+                                          ? guideLanguage === "roman-ur" ? "Andazay mein shamil — hatane ke liye uncheck karein" : "In estimate — uncheck to remove"
+                                          : guideLanguage === "roman-ur" ? "Optional — shamil karne ke liye check karein" : "Optional — check to include"}
+                                    </span>
+                                    <input
+                                      type="checkbox"
+                                      checked={selected}
+                                      disabled={included}
+                                      onChange={() => toggleAddon(addon.id)}
+                                      className="accent-[#E31E36]"
+                                      aria-label={`${guideLanguage === "roman-ur" ? "Add to estimate" : "Add to estimate"}: ${addon.label}`}
+                                    />
+                                  </span>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="mt-3 rounded-lg border border-dashed border-gray-200 p-3 text-[10px] leading-relaxed text-gray-500">
+                          {guideLanguage === "roman-ur"
+                            ? "Is level ke liye filhal koi relevant add-on available nahi. Neeche tamam options dekh sakte hain."
+                            : "No matching add-ons are available at this level. Browse all options below."}
+                        </p>
+                      )}
+                      <div className="mt-auto flex justify-between gap-2 border-t border-gray-100 pt-3">
+                        <span className="text-[10px] text-gray-500">
+                          {guideLanguage === "roman-ur" ? "Is section se chune gaye add-ons" : "Selected from this set"}
+                        </span>
+                        <strong className="text-[10px] text-[#E31E36]">
+                          {selectedTierTotal > 0
+                            ? formatEstimate(selectedTierTotal)
+                            : guideLanguage === "roman-ur" ? "Koi select nahi" : "None selected"}
+                        </strong>
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+
+              <section className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h4 className="text-xs font-extrabold text-[#101216]">
+                      {guideLanguage === "roman-ur" ? "Aapke chune huay add-ons ka hisaab" : "Your selected add-ons"}
+                    </h4>
+                    <p className="mt-1 text-[10px] text-gray-600">
+                      {guideLanguage === "roman-ur"
+                        ? "Sirf checked options is hisaab mein shamil hain. Koi suggestion lazmi nahi."
+                        : "Only checked options are included here. Suggestions are never required."}
+                    </p>
+                  </div>
+                  <strong className="text-sm font-black text-[#E31E36]">
+                    {formatEstimate(calculation.estimatedTotal)}
+                    {calculation.monthlyAddonTotal > 0 && ` + ${formatEstimate(calculation.monthlyAddonTotal)}/${guideLanguage === "roman-ur" ? "mah" : "mo"}`}
+                  </strong>
+                </div>
+                {calculation.selectedAddonDetails.length > 0 ? (
+                  <ul className="mt-3 divide-y divide-gray-100 border-t border-gray-100">
+                    {calculation.selectedAddonDetails.map((addon) => (
+                      <li key={addon.id} className="flex items-center justify-between gap-3 py-2 text-[10px]">
+                        <span className="text-gray-700">{addon.label}{addon.billingPeriod === "monthly" ? ` · ${guideLanguage === "roman-ur" ? "mahana" : "monthly"}` : ""}</span>
+                        <strong className="shrink-0 text-gray-900">+{formatEstimate(addon.price)}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-3 border-t border-gray-100 pt-3 text-[10px] text-gray-500">
+                    {guideLanguage === "roman-ur"
+                      ? "Abhi koi extra paid add-on select nahi. Aapka current estimate sirf pehle chune huay scope ka hai."
+                      : "No extra paid add-ons selected. Your estimate is based on the scope chosen so far."}
+                  </p>
+                )}
+              </section>
+              <p className="mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-[10px] leading-relaxed text-blue-950">
+                {guideLanguage === "roman-ur"
+                  ? "Kisi feature ke faide ya zaroorat ka yaqeen na ho to usay select na karein. Aapke budget aur business ko dekh kar hamari team final discussion mein munasib options samjha degi."
+                  : "If you are unsure whether a feature is useful, leave it unchecked. Our team can discuss suitable options for your budget and business before finalizing the scope."}
+              </p>
+            </section>
+
+            {!selectedPricingPackage ? (
+              <section className="rounded-xl border border-gray-200 bg-gray-50 p-4 sm:p-5">
+                <h3 className="text-sm font-extrabold text-[#101216]">
+                  {guideLanguage === "roman-ur" ? "Website ke updates ka control kis ke paas ho?" : "Who should manage website updates?"}
+                </h3>
+                <p className="mt-1 text-[11px] leading-relaxed text-gray-600">
+                  {guideLanguage === "roman-ur"
+                    ? "Yeh choice aapke estimate ko badal sakti hai. Aap baad mein bhi isay confirm kar sakte hain."
+                    : "This choice can change your estimate. You can confirm it with us later."}
+                </p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {([
+                    {
+                      value: "none" as const,
+                      price: pricingConfig.baseWithoutAdmin,
+                      title: guideLanguage === "roman-ur" ? "Team website manage kare" : "Our team manages it",
+                      detail: guideLanguage === "roman-ur"
+                        ? "Aapko admin dashboard nahi milega; updates ke liye hamari team se rabta karein."
+                        : "You will not receive an admin dashboard; contact our team for updates.",
+                    },
+                    {
+                      value: "client_admin" as const,
+                      price: pricingConfig.baseWithAdmin,
+                      title: guideLanguage === "roman-ur" ? "Mujhe admin dashboard chahiye" : "I want an admin dashboard",
+                      detail: guideLanguage === "roman-ur"
+                        ? "Aap khud website ke content aur available modules manage kar sakenge."
+                        : "Manage your website content and available modules yourself.",
+                    },
+                  ]).map((option) => (
+                    <label
+                      key={option.value}
+                      className={`flex cursor-pointer gap-3 rounded-xl border-2 p-4 transition ${
+                        adminPanelType === option.value
+                          ? "border-[#E31E36] bg-white shadow-sm"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="adminPanelChoice"
+                        checked={adminPanelType === option.value}
+                        onChange={() => setAdminPanelType(option.value)}
+                        className="mt-1 accent-[#E31E36]"
+                      />
+                      <span>
+                        <strong className="block text-xs text-[#101216]">{option.title}</strong>
+                        <span className="mt-1 block text-[11px] leading-relaxed text-gray-600">{option.detail}</span>
+                        <strong className="mt-2 block text-sm text-[#E31E36]">{formatEstimate(option.price)}</strong>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {adminPanelType === "client_admin" && (
+                  <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+                    <span className="text-xs font-bold text-[#101216]">
+                      {guideLanguage === "roman-ur" ? "Dashboard mein kya manage karna hai?" : "What should the dashboard manage?"}
+                    </span>
+                    <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2 md:grid-cols-3">
+                      {adminFeatureOptions.map((option) => (
+                        <label key={option.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2">
+                          <input
+                            type="checkbox"
+                            checked={adminFeatures.includes(option.id)}
+                            onChange={() => toggleAdminFeature(option.id)}
+                            className="accent-[#E31E36]"
+                          />
+                          <span className="text-gray-700">{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+            ) : (
+              <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs leading-relaxed text-emerald-950">
+                {guideLanguage === "roman-ur"
+                  ? "Aapke chune huay starting package mein admin dashboard shamil hai. Neeche diye gaye extra features alag se add kiye ja sakte hain."
+                  : "Your selected starting package includes an admin dashboard. Optional features below can be added separately."}
+              </section>
+            )}
+
+            <details className="rounded-xl border border-gray-200 bg-white">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 text-xs font-extrabold text-[#101216]">
+                <span>
+                  {guideLanguage === "roman-ur" ? "Tamam add-ons dekhein" : "Browse all add-ons"}
+                  <span className="mt-1 block text-[10px] font-normal text-gray-500">
+                    {guideLanguage === "roman-ur"
+                      ? "Agar upar di hui suggestions kaafi nahi, yahan mazeed options aur filters hain."
+                      : "Explore more options and filters if the suggestions above are not enough."}
+                  </span>
+                </span>
+                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[9px] font-bold text-gray-600">
+                  {businessAddonCatalog.length + addonOptions.filter((addon) => addon.enabled && addon.category !== "businesscatalog").length}
+                </span>
+              </summary>
+              <div className="space-y-4 border-t border-gray-100 p-4">
             <section className="rounded-xl border border-red-100 bg-white p-4 sm:p-5">
               <div>
-                <h3 className="text-sm font-extrabold text-[#101216]">Business-specific add-ons</h3>
+                <h3 className="text-sm font-extrabold text-[#101216]">
+                  {guideLanguage === "roman-ur" ? "Business ke mutabiq options" : "Business-specific add-ons"}
+                </h3>
                 <p className="mt-1 text-[11px] leading-5 text-gray-600">
                   {selectedBusinessCategory
-                    ? `Showing features for ${selectedBusinessCategory.label}. Choose a business type to narrow the results.`
-                    : "Choose a business category and type to browse relevant features."}
-                  {" "}Prices are estimates; complex integrations and custom-quote features need scope confirmation.
+                    ? guideLanguage === "roman-ur"
+                      ? `${selectedBusinessCategory.label} ke liye options. Business type chun kar list ko aur relevant bana sakte hain.`
+                      : `Showing features for ${selectedBusinessCategory.label}. Choose a business type to narrow the results.`
+                    : guideLanguage === "roman-ur"
+                      ? "Business category aur type chun kar relevant features dekhein."
+                      : "Choose a business category and type to browse relevant features."}
+                  {" "}{guideLanguage === "roman-ur"
+                    ? "Yeh andazati prices hain; complex integration ki final scope discuss karke confirm hogi."
+                    : "Prices are estimates; complex integrations and custom-quote features need scope confirmation."}
                 </p>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -2031,7 +2750,7 @@ function CalculatorContent() {
                     }}
                     className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5"
                   >
-                    <option value="">All business categories</option>
+                    <option value="">{guideLanguage === "roman-ur" ? "Tamam business categories" : "All business categories"}</option>
                     {BUSINESS_CATEGORIES.map((category) => (
                       <option key={category.id} value={category.id}>{category.label}</option>
                     ))}
@@ -2044,7 +2763,7 @@ function CalculatorContent() {
                     onChange={(event) => setBusinessTypeFilter(event.target.value)}
                     className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5"
                   >
-                    <option value="all">All applicable business types</option>
+                    <option value="all">{guideLanguage === "roman-ur" ? "Tamam mutaliqa business types" : "All applicable business types"}</option>
                     {selectedBusinessCategory?.businessTypes.map((type) => (
                       <option key={type.id} value={type.id}>{type.label}</option>
                     ))}
@@ -2053,10 +2772,10 @@ function CalculatorContent() {
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {[
-                  ["all", "All levels"],
-                  ["basic", "Basic"],
-                  ["expanded", "Expanded"],
-                  ["complex", "Complex"],
+                  ["all", guideLanguage === "roman-ur" ? "Tamam levels" : "All levels"],
+                  ["basic", guideLanguage === "roman-ur" ? "Basic" : "Basic"],
+                  ["expanded", guideLanguage === "roman-ur" ? "Expanded" : "Expanded"],
+                  ["complex", guideLanguage === "roman-ur" ? "Complex" : "Complex"],
                 ].map(([value, label]) => (
                   <button
                     key={value}
@@ -2073,11 +2792,11 @@ function CalculatorContent() {
                   </button>
                 ))}
                 <label className="min-w-[180px] flex-1">
-                  <span className="sr-only">Search business add-ons</span>
+                  <span className="sr-only">{guideLanguage === "roman-ur" ? "Business add-ons talash karein" : "Search business add-ons"}</span>
                   <input
                     value={businessAddonSearch}
                     onChange={(event) => setBusinessAddonSearch(event.target.value)}
-                    placeholder="Search business add-ons"
+                    placeholder={guideLanguage === "roman-ur" ? "Kisi feature ko talash karein" : "Search business add-ons"}
                     className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs"
                   />
                 </label>
@@ -2085,7 +2804,9 @@ function CalculatorContent() {
               </div>
               {filteredBusinessAddons.length === 0 ? (
                 <p className="mt-4 rounded-lg border border-dashed border-gray-300 p-4 text-xs text-gray-500">
-                  No business add-ons match these filters. Choose another category, level, or search term.
+                  {guideLanguage === "roman-ur"
+                    ? "In filters ke saath koi add-on nahi mila. Doosri category, level ya search lafz chunein."
+                    : "No business add-ons match these filters. Choose another category, level, or search term."}
                 </p>
               ) : (
                 <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -2094,6 +2815,7 @@ function CalculatorContent() {
                       [addon.id], selectedPricingPackage, adminPanelType
                     ).length === 0;
                     const isSelected = selectedAddons.includes(addon.id);
+                    const AddonIcon = getAddonIcon(addon.id);
                     return (
                       <label
                         key={`${addon.categoryId}-${addon.id}`}
@@ -2106,25 +2828,44 @@ function CalculatorContent() {
                         }`}
                       >
                         <span className="flex items-start justify-between gap-2">
-                          <span>
-                            <span className="block text-[10px] font-extrabold uppercase tracking-wide text-gray-500">
-                              {addon.level} · {addon.origin}
+                          <span className="flex gap-2">
+                            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-[#E31E36]">
+                              <AddonIcon className="h-4 w-4" aria-hidden="true" />
                             </span>
-                            <strong className="mt-1 block text-xs text-[#101216]">{addon.label}</strong>
+                            <span>
+                              <span className="block text-[10px] font-extrabold uppercase tracking-wide text-gray-500">
+                                {guideLanguage === "roman-ur"
+                                  ? `${addon.level === "basic" ? "Basic" : addon.level === "expanded" ? "Expanded" : "Complex"} · ${addon.origin === "new" ? "naya feature" : "maujooda feature"}`
+                                  : `${addon.level} · ${addon.origin}`}
+                              </span>
+                              <strong className="mt-1 block text-xs text-[#101216]">{addon.label}</strong>
+                            </span>
                           </span>
                           <strong className={`shrink-0 text-[11px] ${isIncluded ? "text-emerald-700" : "text-[#E31E36]"}`}>
-                            {isIncluded ? "Included" : formatEstimate(addon.price)}
+                            {isIncluded
+                              ? guideLanguage === "roman-ur" ? "Package mein shamil" : "Included"
+                              : formatEstimate(addon.price)}
                           </strong>
                         </span>
-                        <span className="mt-2 flex-1 text-[10px] leading-4 text-gray-600">{addon.description}</span>
+                        <span className="mt-2 flex-1 text-[10px] leading-4 text-gray-600">
+                          {guideLanguage === "roman-ur"
+                            ? getRomanUrduAddonBenefit(addon.id, addon.label, addon.level)
+                            : addon.description}
+                        </span>
                         {addon.requiresCustomQuote && (
                           <span className="mt-2 text-[10px] font-semibold text-amber-800">
-                            Custom scope quotation required; displayed amount is indicative.
+                            {guideLanguage === "roman-ur"
+                              ? "Yeh andazati raqam hai; final price scope discuss karne ke baad tay hogi."
+                              : "Custom scope quotation required; displayed amount is indicative."}
                           </span>
                         )}
                         <span className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2 text-[10px] font-bold">
                           <span className={isIncluded ? "text-emerald-700" : isSelected ? "text-[#E31E36]" : "text-gray-500"}>
-                            {isIncluded ? "Included in selected package" : isSelected ? "Added to estimate" : "Add to estimate"}
+                            {isIncluded
+                              ? guideLanguage === "roman-ur" ? "Chune huay package mein shamil" : "Included in selected package"
+                              : isSelected
+                                ? guideLanguage === "roman-ur" ? "Andazay mein shamil" : "Added to estimate"
+                                : guideLanguage === "roman-ur" ? "Optional — shamil karne ke liye check karein" : "Optional — add to estimate"}
                           </span>
                           <input
                             type="checkbox"
@@ -2142,9 +2883,13 @@ function CalculatorContent() {
             </section>
 
             <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <h3 className="text-sm font-extrabold text-[#101216]">Shared add-ons</h3>
+              <h3 className="text-sm font-extrabold text-[#101216]">
+                {guideLanguage === "roman-ur" ? "Doosre common add-ons" : "Shared add-ons"}
+              </h3>
               <p className="mt-1 text-[11px] text-gray-600">
-                Browse the existing website, business tools, commerce, SaaS, automation, security, and industry add-ons below. Shared records keep their current IDs and prices.
+                {guideLanguage === "roman-ur"
+                  ? "Website, business tools, online store, SaaS aur security ke doosre options neeche dekh sakte hain."
+                  : "Browse the existing website, business tools, commerce, SaaS, automation, security, and industry add-ons below."}
               </p>
             </div>
 
@@ -2165,13 +2910,27 @@ function CalculatorContent() {
               {Object.entries(groupedAddonOptions).map(([category, categoryAddons], categoryIndex) => (
                 <details key={category} open={categoryIndex === 0} className="rounded-lg border border-gray-200 bg-white">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 text-xs font-extrabold text-[#101216]">
-                    <span>{category}</span>
-                    <span className="text-[10px] font-semibold text-gray-500">{categoryAddons.length} add-ons</span>
+                    <span>{guideLanguage === "roman-ur" ? ({
+                      "Database & Authentication": "Database aur login",
+                      "E-commerce & Payments": "Online store aur payments",
+                      "Business Tools & Admin": "Business tools aur admin",
+                      "AI & Automation": "AI aur automatic kaam",
+                      "Website & Design": "Website aur design",
+                      "Website Images & Video": "Website tasveerain aur video",
+                      "SaaS & Multi-Vendor": "SaaS aur multi-vendor",
+                      "Security & Reliability": "Security aur bharosemandi",
+                      "Industry-Specific": "Business ke khaas features",
+                      "Real Estate & PropertyTech": "Property aur real estate",
+                    }[category] || category) : category}</span>
+                    <span className="text-[10px] font-semibold text-gray-500">
+                      {categoryAddons.length} {guideLanguage === "roman-ur" ? "options" : "add-ons"}
+                    </span>
                   </summary>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 border-t border-gray-100 p-3">
               {categoryAddons.map((addon) => {
                 const isIncluded = getChargeableAddonIds([addon.id], selectedPricingPackage, adminPanelType).length === 0;
                 const isSelected = selectedAddons.includes(addon.id);
+                const AddonIcon = getAddonIcon(addon.id);
                 return (
                   <div
                     key={addon.id}
@@ -2187,25 +2946,36 @@ function CalculatorContent() {
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                          {addon.category}
+                          {guideLanguage === "roman-ur" ? "Optional feature" : addon.category}
                         </span>
                         <strong className={`text-xs font-black ${isIncluded ? "text-emerald-700" : "text-[#E31E36]"}`}>
                           {isIncluded
-                            ? "Included"
-                            : `+${formatEstimate(addon.price)}${addon.billingPeriod === "monthly" ? " / month" : ""}`}
+                            ? guideLanguage === "roman-ur" ? "Package mein shamil" : "Included"
+                            : `+${formatEstimate(addon.price)}${addon.billingPeriod === "monthly" ? guideLanguage === "roman-ur" ? " / mahana" : " / month" : ""}`}
                         </strong>
                       </div>
-                      <h4 className="font-extrabold text-xs text-[#101216] mb-1">
-                        {addon.label}
-                      </h4>
-                      <p className="text-[11px] text-gray-600 leading-relaxed">
-                        {addon.description}
-                      </p>
+                      <div className="flex items-start gap-2">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-[#E31E36]">
+                          <AddonIcon className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                        <span>
+                          <h4 className="font-extrabold text-xs text-[#101216] mb-1">{addon.label}</h4>
+                          <p className="text-[11px] text-gray-600 leading-relaxed">
+                            {guideLanguage === "roman-ur"
+                              ? getRomanUrduAddonBenefit(addon.id, addon.label, addon.pricingLevel || "basic")
+                              : addon.description}
+                          </p>
+                        </span>
+                      </div>
                     </div>
 
                     <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px]">
                       <span className={isIncluded ? "text-emerald-700 font-bold" : isSelected ? "text-[#E31E36] font-bold" : "text-gray-400"}>
-                        {isIncluded ? "✓ Included in Package" : isSelected ? "✓ Added to Estimate" : "+ Click to Add"}
+                        {isIncluded
+                          ? guideLanguage === "roman-ur" ? "✓ Package mein shamil" : "✓ Included in Package"
+                          : isSelected
+                            ? guideLanguage === "roman-ur" ? "✓ Andazay mein shamil" : "✓ Added to Estimate"
+                            : guideLanguage === "roman-ur" ? "+ Zaroorat ho to shamil karein" : "+ Add if needed"}
                       </span>
                       <input
                         type="checkbox"
@@ -2225,27 +2995,31 @@ function CalculatorContent() {
 
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
-                Custom Advanced Feature Notes (Optional)
+                {guideLanguage === "roman-ur" ? "Koi khaas feature chahiye? (ikhtiyari)" : "Any other feature you need? (optional)"}
               </label>
               <textarea
                 rows={3}
-                placeholder="Misal: Order confirm hote hi customer ko WhatsApp par message bhejna hai aur roz ke orders ki report Excel mein chahiye. Agar kisi khaas service ki integration chahiye to uska naam likhein. Hum external API/account ya paid subscription provide nahi karte; zaroorat par aapko provider se khud arrange karna hoga."
+                placeholder={guideLanguage === "roman-ur"
+                  ? "Misal: Order confirm hote hi customer ko WhatsApp message bhejna hai ya roz ke orders ki Excel report chahiye. Khaas service ki integration ho to uska naam batayein; final scope aur kisi paid provider ki fees alag confirm hongi."
+                  : "For example: send customers a WhatsApp message when an order is confirmed, or provide a daily Excel report. Name any service integration you need; final scope and provider fees are confirmed separately."}
                 value={customFeatureNotes}
                 onChange={(e) => setCustomFeatureNotes(e.target.value)}
                 className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
               />
             </div>
+              </div>
+            </details>
           </div>
         )}
 
         {/* ============================================================== */}
         {/* STEP 7: ESTIMATED BUDGET & PAYMENT SCHEDULE */}
         {/* ============================================================== */}
-        {currentStep === 7 && (
-          <div className="bg-[#F4F5F7] p-6 sm:p-8 rounded-2xl border border-gray-200 space-y-6 animate-fadeIn">
+        {currentStep === 6 && (
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-6 animate-fadeIn sm:p-8">
             <div>
               <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
-                Step 7 of 8
+                Step 6 of 7
               </span>
               <h2 className="text-2xl font-black text-[#101216] mt-1">
                 Your Estimated Development Budget & Payment Plan
@@ -2514,7 +3288,15 @@ function CalculatorContent() {
                 onClick={handleNext}
                 className="inline-flex items-center gap-2 text-xs font-bold text-white bg-[#E31E36] hover:bg-[#C8162D] px-6 py-3 rounded-xl shadow-glow transition"
               >
-                Continue to Step {currentStep + 1}
+                {guideLanguage === "roman-ur"
+                  ? currentStep === 6
+                    ? "Aakhri qadam: rabtay ki maloomat"
+                    : currentStep === 4
+                      ? "Mazeed options dekhein"
+                      : currentStep === 5 ? "Mera updated andaza dekhein" : "Agla qadam"
+                  : currentStep === 6
+                    ? "Continue to contact details"
+                    : currentStep === 5 ? "Review updated estimate" : `Continue: ${stepsList[currentStep]}`}
                 <ArrowRight className="w-4 h-4" />
               </button>
             ) : (

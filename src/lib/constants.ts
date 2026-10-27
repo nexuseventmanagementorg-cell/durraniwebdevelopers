@@ -520,7 +520,7 @@ export function isSaasProjectType(projectType: string): boolean {
 export function getDefaultPricingPackageForProjectType(
   projectType: string
 ): PricingPackageId | null {
-  if (isEcommerceProjectType(projectType)) return "ecommerce_business";
+  if (isEcommerceProjectType(projectType)) return "ecommerce_starter";
   if (isSaasProjectType(projectType)) return "saas_starter";
   return null;
 }

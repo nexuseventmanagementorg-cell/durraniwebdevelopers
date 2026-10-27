@@ -40,7 +40,7 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     category: "Restaurant web applications",
     shortDescription: "Customizable restaurant website with a client admin dashboard, menu QR codes, online ordering, order tracking, and daily sales reports.",
     fullDescription: "A ready-made responsive restaurant website and client admin dashboard. Customers can browse a searchable menu, add items to a cart, check out, track order status, and contact the restaurant through WhatsApp. The eight admin sections manage overview and sales, live orders, daily sales by selected date, menu and prices, per-item QR codes with printable sheets, payment accounts, review moderation, and restaurant settings. Admins can print kitchen tickets and receipts, and export daily sales reports to CSV or print. The comparable new-build estimate is PKR 225,000: the E-Commerce Business package at PKR 150,000 plus the listed restaurant QR, order tracking, kitchen ticket, daily sales record, and sales-calendar add-ons. Supabase persistence is optional; no half-price offer is active for this template.",
-    imageUrl: "https://gtroad1.vercel.app/images/family-sharing-thaal.jpg",
+    imageUrl: "https://dwdtemplate2.vercel.app/images/family-sharing-thaal.jpg",
     technologies: [
       "Next.js",
       "Responsive Web Design",
@@ -77,7 +77,7 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
       daily_sales_records: 10000,
       daily_sales_calendar: 10000,
     },
-    demoUrl: "https://gtroad1.vercel.app/",
+    demoUrl: "https://dwdtemplate2.vercel.app/",
     isPublic: true,
     approvedPublicBudget: 225000,
     budgetLabel: "Estimated Build Price",
@@ -91,7 +91,7 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     category: "Restaurant web applications",
     shortDescription: "Restaurant website with WhatsApp ordering, dine-in table QR codes, order tracking, and a nine-page admin panel for sales, customers, menu, and deals.",
     fullDescription: "A responsive restaurant ordering website with menu and deal browsing, server-validated cart checkout via WhatsApp, dine-in table QR ordering, and customer order-status tracking. Its authenticated client admin panel has nine operational pages: dashboard, orders, daily sales, customers, products, deals, QR tables, menu verification, and business settings. Staff can manage orders and export them to CSV; manage menu items and deal availability; generate, download, and print table QR standees; review completed sales by date with a monthly calendar, item breakdown, purchase expenses, and estimated profit or loss; manage monthly customer credit accounts, payments, and balances; and update restaurant settings. Checkout hands off to WhatsApp; no online payment gateway is included. The comparable new-build estimate is PKR 225,000: the E-Commerce Business package at PKR 150,000 plus Restaurant Digital Menu & QR Codes (PKR 10,000), Order Tracking (PKR 25,000), Daily Sales Records (PKR 10,000), Daily Sales Calendar (PKR 10,000), Customer Monthly Credit Accounts (PKR 10,000), and Order CSV Export (PKR 10,000). The website uses a Vercel subdomain; a personal domain and its registration are not included.",
-    imageUrl: "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-1.webp",
+    imageUrl: "https://dwdtemplate1.vercel.app/images/deals/deal-1.webp",
     technologies: [
       "Next.js",
       "Responsive Web Design",
@@ -130,7 +130,7 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
       monthly_credit_accounts: 10000,
       csv_data_export: 10000,
     },
-    demoUrl: "https://student-burgers-and-shawarmas.vercel.app/",
+    demoUrl: "https://dwdtemplate1.vercel.app/",
     isPublic: true,
     approvedPublicBudget: 225000,
     budgetLabel: "Estimated Build Price",
@@ -172,8 +172,12 @@ const LEGACY_PORTFOLIO_IMAGE_URLS: Record<string, string[]> = {
     "https://student-burgers-and-shawarmas.vercel.app/images/deals/deal-4.webp",
   ],
 };
-const LEGACY_PORTFOLIO_DEMO_URLS: Record<string, string> = {
-  "grillvi-gtroad": "https://grillvi-gtroad.vercel.app/",
+const LEGACY_PORTFOLIO_DEMO_URLS: Record<string, string[]> = {
+  "grillvi-gtroad": [
+    "https://grillvi-gtroad.vercel.app/",
+    "https://gtroad1.vercel.app/",
+  ],
+  "student-burgers-shawarmas": ["https://student-burgers-and-shawarmas.vercel.app/"],
 };
 const LEGACY_GRILLVI_PORTFOLIO_VALUES: Partial<PortfolioProject> = {
   title: "GRILLVI - Restaurant Website & Online Ordering",
@@ -238,7 +242,8 @@ export function mergePortfolioSeedProjects(
     )
       ? seedProject.imageUrl
       : savedProject.imageUrl;
-    const demoUrl = seedProject && LEGACY_PORTFOLIO_DEMO_URLS[savedProject.id] === savedProject.demoUrl
+    const demoUrl = seedProject && typeof savedProject.demoUrl === "string" &&
+      LEGACY_PORTFOLIO_DEMO_URLS[savedProject.id]?.includes(savedProject.demoUrl)
       ? seedProject.demoUrl
       : savedProject.demoUrl;
     const technologies = migratedLegacyValue("technologies");

@@ -13,12 +13,12 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "gtroad1.vercel.app",
+        hostname: "dwdtemplate2.vercel.app",
         pathname: "/images/**",
       },
       {
         protocol: "https",
-        hostname: "student-burgers-and-shawarmas.vercel.app",
+        hostname: "dwdtemplate1.vercel.app",
         pathname: "/images/**",
       },
     ],
