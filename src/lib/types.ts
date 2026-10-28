@@ -48,11 +48,19 @@ export interface AddonOption {
     | "automation"
     | "security"
     | "industry"
-    | "propertytech";
+    | "propertytech"
+    | "businesscatalog";
   price: number;
   description: string;
   enabled: boolean;
   billingPeriod?: "one_time" | "monthly";
+  businessCategories?: string[];
+  businessTypes?: string[];
+  pricingLevel?: "basic" | "expanded" | "complex";
+  origin?: "existing" | "new";
+  status?: "active" | "inactive" | "archived";
+  relatedAddOnIds?: string[];
+  requiresCustomQuote?: boolean;
 }
 
 export interface PricingRuleConfig {

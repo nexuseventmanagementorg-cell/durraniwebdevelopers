@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ADDON_CATEGORY_LABELS } from "@/lib/constants";
+import { BUSINESS_CATEGORIES, getBusinessAddonCatalog } from "@/lib/business-addon-catalog";
 import { DataStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const config = DataStore.getPricingConfig();
+    const businessCatalog = getBusinessAddonCatalog(config.addons);
     const addons = Object.values(config.addons)
       .filter((addon) => addon.enabled)
       .map((addon) => ({
@@ -18,10 +20,21 @@ export async function GET() {
         billingPeriod: addon.billingPeriod || "one_time",
         description: addon.description,
         enabled: addon.enabled,
+        businessCategories: addon.businessCategories || [],
+        businessTypes: addon.businessTypes || [],
+        pricingLevel: addon.pricingLevel,
+        origin: addon.origin || "existing",
+        status: addon.status || (addon.enabled ? "active" : "inactive"),
       }));
 
     return NextResponse.json(
-      { success: true, addons, pricingConfig: config },
+      {
+        success: true,
+        addons,
+        businessCatalog: businessCatalog.filter((addon) => addon.enabled),
+        businessCategories: BUSINESS_CATEGORIES,
+        pricingConfig: config,
+      },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (error) {

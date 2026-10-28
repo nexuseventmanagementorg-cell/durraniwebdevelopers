@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 import { createHmac } from "crypto";
+import { PassThrough } from "stream";
 import {
   calculateBudget,
   DEFAULT_PRICING_CONFIG,
@@ -27,6 +28,7 @@ import { NextRequest } from "next/server";
 import { GET as getPublicTracking } from "../src/app/api/public/inquiries/track/route";
 import { GET as getPublicAddons } from "../src/app/api/public/addons/route";
 import { POST as postAdminPortfolio } from "../src/app/api/admin/portfolio/route";
+import { POST as postAdminPricing } from "../src/app/api/admin/pricing/route";
 import { PATCH as patchAdminInquiry } from "../src/app/api/admin/inquiries/route";
 import { PATCH as patchAdminProject } from "../src/app/api/admin/projects/route";
 import { POST as postProjectTaskExecution } from "../src/app/api/admin/projects/task-executions/route";
@@ -60,11 +62,18 @@ import {
   applyPortfolioTemplateStartingPrice,
   detectWebsiteFeatures,
   estimateWebsite,
+  isSupportedPublicDocument,
+  readBoundedHtmlBody,
   ScannedPage,
 } from "../src/lib/website-estimator";
 import {
+  calculateSelectableWebsiteEstimate,
   calculateReviewedWebsiteEstimate,
-  getDefaultNewBuildAddonIds,
+  getDetectedAddonCandidateIds,
+  getPricingOptionIdsForScope,
+  getRequirementAddonIds,
+  isManualQuoteScope,
+  type MarketplaceRequirementAnswers,
 } from "../src/lib/website-estimate-review";
 import {
   applyTemplatePricingToCalculator,
@@ -152,6 +161,11 @@ import {
   validatePaymentSettings,
 } from "../src/lib/payment-server";
 import { DEFAULT_PAYMENT_SETTINGS } from "../src/lib/payment-types";
+import {
+  BUSINESS_ADDON_DEFINITIONS,
+  BUSINESS_CATEGORIES,
+  getBusinessAddonCatalog,
+} from "../src/lib/business-addon-catalog";
 
 function approveSyntheticTestScope(
   scope: Omit<SyntheticTaskScope, "approval">,
@@ -443,6 +457,74 @@ test("Public add-on endpoint shares the current customer-safe calculator pricing
   assert.equal(body.pricingConfig.baseWithoutAdmin, DataStore.getPricingConfig().baseWithoutAdmin);
   assert.equal(body.pricingConfig.addons.order_tracking.price, DataStore.getPricingConfig().addons.order_tracking.price);
   assert.equal(body.addons.some((addon: { id: string }) => addon.id === "prompt_to_website_draft"), false);
+  assert.equal(body.businessCategories.length, 10);
+  assert.equal(body.businessCatalog.length, 150);
+});
+
+test("Business add-on catalog preserves shared records and provides priced levels for all categories", () => {
+  assert.equal(BUSINESS_CATEGORIES.length, 10);
+  assert.equal(BUSINESS_ADDON_DEFINITIONS.length, 150);
+  assert.equal(new Set(BUSINESS_ADDON_DEFINITIONS.map((entry) => entry.id)).size, 150);
+  assert.equal(BUSINESS_ADDON_DEFINITIONS.filter((entry) => entry.existingAddonId).length, 7);
+  assert.equal(BUSINESS_ADDON_DEFINITIONS.filter((entry) => !entry.existingAddonId).length, 143);
+  assert.ok(BUSINESS_ADDON_DEFINITIONS.some((entry) => entry.existingAddonId === "document_generation"));
+
+  for (const category of BUSINESS_CATEGORIES) {
+    const categoryEntries = BUSINESS_ADDON_DEFINITIONS.filter((entry) => entry.categoryId === category.id);
+    assert.equal(categoryEntries.length, 15, `${category.label} should list 15 requested add-ons`);
+    for (const level of ["basic", "expanded", "complex"] as const) {
+      const entries = categoryEntries.filter((entry) => entry.level === level);
+      assert.equal(entries.length, 5, `${category.label} should have five ${level} add-ons`);
+      for (const entry of entries.filter((item) => !item.existingAddonId)) {
+        assert.ok(Number.isInteger(entry.price), `${entry.label} needs a numeric PKR price`);
+        if (level === "basic") assert.ok(entry.price! >= 10000 && entry.price! <= 20000);
+        if (level === "expanded") assert.ok(entry.price! >= 25000 && entry.price! <= 60000);
+        if (level === "complex") assert.ok(entry.price! >= 70000);
+      }
+    }
+  }
+
+  const existingDefaults = Object.values(DEFAULT_PRICING_CONFIG.addons)
+    .filter((addon) => addon.category !== "businesscatalog");
+  assert.equal(existingDefaults.length, 134, "Existing shared catalog records remain intact");
+  const merged = mergePricingConfigWithDefaults(DEFAULT_PRICING_CONFIG);
+  for (const addon of existingDefaults) {
+    assert.equal(merged.addons[addon.id].price, addon.price, `${addon.id} price must not change`);
+  }
+  assert.equal(getBusinessAddonCatalog(merged.addons).length, 150);
+});
+
+test("Repeated business add-on selections are charged once", () => {
+  const addon = DEFAULT_PRICING_CONFIG.addons.back_in_stock_notifications;
+  const calculation = calculateBudget(
+    "none",
+    [addon.id, addon.id],
+    DEFAULT_PRICING_CONFIG,
+  );
+  assert.equal(calculation.addonsTotal, addon.price);
+  assert.equal(calculation.selectedAddonDetails.filter((item) => item.id === addon.id).length, 1);
+});
+
+test("Admin pricing API rejects new business add-ons outside their pricing band", async () => {
+  const previousSecret = process.env.SESSION_SECRET;
+  process.env.SESSION_SECRET = "test-session-secret-with-at-least-32-bytes";
+  try {
+    const config = JSON.parse(JSON.stringify(DataStore.getPricingConfig())) as PricingRuleConfig;
+    config.addons.product_badges_labels.price = 9000;
+    const token = signToken({ email: "admin@example.test", timestamp: Date.now() });
+    const response = await postAdminPricing(new NextRequest("http://localhost/api/admin/pricing", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: `dwd_admin_session=${token}`,
+      },
+      body: JSON.stringify(config),
+    }));
+    assert.equal(response.status, 400);
+  } finally {
+    if (previousSecret === undefined) delete process.env.SESSION_SECRET;
+    else process.env.SESSION_SECRET = previousSecret;
+  }
 });
 
 test("Admin portfolio API rejects invalid included features and prices", async () => {
@@ -2526,6 +2608,107 @@ function createWebsiteFixtureLoader(
   };
 }
 
+test("URL scanner keeps bounded partial HTML from large live-site responses", async () => {
+  const response = new PassThrough();
+  const bodyPromise = readBoundedHtmlBody(response, 17);
+  response.write("<title>Large site</title>");
+  response.end();
+
+  const result = await bodyPromise;
+  assert.equal(result.body, "<title>Large site");
+  assert.equal(result.truncated, true);
+});
+
+test("URL scanner verifies HTML when a public server omits its content type", () => {
+  assert.equal(isSupportedPublicDocument("", "<!doctype html><html><title>Store</title></html>"), true);
+  assert.equal(isSupportedPublicDocument("text/plain", "<html><title>Store</title></html>"), true);
+  assert.equal(isSupportedPublicDocument("application/json", "<html><title>Store</title></html>"), false);
+  assert.equal(isSupportedPublicDocument("", '{"error":"not html"}'), false);
+  assert.equal(isSupportedPublicDocument("", "<urlset></urlset>", true), true);
+});
+
+test("URL scanner does not mistake a book catalog for an appointment booking feature", () => {
+  const books = detectWebsiteFeatures("Shop books and product catalogs with cart checkout.");
+  const appointments = detectWebsiteFeatures("Book an appointment or schedule a visit.");
+
+  assert.equal(books.features.some((feature) => feature.title === "Booking ya appointment"), false);
+  assert.equal(appointments.features.some((feature) => feature.title === "Booking ya appointment"), true);
+});
+
+test("URL estimator returns findings and a scan warning for capped large pages", async () => {
+  const estimate = await estimateWebsite(
+    "https://large-store.example/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    async (input) => ({
+      url: input,
+      html: `<title>Large Store</title><meta name="description" content="Online shopping for products"><a href="/gp/cart/view.html">Cart</a>`,
+      truncated: true,
+    })
+  );
+
+  assert.equal(estimate.pricingPackage, "ecommerce_business");
+  assert.equal(estimate.basePrice, ECOMMERCE_PACKAGES.ecommerce_business.basePrice);
+  assert.ok(estimate.warnings.some((warning) => warning.includes("capped at 5 MB")));
+});
+
+test("URL estimator lists public pages, style clues, and marketplace signals with catalog pricing", async () => {
+  const requestedUrls: string[] = [];
+  const estimate = await estimateWebsite(
+    "https://market.example/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": `<html><head><title>Marketplace Home</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#123456"><link rel="stylesheet" href="/theme.css"><style>body{font-family:Inter,sans-serif;color:#112233}@media(max-width:600px){.main{display:block}}</style></head><body><h1>Shop products</h1><a href="/products?sort=popular">Products</a><a href="/products?sort=new">More products</a><a href="/about">About</a><a href="/admin/login">Admin</a><a href="/seller">Become a seller</a><a href="/cart">Cart</a><a href="https://seller.market.example">Seller portal</a><a href="https://www.market.example">Main website</a><p>Custom domains for each vendor.</p></body></html>`,
+      "/sitemap.xml": "",
+      "/products": `<title>Product Catalog</title><h1>Products</h1>`,
+      "/about": `<title>About our marketplace</title><p>Marketplace platform</p>`,
+      "/seller": `<title>Become a seller</title><p>Seller dashboard and marketplace registration</p>`,
+    }, requestedUrls),
+    undefined,
+    async (url, origin) => {
+      assert.equal(origin, "https://market.example");
+      assert.equal(url, "https://market.example/theme.css");
+      return ".brand{color:#abcdef;font-family:Example Sans}";
+    }
+  );
+
+  assert.equal(estimate.pagesScanned, 4);
+  assert.equal(estimate.pageInventory.length, estimate.pagesScanned);
+  assert.equal(new Set(estimate.pageInventory.map((page) => page.url)).size, estimate.pagesScanned);
+  assert.ok(estimate.pageInventory.some((page) => page.title === "Product Catalog" && page.type === "Product/category listing"));
+  assert.equal(estimate.scannedPages.some((url) => new URL(url).pathname === "/admin/login"), false);
+  assert.equal(requestedUrls.filter((url) => new URL(url).pathname === "/products").length, 1);
+  assert.ok(estimate.designSignals.some((signal) => signal.includes("#123456")));
+  assert.ok(estimate.designSignals.some((signal) => signal.includes("#abcdef")));
+  assert.ok(estimate.designSignals.some((signal) => signal.includes("Inter")));
+  assert.ok(estimate.designSignals.some((signal) => signal.includes("Responsive layout signal")));
+  assert.ok(estimate.architectureSignals.some((signal) => signal.includes("seller/vendor enrollment")));
+  assert.ok(estimate.architectureSignals.some((signal) => signal.includes("multi-domain storefront wording")));
+  assert.ok(estimate.architectureSignals.some((signal) => signal.includes("related subdomains: seller.market.example")));
+  assert.doesNotMatch(estimate.architectureSignals.join(" "), /www\.market\.example/);
+  assert.ok(estimate.architectureSignals.some((signal) => signal.includes("admin/staff route")));
+  assert.equal(estimate.pricingPackage, "ecommerce_advanced");
+  assert.ok(estimate.features.some((feature) => feature.addonId === "vendor_management"));
+  assert.ok(estimate.addons.some((addon) => addon.id === "vendor_management"));
+});
+
+const EMPTY_MARKETPLACE_REQUIREMENTS_FOR_TEST: MarketplaceRequirementAnswers = {
+  productCount: "not_assessed",
+  productVariants: "not_assessed",
+  sellerPortal: "not_assessed",
+  inventoryWarehouses: "not_assessed",
+  searchRecommendations: "not_assessed",
+  checkoutPaymentsRefunds: "not_assessed",
+  shippingFulfillment: "not_assessed",
+  customerAccountsLoyalty: "not_assessed",
+  adminSecurityAudit: "not_assessed",
+  trafficAvailability: "not_assessed",
+  mobileIntegrations: "not_assessed",
+};
+
 test("URL estimator treats restaurant menu and WhatsApp as public signals, not a store or backend", async () => {
   const requestedUrls: string[] = [];
   const estimate = await estimateWebsite(
@@ -2545,7 +2728,8 @@ test("URL estimator treats restaurant menu and WhatsApp as public signals, not a
   assert.equal(estimate.adminPanel, false);
   assert.equal(estimate.features.some((feature) => feature.addonId === "personal_domain"), false);
   assert.equal(estimate.addons.length, 0);
-  assert.equal(estimate.estimatedTotal, estimate.basePrice);
+  assert.equal(estimate.basePrice, 0);
+  assert.equal(estimate.estimatedTotal, 0);
   assert.ok(estimate.features.some((feature) => feature.title === "WhatsApp click-to-chat signal"));
   assert.equal(estimate.addonCatalog.some((addon) => addon.id === "supabase_db"), true);
   assert.equal(requestedUrls.some((url) => new URL(url).hostname === "other.example"), false);
@@ -2617,14 +2801,14 @@ test("Website estimator prices a confirmed Package 2 admin panel above Package 1
     })
   );
 
-  assert.equal(estimate.basePrice, 35000);
-  assert.equal(estimate.basePriceWithAdmin, 45000);
+  assert.equal(estimate.basePrice, 0);
+  assert.equal(estimate.basePriceWithAdmin, 0);
 
-  const withoutAdmin = calculateReviewedWebsiteEstimate(estimate, "new_build", [], {}, []);
+  const withoutAdmin = calculateReviewedWebsiteEstimate(estimate, "basic_informational", [], {}, [], "package_1");
   assert.equal(withoutAdmin.adminPanelType, "none");
   assert.equal(withoutAdmin.calculation.estimatedTotal, 35000);
 
-  const withAdmin = calculateReviewedWebsiteEstimate(estimate, "new_build", [], {}, [], "package_2");
+  const withAdmin = calculateReviewedWebsiteEstimate(estimate, "basic_informational", [], {}, [], "package_2");
   assert.equal(withAdmin.adminPanelType, "client_admin");
   assert.equal(withAdmin.calculation.basePrice, 45000);
   assert.equal(withAdmin.calculation.adminFee, 10000);
@@ -2632,35 +2816,262 @@ test("Website estimator prices a confirmed Package 2 admin panel above Package 1
   assert.equal(withAdmin.basePackage, "Package 2: Client Admin Panel");
 });
 
-test("URL estimator adds a PKR 10,000 personal-domain option for custom domains", async () => {
+test("URL estimator does not charge domain setup just because the scanned site has a custom domain", async () => {
   const estimate = await estimateWebsite(
-    "https://boutique.com/",
+    "https://amazon.com/",
     "PKR",
     { PKR: 1 },
     undefined,
     createWebsiteFixtureLoader({
-      "/": `<title>Boutique</title><p>Welcome to our shop.</p>`,
+      "/": `<title>Amazon.com</title><p>Shop products and manage your account.</p>`,
       "/sitemap.xml": `<urlset></urlset>`,
     })
   );
 
-  const domainFeature = estimate.features.find((feature) => feature.addonId === "personal_domain");
-  assert.ok(domainFeature);
-  assert.equal(domainFeature.evidenceStatus, "public_signal");
+  assert.equal(estimate.features.some((feature) => feature.addonId === "personal_domain"), false);
   assert.equal(
     estimate.addonCatalog.find((addon) => addon.id === "personal_domain")?.price,
     10000
   );
-  assert.deepEqual(getDefaultNewBuildAddonIds(estimate), ["personal_domain"]);
+  assert.deepEqual(getDetectedAddonCandidateIds(estimate), []);
 
   const reviewed = calculateReviewedWebsiteEstimate(
     estimate,
-    "new_build",
-    getDefaultNewBuildAddonIds(estimate),
+    "basic_informational",
+    getDetectedAddonCandidateIds(estimate),
+    {},
+    [],
+    "package_1"
+  );
+  assert.equal(reviewed.calculation.estimatedTotal, 35000);
+});
+
+test("URL estimator does not infer a starter price or enterprise value from an incomplete public scan", async () => {
+  const fixture = createWebsiteFixtureLoader({
+    "/": `<title>Amazon.com</title><p>Welcome to our website.</p>`,
+    "/sitemap.xml": `<urlset></urlset>`,
+  });
+  const estimate = await estimateWebsite("https://amazon.com/", "PKR", { PKR: 1 }, undefined, fixture);
+  const starterBuild = calculateReviewedWebsiteEstimate(
+    estimate,
+    "basic_informational",
+    getDetectedAddonCandidateIds(estimate),
+    {},
+    [],
+    "package_1"
+  );
+  assert.equal(starterBuild.calculation.estimatedTotal, 35000);
+  assert.equal(starterBuild.calculation.selectedAddonDetails.length, 0);
+  assert.doesNotMatch(starterBuild.basePackage, /enterprise|marketplace/i);
+});
+
+test("Basic informational scope uses the existing starter price only after the user selects it", async () => {
+  const estimate = await estimateWebsite(
+    "https://info.example/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": "<title>Community</title><p>Our community and contact information.</p>",
+      "/sitemap.xml": "",
+    })
+  );
+  const result = calculateReviewedWebsiteEstimate(
+    estimate,
+    "basic_informational",
+    [],
+    {},
+    [],
+    "package_1"
+  );
+
+  assert.equal(estimate.estimatedTotal, 0);
+  assert.equal(estimate.suggestedPricingOptionId, "");
+  assert.equal(result.calculation.estimatedTotal, 35000);
+  assert.deepEqual(getPricingOptionIdsForScope("basic_informational"), ["package_1", "package_2"]);
+});
+
+test("Standard e-commerce scope uses the published business store package and existing add-on prices", async () => {
+  const estimate = await estimateWebsite(
+    "https://shop.example/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": "<title>Shop</title><p>Welcome to our store.</p>",
+      "/sitemap.xml": "",
+    })
+  );
+  const result = calculateReviewedWebsiteEstimate(
+    estimate,
+    "standard_ecommerce",
+    ["product_reviews"],
+    {},
+    [],
+    "ecommerce_business"
+  );
+
+  assert.deepEqual(getPricingOptionIdsForScope("standard_ecommerce"), [
+    "ecommerce_starter",
+    "ecommerce_business",
+  ]);
+  assert.equal(result.calculation.basePrice, ECOMMERCE_PACKAGES.ecommerce_business.basePrice);
+  assert.equal(
+    result.calculation.estimatedTotal,
+    result.calculation.basePrice +
+      result.calculation.addonsTotal +
+      result.calculation.contingencyAmount
+  );
+});
+
+test("Multi-vendor scope prices only mapped catalog features and recommends a custom quote", async () => {
+  const estimate = await estimateWebsite(
+    "https://marketplace.example/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": "<title>Marketplace</title><p>Marketplace project information.</p>",
+      "/sitemap.xml": "",
+    })
+  );
+  const answers: MarketplaceRequirementAnswers = {
+    productCount: "over_10000",
+    productVariants: "yes",
+    sellerPortal: "yes",
+    inventoryWarehouses: "yes",
+    searchRecommendations: "not_assessed",
+    checkoutPaymentsRefunds: "not_assessed",
+    shippingFulfillment: "not_assessed",
+    customerAccountsLoyalty: "not_assessed",
+    adminSecurityAudit: "not_assessed",
+    trafficAvailability: "over_100000",
+    mobileIntegrations: "not_assessed",
+  };
+  const selectedIds = getRequirementAddonIds(answers);
+  const result = calculateReviewedWebsiteEstimate(
+    estimate,
+    "multi_vendor_marketplace",
+    selectedIds,
     {},
     []
   );
-  assert.equal(reviewed.calculation.estimatedTotal, 45000);
+
+  assert.equal(isManualQuoteScope("multi_vendor_marketplace"), true);
+  assert.deepEqual(selectedIds, [
+    "advanced_product_management",
+    "vendor_management",
+    "commission_payouts",
+    "inventory_management",
+    "multi_warehouse",
+  ]);
+  assert.equal(result.calculation.basePrice, 0);
+  assert.equal(result.requiresCustomQuote, true);
+  assert.equal(
+    result.pricedAddonsOneTimeTotal,
+    selectedIds.reduce(
+      (total, id) => total + estimate.addonCatalog.find((addon) => addon.id === id)!.price,
+      0
+    )
+  );
+});
+
+test("Enterprise marketplace scope never invents a numeric base price", async () => {
+  const estimate = await estimateWebsite(
+    "https://enterprise.example/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": "<title>Enterprise</title><p>Enterprise platform reference.</p>",
+      "/sitemap.xml": "",
+    })
+  );
+  const result = calculateReviewedWebsiteEstimate(
+    estimate,
+    "enterprise_marketplace",
+    getRequirementAddonIds({
+      ...EMPTY_MARKETPLACE_REQUIREMENTS_FOR_TEST,
+      sellerPortal: "yes",
+      trafficAvailability: "over_100000",
+    }),
+    {},
+    []
+  );
+
+  assert.equal(isManualQuoteScope("enterprise_marketplace"), true);
+  assert.equal(result.basePackage, "Custom quotation required");
+  assert.equal(result.calculation.basePrice, 0);
+  assert.equal(result.requiresCustomQuote, true);
+  assert.ok(result.calculation.estimatedTotal > 0);
+});
+
+test("An incomplete public scan leaves project scope and estimated cost unselected", async () => {
+  const estimate = await estimateWebsite(
+    "https://limited.example/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": "<title>Products</title><p>Product catalog with account portal.</p>",
+      "/sitemap.xml": "",
+    })
+  );
+
+  assert.equal(estimate.pagesScanned, 1);
+  assert.equal(estimate.basePrice, 0);
+  assert.equal(estimate.estimatedTotal, 0);
+  assert.equal(estimate.suggestedPricingOptionId, "");
+  assert.ok(estimate.features.every((feature) => feature.evidenceStatus === "public_signal"));
+});
+
+test("A sufficiently scanned informational site uses the existing starter price", async () => {
+  const estimate = await estimateWebsite(
+    "https://informational.example/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": `<title>Company Home</title><p>Welcome to our company.</p><a href="/about">About</a><a href="/contact">Contact</a>`,
+      "/sitemap.xml": "",
+      "/about": "<title>About our company</title><p>Our story and team.</p>",
+      "/contact": "<title>Contact</title><p>Contact our team.</p>",
+    })
+  );
+
+  assert.equal(estimate.pagesScanned, 3);
+  assert.equal(estimate.suggestedPricingOptionId, "package_1");
+  assert.equal(estimate.basePackage, "Package 1: Durrani-Managed");
+  assert.equal(estimate.basePrice, 35000);
+  assert.ok(estimate.assumptions.some((assumption) => assumption.includes("at least three public pages")));
+});
+
+test("Existing-site enhancement scope charges only owner-selected add-ons", async () => {
+  const estimate = await estimateWebsite(
+    "https://existing.example/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": "<title>Existing site</title><p>Company information.</p>",
+      "/sitemap.xml": "",
+    })
+  );
+  const result = calculateReviewedWebsiteEstimate(
+    estimate,
+    "existing_site",
+    [],
+    {},
+    ["api_integration", "maintenance_updates"]
+  );
+
+  assert.equal(result.calculation.basePrice, 0);
+  assert.deepEqual(result.chargeableAddonIds.sort(), ["api_integration", "maintenance_updates"].sort());
+  assert.equal(
+    result.calculation.estimatedTotal,
+    estimate.addonCatalog.find((addon) => addon.id === "api_integration")?.price
+  );
+  assert.equal(result.calculation.monthlyAddonTotal, 15000);
 });
 
 test("URL estimator does not treat undetected features as proof of absence", async () => {
@@ -2699,6 +3110,26 @@ test("URL estimator does not select e-commerce from a catalog without cart and c
   assert.equal(estimate.addons.length, 0);
 });
 
+test("URL estimator recognizes storefronts from metadata and accessible cart navigation", async () => {
+  const estimate = await estimateWebsite(
+    "https://storefront.example/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": `<html><head><title>Storefront</title><meta name="description" content="Online shopping for products and household essentials"></head><body><div id="nav-search"><input type="search"></div><a href="/gp/cart/view.html" aria-label="Cart">Cart</a><a href="/categories">Shop by category</a></body></html>`,
+      "/sitemap.xml": "",
+    })
+  );
+
+  assert.equal(estimate.pricingPackage, "ecommerce_business");
+  assert.equal(estimate.basePrice, ECOMMERCE_PACKAGES.ecommerce_business.basePrice);
+  assert.equal(estimate.suggestedPricingOptionId, "ecommerce_business");
+  assert.ok(estimate.features.some((feature) => feature.title === "Product ya menu catalog"));
+  assert.ok(estimate.features.some((feature) => feature.title === "Cart interaction signal"));
+  assert.ok(estimate.addons.some((addon) => addon.id === "search_filter_sort"));
+});
+
 test("URL estimator recommends E-Commerce and excludes package-included features from add-ons", async () => {
   const estimate = await estimateWebsite(
     "https://shop.example/",
@@ -2713,6 +3144,7 @@ test("URL estimator recommends E-Commerce and excludes package-included features
 
   assert.equal(estimate.pricingPackage, "ecommerce_business");
   assert.equal(estimate.basePrice, ECOMMERCE_PACKAGES.ecommerce_business.basePrice);
+  assert.equal(estimate.suggestedPricingOptionId, "ecommerce_business");
   assert.equal(
     estimate.pricingOptions.find((option) => option.id === "ecommerce_business")?.basePrice,
     150000
@@ -2723,13 +3155,68 @@ test("URL estimator recommends E-Commerce and excludes package-included features
 
   const review = calculateReviewedWebsiteEstimate(
     estimate,
-    "new_build",
+    "standard_ecommerce",
     ["supabase_db", "payment_gateway", "admin_dashboard"],
     {},
-    []
+    [],
+    "ecommerce_business"
   );
   assert.deepEqual(review.chargeableAddonIds, []);
-  assert.equal(review.calculation.estimatedTotal, estimate.basePrice);
+  assert.equal(review.calculation.estimatedTotal, ECOMMERCE_PACKAGES.ecommerce_business.basePrice);
+});
+
+test("URL estimator shows the published price range for a detected advanced online store", async () => {
+  const estimate = await estimateWebsite(
+    "https://advanced-shop.example/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": `<title>Advanced Shop</title><p>Products, add to cart, checkout, sales reports, and advanced inventory.</p>`,
+      "/sitemap.xml": "",
+    })
+  );
+
+  assert.equal(estimate.pricingPackage, "ecommerce_advanced");
+  assert.equal(estimate.basePrice, ECOMMERCE_PACKAGES.ecommerce_advanced.basePrice);
+  assert.equal(estimate.estimatedTotal, ECOMMERCE_PACKAGES.ecommerce_advanced.basePrice);
+  assert.equal(estimate.estimatedMaximumTotal, ECOMMERCE_PACKAGES.ecommerce_advanced.maximumPrice);
+});
+
+test("URL estimator add-on selections update totals without double-charging included package features", async () => {
+  const estimate = await estimateWebsite(
+    "https://advanced-shop.example/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": `<title>Advanced Shop</title><p>Products, add to cart, checkout, sales reports, and advanced inventory.</p>`,
+      "/sitemap.xml": "",
+    })
+  );
+  const detectedAddonIds = estimate.addons.map((addon) => addon.id);
+  const baseline = calculateSelectableWebsiteEstimate(estimate, detectedAddonIds);
+  const selected = calculateSelectableWebsiteEstimate(
+    estimate,
+    [...detectedAddonIds, "product_reviews", "payment_gateway"]
+  );
+  const productReviewsPrice = estimate.addonCatalog.find(
+    (addon) => addon.id === "product_reviews"
+  )?.price;
+
+  assert.equal(baseline.calculation.estimatedTotal, estimate.estimatedTotal);
+  assert.equal(baseline.estimatedMaximumTotal, estimate.estimatedMaximumTotal);
+  assert.ok(productReviewsPrice);
+  assert.equal(
+    selected.calculation.estimatedTotal,
+    estimate.estimatedTotal + productReviewsPrice
+  );
+  assert.equal(
+    selected.estimatedMaximumTotal,
+    (estimate.estimatedMaximumTotal || 0) + productReviewsPrice
+  );
+  assert.equal(selected.chargeableAddonIds.includes("payment_gateway"), false);
+  assert.equal(selected.calculation.selectedAddonDetails.some((addon) => addon.id === "payment_gateway"), false);
 });
 
 test("Restaurant cart with WhatsApp ordering selects E-Commerce and prices its QR menu add-on", async () => {
@@ -2746,17 +3233,18 @@ test("Restaurant cart with WhatsApp ordering selects E-Commerce and prices its Q
 
   assert.equal(estimate.pricingPackage, "ecommerce_business");
   assert.equal(estimate.suggestedPricingOptionId, "ecommerce_business");
-  assert.equal(estimate.basePrice, 150000);
+  assert.equal(estimate.basePrice, ECOMMERCE_PACKAGES.ecommerce_business.basePrice);
   assert.deepEqual(estimate.addons.map((addon) => addon.id), ["restaurant_qr_menu"]);
   assert.equal(estimate.addons[0]?.price, 10000);
   assert.equal(estimate.estimatedTotal, 160000);
 
   const reviewed = calculateReviewedWebsiteEstimate(
     estimate,
-    "new_build",
-    getDefaultNewBuildAddonIds(estimate),
+    "standard_ecommerce",
+    getDetectedAddonCandidateIds(estimate),
     {},
-    []
+    [],
+    "ecommerce_business"
   );
   assert.deepEqual(reviewed.chargeableAddonIds, ["restaurant_qr_menu"]);
   assert.equal(reviewed.calculation.estimatedTotal, 160000);
@@ -2808,7 +3296,7 @@ test("Known template URL estimates stay anchored to the published starting price
         ["daily_sales_calendar", 10000],
       ]
     );
-    assert.deepEqual(getDefaultNewBuildAddonIds(estimate), [
+    assert.deepEqual(getDetectedAddonCandidateIds(estimate), [
       "restaurant_qr_menu",
       "order_tracking",
       "kitchen_order_tickets",
@@ -2891,7 +3379,7 @@ test("Student Burgers template estimator uses its Business package and fixed fea
   assert.ok(normalized.assumptions.some((assumption) =>
     assumption.includes("owner-confirmed from its project record")
   ));
-  assert.deepEqual(getDefaultNewBuildAddonIds(normalized), [
+  assert.deepEqual(getDetectedAddonCandidateIds(normalized), [
     "restaurant_qr_menu",
     "order_tracking",
     "daily_sales_records",
@@ -2983,8 +3471,8 @@ test("URL estimator offers every published package and uses configured rates and
     configuredPricing
   );
 
-  assert.equal(estimate.basePrice, 35000);
-  assert.equal(estimate.basePriceWithAdmin, 45000);
+  assert.equal(estimate.basePrice, 0);
+  assert.equal(estimate.basePriceWithAdmin, 0);
   assert.deepEqual(
     estimate.pricingOptions.map((option) => option.id),
     [
@@ -3012,7 +3500,7 @@ test("URL estimator offers every published package and uses configured rates and
 
   const selectedStorePlan = calculateReviewedWebsiteEstimate(
     estimate,
-    "new_build",
+    "standard_ecommerce",
     ["personal_domain", "payment_gateway", "admin_dashboard"],
     {},
     [],
@@ -3023,7 +3511,7 @@ test("URL estimator offers every published package and uses configured rates and
   assert.equal(selectedStorePlan.calculation.estimatedTotal, 160000);
 });
 
-test("URL estimator includes detected add-on prices in the estimate and breakdown", async () => {
+test("URL estimator prices detected catalog features without applying an informational starter package", async () => {
   const estimate = await estimateWebsite(
     "https://studio.com/",
     "PKR",
@@ -3034,33 +3522,44 @@ test("URL estimator includes detected add-on prices in the estimate and breakdow
       "/sitemap.xml": `<urlset></urlset>`,
     })
   );
-  const selectedAddonIds = getDefaultNewBuildAddonIds(estimate);
+  const selectedAddonIds = getDetectedAddonCandidateIds(estimate);
 
   assert.deepEqual(selectedAddonIds.slice().sort(), [
     "payment_gateway",
     "booking_calendar",
     "api_integration",
-    "personal_domain",
   ].sort());
   assert.deepEqual(
     estimate.addons.map((addon) => addon.id).sort(),
     selectedAddonIds.slice().sort()
   );
-  assert.equal(estimate.basePrice, 35000);
-  assert.equal(estimate.estimatedTotal, 75000);
+  assert.equal(estimate.basePrice, 0);
+  assert.equal(estimate.estimatedTotal, 30000);
   assert.ok(estimate.features
     .filter((feature) => feature.addonId)
     .every((feature) => estimate.addonCatalog.some((addon) => addon.id === feature.addonId)));
 
+  const reviewedWithoutSelectedAddons = calculateReviewedWebsiteEstimate(
+    estimate,
+    "basic_informational",
+    [],
+    {},
+    [],
+    "package_1"
+  );
+  assert.equal(reviewedWithoutSelectedAddons.calculation.estimatedTotal, 35000);
+  assert.equal(reviewedWithoutSelectedAddons.calculation.selectedAddonDetails.length, 0);
+
   const reviewed = calculateReviewedWebsiteEstimate(
     estimate,
-    "new_build",
+    "basic_informational",
     selectedAddonIds,
     {},
-    []
+    [],
+    "package_1"
   );
-  assert.equal(reviewed.calculation.estimatedTotal, 75000);
-  assert.equal(reviewed.calculation.selectedAddonDetails.length, 4);
+  assert.equal(reviewed.calculation.estimatedTotal, 65000);
+  assert.equal(reviewed.calculation.selectedAddonDetails.length, 3);
 });
 
 test("Public admin/login stays an unverified signal with a provisional add-on price", async () => {
@@ -3081,7 +3580,9 @@ test("Public admin/login stays an unverified signal with a provisional add-on pr
   assert.ok(estimate.addons.some((addon) => addon.id === "admin_dashboard"));
   assert.equal(
     estimate.estimatedTotal,
-    estimate.basePrice + estimate.addons.reduce((total, addon) => total + addon.price, 0)
+    estimate.addons
+      .filter((addon) => addon.billingPeriod !== "monthly")
+      .reduce((total, addon) => total + addon.price, 0)
   );
   assert.equal(estimate.features.some((feature) => feature.title === "Admin/staff route or reference"), true);
   assert.equal(estimate.features.some((feature) => feature.title === "User Registration & Login"), false);
@@ -3104,6 +3605,33 @@ test("QR imagery alone is not classified as table ordering", async () => {
 
   assert.equal(estimate.features.some((feature) => feature.title === "QR code reference"), true);
   assert.equal(estimate.features.some((feature) => feature.title === "Table QR ordering signal"), false);
+});
+
+test("Retail product copy does not price restaurant-only add-ons as storefront features", async () => {
+  const estimate = await estimateWebsite(
+    "https://amazon.com/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": `<title>Amazon.com</title><h1>Shop products</h1><a href="/dp/123">Kitchen table accessories</a><a href="/gp/cart/view.html">Cart</a>`,
+      "/sitemap.xml": "",
+      "/dp/123": `<title>Kitchen table accessories</title><button>Add to cart</button><p>Product details mention QR code labels, KOT-compatible equipment, allergy information, and a kitchen display system for a commercial kitchen.</p>`,
+    })
+  );
+  const restaurantOnlyAddonIds = [
+    "allergen_information",
+    "kitchen_display_system",
+    "kitchen_order_tickets",
+    "menu_filters",
+    "restaurant_qr_menu",
+    "table_reservations",
+  ];
+
+  assert.equal(estimate.pricingPackage, "ecommerce_business");
+  assert.equal(estimate.basePrice, ECOMMERCE_PACKAGES.ecommerce_business.basePrice);
+  assert.equal(estimate.features.some((feature) => restaurantOnlyAddonIds.includes(feature.addonId || "")), false);
+  assert.equal(estimate.addons.some((addon) => restaurantOnlyAddonIds.includes(addon.id)), false);
 });
 
 test("Existing-site scope excludes existing and unknown features and leaves repairs unpriced", async () => {
@@ -3455,6 +3983,26 @@ test("URL scans recognize behavior signals across business, SaaS, security, and 
     "maintenance_updates",
   ]) {
     assert.ok(detected.addonIds.includes(addonId), `expected ${addonId} from scan signals`);
+  }
+});
+
+test("URL scans detect priced new business add-ons and identify their business category", async () => {
+  const html = "<html><head><title>Salon & Spa</title></head><body>" +
+    "<h1>Treatment Progress Tracking</h1><p>Class Timetable and Membership Passes</p></body></html>";
+  const estimate = await estimateWebsite(
+    "https://salon.example",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    async (url) => ({ url, html: url.includes("sitemap") ? "" : html }),
+  );
+  assert.equal(estimate.suggestedBusinessCategoryId, "health-wellness-beauty");
+  for (const id of ["treatment_progress_tracking", "class_timetable", "membership_passes"]) {
+    assert.ok(estimate.features.some((feature) => feature.addonId === id), `expected detected ${id}`);
+    assert.ok(estimate.addons.some((addon) => addon.id === id), `expected priced ${id}`);
+    const catalogEntry = estimate.addonCatalog.find((addon) => addon.id === id);
+    assert.ok(catalogEntry?.pricingLevel);
+    assert.ok(catalogEntry?.businessCategories?.includes("health-wellness-beauty"));
   }
 });
 

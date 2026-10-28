@@ -1,4 +1,5 @@
 import { AddonOption, PricingRuleConfig, CalculationBreakdown } from "./types";
+import { BUSINESS_ADDON_DEFINITIONS, buildBusinessCatalogAddons } from "./business-addon-catalog";
 
 export const BUSINESS_INFO = {
   name: "Durrani Web Developers",
@@ -61,6 +62,7 @@ function defineAddon(
     category === "ecommerce" ||
       category === "saas" ||
       category === "propertytech" ||
+      category === "businesscatalog" ||
       id === "kitchen_order_tickets"
       ? price
       : FEATURE_ADDON_PRICE_PKR,
@@ -225,6 +227,7 @@ export const ADDON_CATEGORY_LABELS: Record<AddonOption["category"], string> = {
   security: "Security & Reliability",
   industry: "Industry-Specific",
   propertytech: "Real Estate & PropertyTech",
+  businesscatalog: "Business-Specific Add-ons",
 };
 
 export const DEFAULT_PRICING_CONFIG: PricingRuleConfig = {
@@ -283,6 +286,7 @@ export const DEFAULT_PRICING_CONFIG: PricingRuleConfig = {
       enabled: true,
     },
     ...Object.fromEntries(EXTENDED_ADDONS.map((addon) => [addon.id, addon])),
+    ...Object.fromEntries(buildBusinessCatalogAddons().map((addon) => [addon.id, addon])),
   },
 };
 
@@ -304,6 +308,7 @@ export function mergePricingConfigWithDefaults(
     addons: Object.fromEntries(Object.entries(addons).map(([id, addon]) => {
       const defaultAddon = DEFAULT_PRICING_CONFIG.addons[id];
       const planSpecificAddon = addon.category === "ecommerce" || addon.category === "saas";
+      const businessCatalogAddon = addon.category === "businesscatalog";
       const isLegacyFlatPrice =
         addon.billingPeriod !== "monthly" &&
         addon.price === FEATURE_ADDON_PRICE_PKR &&
@@ -317,10 +322,12 @@ export function mergePricingConfigWithDefaults(
           ...defaultAddon,
           ...addon,
           ...(shouldMigrateDescription ? { description: defaultAddon.description } : {}),
-          ...(addon.billingPeriod === "monthly" || planSpecificAddon || addon.category === "creative" || addon.category === "propertytech"
+          ...(addon.billingPeriod === "monthly" || planSpecificAddon || addon.category === "creative" || addon.category === "propertytech" || businessCatalogAddon
             ? isLegacyFlatPrice
               ? { price: defaultAddon.price }
-              : planSpecificAddon
+              : businessCatalogAddon
+                ? {}
+                : planSpecificAddon
                 ? {
                     price: Math.max(
                       addon.price,
@@ -333,6 +340,20 @@ export function mergePricingConfigWithDefaults(
             : addon.id === "kitchen_order_tickets"
               ? { price: Math.max(addon.price, defaultAddon?.price || 0) }
               : { price: FEATURE_ADDON_PRICE_PKR }),
+          ...(() => {
+            const mappings = BUSINESS_ADDON_DEFINITIONS.filter(
+            (entry) => entry.existingAddonId === id
+            );
+            if (businessCatalogAddon) return {};
+            if (!mappings.length && !addon.businessCategories) return {};
+            return {
+            businessCategories: addon.businessCategories || Array.from(new Set(mappings.map((entry) => entry.categoryId))),
+            businessTypes: addon.businessTypes || Array.from(new Set(mappings.flatMap((entry) => entry.businessTypes || []))),
+            pricingLevel: addon.pricingLevel || mappings[0]?.level,
+            origin: addon.origin || "existing" as const,
+            status: addon.status || (addon.enabled ? "active" as const : "inactive" as const),
+            };
+          })(),
         },
       ];
     })),

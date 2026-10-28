@@ -22,6 +22,7 @@ import {
   CreditCard,
   Users,
   Store,
+  ShoppingBag,
 } from "lucide-react";
 
 export default function Header() {
@@ -35,6 +36,7 @@ export default function Header() {
 
   const navLinks = [
     { name: "Services", href: "/services", icon: Layers },
+    { name: "Add-on Catalog", href: "/add-ons", icon: ShoppingBag },
     { name: "AI Workforce", href: "/workforce", icon: Users },
     { name: "Portfolio", href: "/portfolio", icon: Briefcase },
     { name: "Website Templates", href: "/templates", icon: Store },

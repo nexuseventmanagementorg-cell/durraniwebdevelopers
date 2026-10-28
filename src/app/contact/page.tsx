@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { BUSINESS_INFO, buildWhatsAppLink } from "@/lib/constants";
 import {
@@ -25,6 +25,58 @@ export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const scope = params.get("scope");
+    const scopeLabels: Record<string, string> = {
+      multi_vendor_marketplace: "Multi-vendor marketplace",
+      enterprise_marketplace: "Enterprise-scale marketplace",
+      custom_review: "Custom project requiring manual review",
+    };
+    const scopeLabel = scope ? scopeLabels[scope] : undefined;
+    if (!scopeLabel) return;
+
+    const requirementLabels: Record<string, string> = {
+      productCount: "Products / variants",
+      productVariants: "Variant management",
+      sellerPortal: "Seller registration / dashboards",
+      inventoryWarehouses: "Inventory / warehouses",
+      searchRecommendations: "Search / recommendations / ranking",
+      checkoutPaymentsRefunds: "Cart / checkout / refunds / payments",
+      shippingFulfillment: "Shipping / fulfillment / tracking",
+      customerAccountsLoyalty: "Customer accounts / reviews / loyalty",
+      adminSecurityAudit: "Admin / reporting / security / audit",
+      trafficAvailability: "Traffic / performance / availability / scalability",
+      mobileIntegrations: "Mobile applications / integrations / automation",
+    };
+    const details = [
+      `Project scope: ${scopeLabel}`,
+      `Reference website: ${params.get("siteTitle") || "Not specified"}${params.get("sourceUrl") ? ` (${params.get("sourceUrl")})` : ""}`,
+    ];
+    const rawRequirements = params.get("requirements");
+    if (rawRequirements) {
+      try {
+        const parsed: unknown = JSON.parse(rawRequirements);
+        if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+          const answeredRequirements = Object.entries(parsed)
+            .filter(([key, value]) => key in requirementLabels && typeof value === "string" && value !== "not_assessed")
+            .map(([key, value]) => `${requirementLabels[key]}: ${value}`);
+          details.push(
+            `Scope answers:\n${answeredRequirements.join("\n") || "No requirements confirmed yet."}`
+          );
+        }
+      } catch {
+        setErrorMsg("Some scope answers could not be prefilled. Please review the project requirements before sending.");
+      }
+    }
+    const notes = params.get("notes")?.trim();
+    if (notes) details.push(`Other requirements:\n${notes}`);
+    details.push("A detailed technical review and custom quotation are required; URL scan signals are not a full implementation audit.");
+
+    setSubject(`${scopeLabel} inquiry`);
+    setMessage(details.join("\n\n"));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

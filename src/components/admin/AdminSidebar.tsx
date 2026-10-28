@@ -20,6 +20,7 @@ import {
   ExternalLink,
   ShieldCheck,
   UserRoundPlus,
+  ShoppingBag,
 } from "lucide-react";
 
 export default function AdminSidebar() {
@@ -36,6 +37,7 @@ export default function AdminSidebar() {
     { name: "Receipt Reviews", href: "/admin/payment-proofs", icon: ReceiptText },
     { name: "Project Invoices", href: "/admin/invoices", icon: FileText },
     { name: "Dynamic Pricing Rules", href: "/admin/pricing", icon: Sliders },
+    { name: "Add-on Catalog", href: "/admin/addons", icon: ShoppingBag },
     { name: "Portfolio & Templates", href: "/admin/portfolio", icon: ImageIcon },
     { name: "Automated Reminders", href: "/admin/reminders", icon: Bell },
     { name: "Settings & Audit Logs", href: "/admin/settings", icon: Settings },

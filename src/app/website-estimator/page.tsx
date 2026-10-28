@@ -1,120 +1,55 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import Link from "next/link";
-import {
-  AlertTriangle,
-  ArrowRight,
-  ExternalLink,
-  Globe,
-  LoaderCircle,
-  Search,
-} from "lucide-react";
-import { formatCurrency } from "@/lib/currency";
-import {
-  calculateReviewedWebsiteEstimate,
-  getDefaultNewBuildAddonIds,
-} from "@/lib/website-estimate-review";
-import {
-  type ExistingFeatureScope,
-  type WebsiteEstimateResult,
-  type WebsiteScopeMode,
-} from "@/lib/website-estimator";
-import {
-  getChargeableAddonIds,
-  isEcommercePackageId,
-  isSaasPackageId,
-} from "@/lib/constants";
+import { AlertTriangle, ArrowRight, ExternalLink, Globe, LoaderCircle, Search } from "lucide-react";
 import CurrencySelector from "@/components/CurrencySelector";
 import { useCurrency } from "@/components/CurrencyProvider";
+import { formatCurrency } from "@/lib/currency";
+import { getChargeableAddonIds, isEcommercePackageId, isSaasPackageId } from "@/lib/constants";
+import { calculateSelectableWebsiteEstimate } from "@/lib/website-estimate-review";
+import type { WebsiteEstimateResult } from "@/lib/website-estimator";
 import { trackVisitorEvent } from "@/lib/visitor-tracking";
+
+function getCalculatorUrl(estimate: WebsiteEstimateResult): string {
+  const packageId = estimate.pricingPackage;
+  const params = new URLSearchParams({
+    currency: estimate.currency,
+    sourceUrl: estimate.url,
+    projectType: packageId
+      ? isSaasPackageId(packageId) ? "SaaS" : "E-commerce store"
+      : "Custom web application",
+    adminPanel: "none",
+    addons: estimate.addons.map((addon) => addon.id).join(","),
+    scanFeatures: JSON.stringify(
+      estimate.features.slice(0, 30).map((feature) => ({
+        title: feature.title,
+        evidence: `${feature.evidenceStatus === "public_signal"
+          ? "Public scan signal; not verified as a complete workflow."
+          : "Feature requires owner/client confirmation."} ${feature.evidence}`.slice(0, 300),
+      }))
+    ),
+    ...(packageId ? { package: packageId } : {}),
+    ...(estimate.matchedTemplateId ? { templateId: estimate.matchedTemplateId } : {}),
+  });
+  return `/calculator?${params.toString()}`;
+}
 
 export default function WebsiteEstimatorPage() {
   const [url, setUrl] = useState("");
   const [estimate, setEstimate] = useState<WebsiteEstimateResult | null>(null);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
+  const [addonSearch, setAddonSearch] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [scopeMode, setScopeMode] = useState<WebsiteScopeMode>("new_build");
-  const [selectedPricingOptionId, setSelectedPricingOptionId] = useState("package_1");
-  const [featureScopes, setFeatureScopes] = useState<Record<string, ExistingFeatureScope>>({});
-  const [selectedNewBuildAddons, setSelectedNewBuildAddons] = useState<string[]>([]);
-  const [manualNewBuildAddons, setManualNewBuildAddons] = useState<string[]>([]);
-  const [ownerConfirmedAddons, setOwnerConfirmedAddons] = useState<string[]>([]);
-  const [scopeReviewed, setScopeReviewed] = useState(false);
   const { currency, locale } = useCurrency();
-
-  const addonById = useMemo(
-    () => new Map(estimate?.addonCatalog.map((addon) => [addon.id, addon]) || []),
-    [estimate]
-  );
-  const selectedPricingOption = estimate?.pricingOptions.find(
-    (option) => option.id === selectedPricingOptionId
-  );
-  const reviewedEstimate = estimate
-    ? calculateReviewedWebsiteEstimate(
-        estimate,
-        scopeMode,
-        [...selectedNewBuildAddons, ...manualNewBuildAddons],
-        featureScopes,
-        ownerConfirmedAddons,
-        selectedPricingOptionId
-      )
-    : null;
-  const chargeableAddonIds = reviewedEstimate?.chargeableAddonIds || [];
-  const calculation = reviewedEstimate?.calculation || null;
-  const unpricedRepairs = reviewedEstimate?.unpricedRepairs || [];
-
-  const calculatorUrl = estimate
-    ? (() => {
-        const params = new URLSearchParams({
-          currency: estimate.currency,
-          sourceUrl: estimate.url,
-          projectType: scopeMode === "existing_site"
-            ? "Custom web application"
-            : selectedPricingOption?.pricingPackage
-            ? isSaasPackageId(selectedPricingOption.pricingPackage) ? "SaaS" : "E-commerce store"
-            : "Custom web application",
-          adminPanel: reviewedEstimate?.adminPanelType || "none",
-          addons: chargeableAddonIds.join(","),
-          scanFeatures: JSON.stringify([
-            ...estimate.features.slice(0, 30).map((feature) => ({
-              title: feature.title,
-              evidence: `${feature.evidenceStatus === "owner_confirmed"
-                ? "Owner-confirmed from the portfolio project record."
-                : feature.evidenceStatus === "public_signal"
-                  ? "Public scan signal; not verified as a complete workflow."
-                  : "Scope status requires admin/client confirmation."} ${feature.evidence}`.slice(0, 300),
-            })),
-            ...manualNewBuildAddons.map((id) => ({
-              title: `User-requested; not detected by scan: ${addonById.get(id)?.title || id}`,
-              evidence: "Added manually during estimator scope review.",
-            })),
-          ].slice(0, 40)),
-          ...(estimate.matchedTemplateId
-            ? { templateId: estimate.matchedTemplateId }
-            : {}),
-          ...(scopeMode === "new_build" && selectedPricingOption
-            ? {
-                package: selectedPricingOption.pricingPackage ||
-                  (selectedPricingOption.id === "package_2" ? "with_admin" : "without_admin"),
-              }
-            : {}),
-        });
-        return `/calculator?${params.toString()}`;
-      })()
-    : "/calculator";
-  const nextStepUrl = calculatorUrl;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setEstimate(null);
-    setSelectedNewBuildAddons([]);
-    setManualNewBuildAddons([]);
-    setOwnerConfirmedAddons([]);
-    setScopeReviewed(false);
-    setFeatureScopes({});
-    setSelectedPricingOptionId("package_1");
+    setSelectedAddonIds([]);
+    setAddonSearch("");
     setLoading(true);
 
     try {
@@ -130,15 +65,9 @@ export default function WebsiteEstimatorPage() {
         return;
       }
 
-      const nextEstimate = result.estimate as WebsiteEstimateResult;
-      setEstimate(nextEstimate);
-      setSelectedPricingOptionId(nextEstimate.suggestedPricingOptionId);
-      setSelectedNewBuildAddons(getDefaultNewBuildAddonIds(nextEstimate));
-      setManualNewBuildAddons([]);
-      setFeatureScopes(Object.fromEntries(
-        nextEstimate.features.map((feature) => [feature.id, "unknown"])
-      ));
-      setScopeMode("new_build");
+      const websiteEstimate = result.estimate as WebsiteEstimateResult;
+      setEstimate(websiteEstimate);
+      setSelectedAddonIds(websiteEstimate.addons.map((addon) => addon.id));
       trackVisitorEvent("estimator").catch((trackingError) => {
         console.error("Could not record all-time URL estimator user count", trackingError);
       });
@@ -149,6 +78,31 @@ export default function WebsiteEstimatorPage() {
       setLoading(false);
     }
   }
+
+  const selectedPackage = estimate?.pricingOptions.find(
+    (option) => option.id === (estimate.pricingPackage || estimate.suggestedPricingOptionId)
+  );
+  const hasMatchedPackage = Boolean(estimate?.suggestedPricingOptionId);
+  const selectedEstimate = estimate
+    ? calculateSelectableWebsiteEstimate(estimate, selectedAddonIds)
+    : null;
+  const selectedOneTimeAddonTotal = selectedEstimate?.calculation.addonsTotal || 0;
+  const selectedMonthlyAddonTotal = selectedEstimate?.calculation.monthlyAddonTotal || 0;
+  const hasPricedSignals = selectedOneTimeAddonTotal > 0 || selectedMonthlyAddonTotal > 0;
+  const includedAddonIds = new Set(
+    estimate?.addonCatalog
+      .filter((addon) =>
+        !getChargeableAddonIds(
+          [addon.id],
+          estimate.pricingPackage,
+          selectedPackage?.adminPanelType
+        ).includes(addon.id)
+      )
+      .map((addon) => addon.id) || []
+  );
+  const visibleAddons = estimate?.addonCatalog.filter((addon) =>
+    `${addon.title} ${addon.description}`.toLowerCase().includes(addonSearch.trim().toLowerCase())
+  ) || [];
 
   return (
     <main className="min-h-screen bg-[#F4F5F7] text-[#101216]">
@@ -164,7 +118,7 @@ export default function WebsiteEstimatorPage() {
             Kisi Website Ka Andazati Budget Maloom Karein
           </h1>
           <p className="text-sm text-gray-300 max-w-2xl mx-auto mt-4 leading-relaxed">
-            Public website URL dein. Tool accessible pages se feature signals dhoondta hai. Private dashboards, source code aur backend inspect nahi hote, is liye scope aur optional charges review karein.
+            Public website URL dein. Tool accessible pages ke feature signals aur un par lagu existing package/add-on prices se provisional rebuild estimate banata hai.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 max-w-2xl mx-auto">
@@ -199,7 +153,7 @@ export default function WebsiteEstimatorPage() {
               </button>
             </div>
             <p className="text-[11px] text-gray-400 mt-3">
-              Scanner sitemap aur internal links se maximum 12 public HTML pages tak check karta hai. JavaScript-only content, login/private pages, source code, aur database verify nahi hotay.
+              Scanner sitemap aur internal links se maximum 24 same-site public HTML pages tak check karta hai. Login ke peechay workflows, source code, aur database verify nahi hotay.
             </p>
           </form>
         </div>
@@ -219,86 +173,17 @@ export default function WebsiteEstimatorPage() {
             <p className="mt-3 text-sm font-semibold text-gray-700">
               Public pages aur feature signals check kiye ja rahe hain...
             </p>
-            <p className="mt-1 text-xs text-gray-500">Aam tor par is mein chand seconds lagte hain.</p>
+            <p className="mt-1 text-xs text-gray-500">Large ya slow websites par scan ko kuch zyada waqt lag sakta hai.</p>
           </div>
         )}
 
         {estimate && (
           <div className="space-y-6">
-            <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5 sm:p-6">
-              <h2 className="font-extrabold text-base text-blue-950">Estimate kis kaam ke liye hai?</h2>
-              <p className="mt-1 text-xs leading-relaxed text-blue-900">
-                Scan public pages and sitemap se signals collect karta hai; yeh complete code audit nahi. Login ke peechay ya JS-only features miss ho sakte hain. New build ya existing site select karke included scope review karein.
-              </p>
-              <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                <label className="flex flex-1 items-start gap-2 rounded-xl border border-blue-200 bg-white p-3 text-sm">
-                  <input
-                    type="radio"
-                    name="scope-mode"
-                    checked={scopeMode === "new_build"}
-                    onChange={() => setScopeMode("new_build")}
-                    className="mt-1"
-                  />
-                  <span><strong>New build</strong><span className="block text-xs text-gray-600">Detected add-ons review ke liye selected hain; scan signal ko confirmed implementation na samjhein.</span></span>
-                </label>
-                <label className="flex flex-1 items-start gap-2 rounded-xl border border-blue-200 bg-white p-3 text-sm">
-                  <input
-                    type="radio"
-                    name="scope-mode"
-                    checked={scopeMode === "existing_site"}
-                    onChange={() => setScopeMode("existing_site")}
-                    className="mt-1"
-                  />
-                  <span><strong>Existing site / remaining work</strong><span className="block text-xs text-gray-600">No base package; only explicitly selected new items are priced.</span></span>
-                </label>
-              </div>
-              {scopeMode === "new_build" && (
-                <div className="mt-4 rounded-xl border border-blue-200 bg-white p-4">
-                  <label htmlFor="pricing-plan" className="block text-sm font-semibold text-gray-800">
-                    Published pricing plan
-                  </label>
-                  <p className="mt-1 text-xs text-gray-600">
-                    The scan recommends a plan when public signals are clear. Choose the matching plan yourself if the site needs a store or SaaS build that the public pages do not reveal.
-                  </p>
-                  <select
-                    id="pricing-plan"
-                    value={selectedPricingOptionId}
-                    onChange={(event) => setSelectedPricingOptionId(event.target.value)}
-                    className="mt-3 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-                  >
-                    {estimate.pricingOptions.map((option) => {
-                      const displayedPrice = option.adminPanelType === "client_admin"
-                        ? option.basePriceWithAdmin
-                        : option.basePrice;
-                      const priceLabel = option.maximumPrice
-                        ? `${formatCurrency(displayedPrice, estimate.currency, locale)}–${formatCurrency(option.maximumPrice, estimate.currency, locale)}`
-                        : option.id === "package_2"
-                          ? formatCurrency(displayedPrice, estimate.currency, locale)
-                          : option.pricingPackage === "saas_enterprise"
-                            ? `${formatCurrency(displayedPrice, estimate.currency, locale)}+`
-                            : formatCurrency(displayedPrice, estimate.currency, locale);
-                      return (
-                        <option key={option.id} value={option.id}>
-                          {option.label} — {priceLabel}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              )}
-              {scopeMode === "new_build" && selectedPricingOption?.pricingPackage &&
-                isEcommercePackageId(selectedPricingOption.pricingPackage) && (
-                <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-900">
-                  Client admin and store-management tools are included in this e-commerce package price.
-                </p>
-              )}
-            </section>
-
             <section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-7 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5">
                 <div className="min-w-0">
                   <span className="text-[10px] uppercase tracking-widest font-extrabold text-emerald-700">
-                    Public page scan complete
+                    Public scan · Preliminary estimate — requirements not fully verified
                   </span>
                   <h2 className="text-xl sm:text-2xl font-black mt-1 break-words">{estimate.siteTitle}</h2>
                   <a
@@ -313,357 +198,408 @@ export default function WebsiteEstimatorPage() {
                     <p className="text-xs text-gray-600 mt-3 leading-relaxed">{estimate.siteDescription}</p>
                   )}
                   <p className="text-[11px] text-gray-400 mt-2">
-                    {estimate.pagesScanned} public page{estimate.pagesScanned === 1 ? "" : "s"} check kiye gaye
-                  </p>
-                  <p className="text-[10px] text-gray-400 mt-1 break-all">
-                    Scanned: {estimate.scannedPages.join(", ")}
+                    {estimate.pagesScanned} public page{estimate.pagesScanned === 1 ? "" : "s"} scanned
                   </p>
                 </div>
-                <div className="sm:min-w-52 rounded-xl bg-red-50 border border-red-100 p-4 sm:text-right">
+                <div className="sm:min-w-56 rounded-xl bg-red-50 border border-red-100 p-4 sm:text-right">
                   <span className="text-[10px] uppercase tracking-wider font-bold text-gray-600">
-                  {scopeMode === "new_build" ? "New build estimate" : "Selected remaining work"}
+                    {hasMatchedPackage ? "Estimated budget for a similar detected scope" : "Selected catalog add-on total"}
                   </span>
                   <strong className="block text-2xl sm:text-3xl font-black text-[#E31E36] mt-1">
-                  {formatCurrency(calculation?.estimatedTotal || 0, estimate.currency, locale)}
+                    {hasMatchedPackage
+                      ? selectedEstimate?.estimatedMaximumTotal
+                        ? `${formatCurrency(selectedEstimate.calculation.estimatedTotal, estimate.currency, locale)}–${formatCurrency(selectedEstimate.estimatedMaximumTotal, estimate.currency, locale)}`
+                        : `${estimate.pricingPackage === "saas_enterprise" ? "From " : ""}${formatCurrency(selectedEstimate?.calculation.estimatedTotal || 0, estimate.currency, locale)}`
+                      : hasPricedSignals
+                        ? selectedOneTimeAddonTotal > 0
+                          ? formatCurrency(selectedOneTimeAddonTotal, estimate.currency, locale)
+                          : `${formatCurrency(selectedMonthlyAddonTotal, estimate.currency, locale)} / month`
+                        : "Insufficient priced signals"}
                   </strong>
                   <span className="block text-[11px] text-gray-500 mt-1">
-                  {scopeMode === "new_build" ? reviewedEstimate?.basePackage : "No existing-site base fee"}
+                    {hasMatchedPackage
+                      ? `${selectedPackage?.label || estimate.basePackage}; public features and current price rules`
+                      : hasPricedSignals
+                        ? "Selected catalog-priced features only — not a full project total"
+                        : "No published package or priced feature was reliably detected"}
                   </span>
                 </div>
               </div>
+              <p className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">
+                <strong>Public-scan based build estimate — some requirements cannot be verified.</strong>{" "}
+                Yeh estimate scanned public pages, matched features aur aapke existing package/add-on prices ko use karke isi tarah ka visible website scope build karne ka andaza deta hai. Private admin workflows, seller operations, integrations, infrastructure aur hidden functionality source code ke baghair verify nahi hotay; agar woh scan mein nazar na aayein to final scope aur budget badal sakta hai.
+              </p>
+            </section>
+
+            <section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-7 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-black">Choose add-ons and update the budget</h3>
+                  <p className="mt-1 max-w-2xl text-xs leading-relaxed text-gray-600">
+                    Scan se detected, chargeable features pehle se selected hain. Mazeed features select ya unselect karein; package mein included features dobara charge nahi honge.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-red-50 border border-red-100 p-3 sm:text-right sm:min-w-52">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-gray-600">
+                    {hasMatchedPackage ? "Updated comparable build budget" : "Selected catalog add-ons"}
+                  </span>
+                  <strong className="mt-1 block text-lg font-black text-[#E31E36]">
+                    {hasMatchedPackage
+                      ? selectedEstimate?.estimatedMaximumTotal
+                        ? `${formatCurrency(selectedEstimate.calculation.estimatedTotal, estimate.currency, locale)}–${formatCurrency(selectedEstimate.estimatedMaximumTotal, estimate.currency, locale)}`
+                        : formatCurrency(selectedEstimate?.calculation.estimatedTotal || 0, estimate.currency, locale)
+                      : selectedOneTimeAddonTotal > 0
+                        ? formatCurrency(selectedOneTimeAddonTotal, estimate.currency, locale)
+                        : selectedMonthlyAddonTotal > 0
+                          ? `${formatCurrency(selectedMonthlyAddonTotal, estimate.currency, locale)} / month`
+                          : "No add-ons selected"}
+                  </strong>
+                  {selectedMonthlyAddonTotal > 0 && selectedOneTimeAddonTotal > 0 && (
+                    <span className="mt-1 block text-[11px] text-amber-800">
+                      Plus {formatCurrency(selectedMonthlyAddonTotal, estimate.currency, locale)} / month recurring
+                    </span>
+                  )}
+                  {!hasMatchedPackage && (
+                    <span className="mt-1 block text-[10px] text-gray-500">
+                      Add-on total only; base project scope is not priced by this scan.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <label htmlFor="estimator-addon-search" className="mt-5 block text-xs font-bold text-gray-700">
+                Find an add-on
+              </label>
+              <input
+                id="estimator-addon-search"
+                type="search"
+                value={addonSearch}
+                onChange={(event) => setAddonSearch(event.target.value)}
+                placeholder="Search features, e.g. reviews or inventory"
+                className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E31E36]"
+              />
+              <div className="mt-5 grid max-h-[34rem] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                {visibleAddons.map((addon) => {
+                  const includedInPackage = includedAddonIds.has(addon.id);
+                  const detectedAddon = estimate.addons.find((item) => item.id === addon.id);
+                  const checked = includedInPackage || selectedAddonIds.includes(addon.id);
+                  const displayedPrice = detectedAddon?.price ?? addon.price;
+
+                  return (
+                    <label
+                      key={addon.id}
+                      className={`flex items-start gap-3 rounded-xl border p-3 transition ${
+                        includedInPackage
+                          ? "border-emerald-200 bg-emerald-50/60"
+                          : checked
+                            ? "border-red-200 bg-red-50/50"
+                            : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={includedInPackage}
+                        onChange={(event) => {
+                          setSelectedAddonIds((current) =>
+                            event.target.checked
+                              ? Array.from(new Set([...current, addon.id]))
+                              : current.filter((id) => id !== addon.id)
+                          );
+                        }}
+                        className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[#E31E36] disabled:accent-emerald-600"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-start justify-between gap-1">
+                          <span className="text-xs font-bold text-gray-800">{addon.title}</span>
+                          <strong className={`text-xs ${includedInPackage ? "text-emerald-700" : "text-[#E31E36]"}`}>
+                            {includedInPackage
+                              ? "Included in package"
+                              : `${formatCurrency(displayedPrice, estimate.currency, locale)}${addon.billingPeriod === "monthly" ? " / month" : ""}`}
+                          </strong>
+                        </span>
+                        <span className="mt-1 block text-[11px] leading-relaxed text-gray-600">{addon.description}</span>
+                        {detectedAddon && !includedInPackage && (
+                          <span className="mt-1 block text-[10px] font-semibold text-blue-700">
+                            Detected on public pages
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              {estimate.addonCatalog.length === 0 && (
+                <p className="mt-4 rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
+                  Is scan ke liye koi active catalog add-on available nahi.
+                </p>
+              )}
+              {estimate.addonCatalog.length > 0 && visibleAddons.length === 0 && (
+                <p className="mt-4 rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
+                  Is search ke liye koi add-on match nahi hua.
+                </p>
+              )}
+              <p className="mt-3 text-[10px] leading-relaxed text-gray-500">
+                Prices existing add-on catalog se li gayi hain. Public scan mein nazar na aane wali functionality, custom integrations, hosting aur maintenance is selection total mein shamil nahi.
+              </p>
             </section>
 
             {estimate.historicalProjectReference && (
               <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
                 <h3 className="font-extrabold text-sm text-emerald-950">
-                  Existing project fee — separate from this new-build estimate
+                  Historical project fee — separate from this scan estimate
                 </h3>
                 <p className="mt-2 text-sm text-emerald-900">
-                  {estimate.historicalProjectReference.title} was actually built for{" "}
+                  {estimate.historicalProjectReference.title} was built for{" "}
                   <strong>{formatCurrency(estimate.historicalProjectReference.amountPKR, "PKR", "en-PK")}</strong>.
-                  At today&apos;s exchange rate, that historical Pakistan fee is about{" "}
+                  Converted at today&apos;s exchange rate, that historical Pakistan fee is about{" "}
                   <strong>
                     {formatCurrency(
                       estimate.historicalProjectReference.convertedAmount,
                       estimate.historicalProjectReference.currency,
                       locale
                     )}
-                  </strong>
-                  .
+                  </strong>.
                 </p>
                 <p className="mt-2 text-xs leading-relaxed text-emerald-900">
-                  This is a straight currency conversion of the original Pakistan project fee—not an international quote. The estimate above is a separate quote for a new project with similar visible features, using the selected country&apos;s international pricing.
+                  This is a currency conversion of that project&apos;s historical fee, not an international quotation or a valuation of the scanned website.
                 </p>
               </section>
             )}
 
             <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
-                <h3 className="font-extrabold text-base">Public feature signals</h3>
+                <h3 className="font-extrabold text-base">1. Public website scan findings</h3>
                 <p className="text-xs text-gray-500 mt-1">
-                  Priced signals are selected by default and included in the breakdown below. Signals are not proof of a complete workflow; uncheck any add-on that is not part of the requested build. Registrar purchase and renewal fees are separate.
+                  Features below are public-page signals only. Listed price is the matching existing catalog price, where available; package-included items are not charged twice.
                 </p>
                 <div className="mt-4 space-y-3">
                   {estimate.features.map((feature) => {
-                    const addon = feature.addonId ? addonById.get(feature.addonId) : undefined;
-                    const packageIncludedAddon = Boolean(
+                    const addon = feature.addonId
+                      ? estimate.addonCatalog.find((item) => item.id === feature.addonId)
+                      : undefined;
+                    const detectedAddon = feature.addonId
+                      ? estimate.addons.find((item) => item.id === feature.addonId)
+                      : undefined;
+                    const packageIncludesFeature = Boolean(
                       feature.addonId &&
-                      selectedPricingOption?.pricingPackage &&
+                      estimate.pricingPackage &&
                       !getChargeableAddonIds(
                         [feature.addonId],
-                        selectedPricingOption.pricingPackage,
-                        selectedPricingOption.adminPanelType
+                        estimate.pricingPackage,
+                        selectedPackage?.adminPanelType
                       ).includes(feature.addonId)
                     );
-                    const includedStoreSignal = Boolean(
-                      selectedPricingOption?.pricingPackage &&
-                      isEcommercePackageId(selectedPricingOption.pricingPackage) &&
-                      [
-                        "Product ya menu catalog",
-                        "Cart interaction signal",
-                        "Checkout or order-submission signal",
-                        "E-commerce store package",
-                      ].includes(feature.title)
-                    );
-                    const includedInSelectedPackage = packageIncludedAddon || includedStoreSignal;
 
                     return (
-                      <div key={feature.title} className="flex items-start gap-2.5">
+                      <div key={feature.id} className="flex items-start gap-2.5 border-b border-gray-100 pb-3 last:border-0">
                         <Globe className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                        <p className="text-sm font-bold text-gray-800">{feature.title}</p>
-                        <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{feature.explanation}</p>
-                        <p className="text-[10px] text-gray-400 mt-1">
-                          {feature.evidenceStatus === "owner_confirmed" ? "Owner-confirmed scope record" : "Public page signal — not implementation-verified"} · {feature.evidence}
-                          {feature.sourcePages.length > 0 && ` Source: ${feature.sourcePages.join(", ")}`}
-                        </p>
-                        {scopeMode === "new_build" && includedInSelectedPackage && (
-                          <p className="mt-2 text-xs font-semibold text-emerald-700">
-                            Included in {selectedPricingOption?.label}; no additional add-on charge.
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <p className="text-sm font-bold text-gray-800">{feature.title}</p>
+                            {detectedAddon ? (
+                              <strong className="text-xs text-[#E31E36]">
+                                {formatCurrency(detectedAddon.price, estimate.currency, locale)}
+                                {detectedAddon.billingPeriod === "monthly" ? " / month" : ""}
+                              </strong>
+                            ) : packageIncludesFeature ? (
+                              <span className="text-[10px] font-semibold text-emerald-700">
+                                Included in {selectedPackage?.label}
+                              </span>
+                            ) : feature.addonId && addon ? (
+                              <span className="text-[10px] text-gray-500">
+                                Catalog: {formatCurrency(addon.price, estimate.currency, locale)}
+                                {addon.billingPeriod === "monthly" ? " / month" : ""}
+                              </span>
+                            ) : feature.addonId ? (
+                              <span className="text-[10px] text-amber-700">No active catalog price</span>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{feature.explanation}</p>
+                          <p className="text-[10px] text-gray-400 mt-1">
+                            {feature.evidenceStatus === "owner_confirmed"
+                              ? "Owner-confirmed project record"
+                              : "Public page signal — not implementation-verified"}{" "}
+                            · {feature.evidence}
                           </p>
-                        )}
-                        {scopeMode === "new_build" && addon && !includedInSelectedPackage && (
-                          <label className="mt-2 flex items-center gap-2 text-xs text-gray-700">
-                            <input
-                              type="checkbox"
-                              checked={selectedNewBuildAddons.includes(addon.id)}
-                              onChange={(event) => setSelectedNewBuildAddons((current) =>
-                                event.target.checked
-                                  ? Array.from(new Set([...current, addon.id]))
-                                  : current.filter((id) => id !== addon.id)
-                              )}
-                            />
-                            Include as new scope: {addon.title}{" "}
-                            ({formatCurrency(addon.price, estimate.currency, locale)})
-                          </label>
-                        )}
-                        {scopeMode === "new_build" &&
-                          feature.addonId &&
-                          !addon &&
-                          !includedInSelectedPackage && (
-                            <p className="mt-2 text-xs text-amber-700">
-                              This feature has no enabled add-on price in the current Pricing &amp; Rates list, so it is not included in the total.
+                          {feature.sourcePages.length > 0 && (
+                            <p className="text-[10px] text-gray-400 mt-1 break-all">
+                              Source: {feature.sourcePages.join(", ")}
                             </p>
                           )}
-                        {scopeMode === "existing_site" && (
-                          <label className="mt-2 flex flex-col gap-1 text-xs text-gray-700">
-                            <span>Owner scope review</span>
-                            <select
-                              value={featureScopes[feature.id] || "unknown"}
-                              onChange={(event) => setFeatureScopes((current) => ({
-                                ...current,
-                                [feature.id]: event.target.value as ExistingFeatureScope,
-                              }))}
-                              className="w-fit rounded-lg border border-gray-300 bg-white px-2 py-1"
-                            >
-                              <option value="unknown">Unknown — not priced</option>
-                              <option value="existing">Already implemented — owner-confirmed</option>
-                              <option value="new">New work required — owner-confirmed</option>
-                              <option value="repair">Repair / hardening — requires separate scope</option>
-                            </select>
-                            {featureScopes[feature.id] === "new" && feature.addonId && addonById.has(feature.addonId) && (
-                              <span className="text-gray-500">
-                                Provisional add-on: {addonById.get(feature.addonId)?.title}{" "}
-                                {formatCurrency(addonById.get(feature.addonId)?.price || 0, estimate.currency, locale)}
-                              </span>
-                            )}
-                            {featureScopes[feature.id] === "new" && (!feature.addonId || !addonById.has(feature.addonId)) && (
-                              <span className="text-amber-700">No matching price rule; this item is not included in the total.</span>
-                            )}
-                          </label>
-                        )}
                         </div>
                       </div>
                     );
                   })}
-                </div>
-                {scopeMode === "existing_site" && (
-                  <div className="mt-5 border-t border-gray-100 pt-4">
-                    <label htmlFor="owner-addon" className="block text-sm font-bold">Add owner-confirmed new work</label>
-                    <p className="mt-1 text-xs text-gray-500">Use for private features not visible in the public scan. This choice is owner-reported, not independently verified.</p>
-                    <select
-                      id="owner-addon"
-                      value=""
-                      onChange={(event) => {
-                        const id = event.target.value;
-                        if (id) setOwnerConfirmedAddons((current) => Array.from(new Set([...current, id])));
-                      }}
-                      className="mt-2 max-w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs"
-                    >
-                      <option value="">Choose a priced feature...</option>
-                      {estimate.addonCatalog
-                        .filter((addon) => !ownerConfirmedAddons.includes(addon.id))
-                        .map((addon) => (
-                          <option key={addon.id} value={addon.id}>
-                            {addon.title} — {formatCurrency(addon.price, estimate.currency, locale)}
-                          </option>
-                        ))}
-                    </select>
-                    {ownerConfirmedAddons.map((id) => {
-                      const addon = addonById.get(id);
-                      return addon ? (
-                        <label key={id} className="mt-2 flex items-center gap-2 text-xs">
-                          <input
-                            type="checkbox"
-                            checked
-                            onChange={() => setOwnerConfirmedAddons((current) => current.filter((item) => item !== id))}
-                          />
-                          Owner-confirmed: {addon.title} ({formatCurrency(addon.price, estimate.currency, locale)})
-                        </label>
-                      ) : null;
-                    })}
-                  </div>
-                )}
-                {scopeMode === "new_build" && (
-                  <div className="mt-5 border-t border-gray-100 pt-4">
-                    <label htmlFor="manual-new-build-addon" className="block text-sm font-bold">
-                      Add a feature the scan may have missed
-                    </label>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Private or JavaScript-only features may not appear in a public scan. Select any additional feature you want included; this is your requested scope, not a claim that it was found on the scanned site.
+                  {estimate.features.length === 0 && (
+                    <p className="rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
+                      Koi supported feature signal scan kiye gaye public pages par nahi mila. Yeh proof nahi ke website mein features maujood nahi.
                     </p>
-                    <select
-                      id="manual-new-build-addon"
-                      value=""
-                      onChange={(event) => {
-                        const id = event.target.value;
-                        if (id) setManualNewBuildAddons((current) => Array.from(new Set([...current, id])));
-                      }}
-                      className="mt-2 max-w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs"
-                    >
-                      <option value="">Choose a feature to add...</option>
-                      {estimate.addonCatalog
-                        .filter((addon) => {
-                          if (
-                            selectedNewBuildAddons.includes(addon.id) ||
-                            manualNewBuildAddons.includes(addon.id)
-                          ) return false;
-                          const packageId = selectedPricingOption?.pricingPackage;
-                          return !packageId || getChargeableAddonIds(
-                            [addon.id],
-                            packageId,
-                            selectedPricingOption.adminPanelType
-                          ).includes(addon.id);
-                        })
-                        .map((addon) => (
-                          <option key={addon.id} value={addon.id}>
-                            {addon.title} — {formatCurrency(addon.price, estimate.currency, locale)}
-                          </option>
-                        ))}
-                    </select>
-                    {manualNewBuildAddons.map((id) => {
-                      const addon = addonById.get(id);
-                      return addon ? (
-                        <label key={id} className="mt-2 flex items-center gap-2 text-xs">
-                          <input
-                            type="checkbox"
-                            checked
-                            onChange={() => setManualNewBuildAddons((current) =>
-                              current.filter((item) => item !== id)
-                            )}
-                          />
-                          Requested addition: {addon.title} ({formatCurrency(addon.price, estimate.currency, locale)})
-                        </label>
-                      ) : null;
-                    })}
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               <div className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
-                <h3 className="font-extrabold text-base">Calculator ke mutabiq price breakdown</h3>
+                <h3 className="font-extrabold text-base">2. Estimated build budget breakdown</h3>
                 <div className="mt-4 space-y-3 text-sm">
-                  <div className="flex justify-between gap-4 border-b border-gray-100 pb-3">
-                    <span className="text-gray-600">
-                      {scopeMode === "new_build"
-                        ? reviewedEstimate?.adminPanelType === "client_admin" &&
-                          !selectedPricingOption?.pricingPackage
-                          ? "Package 1: Durrani-Managed (without client admin)"
-                          : reviewedEstimate?.basePackage || estimate.basePackage
-                        : "Existing site — base excluded"}
-                    </span>
-                    <strong>
-                      {formatCurrency(
-                        scopeMode === "new_build"
-                          ? Math.max(0, (calculation?.basePrice || 0) - (calculation?.adminFee || 0))
-                          : 0,
-                        estimate.currency,
-                        locale
-                      )}
-                    </strong>
-                  </div>
-                  {scopeMode === "new_build" && (calculation?.adminFee || 0) > 0 && (
-                    <div className="flex justify-between gap-4">
-                      <span className="text-gray-600">Client admin panel upgrade (Package 2)</span>
-                      <strong>{formatCurrency(calculation?.adminFee || 0, estimate.currency, locale)}</strong>
+                  {hasMatchedPackage ? (
+                    <div className="flex justify-between gap-4 border-b border-gray-100 pb-3">
+                      <span className="text-gray-600">{selectedPackage?.label || estimate.basePackage}</span>
+                      <strong>{formatCurrency(estimate.basePrice, estimate.currency, locale)}</strong>
                     </div>
+                  ) : (
+                    <p className="rounded-lg bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">
+                      Public scan ne kisi priced base package ko sufficiently match nahi kiya. Basic/starter package ko automatically assume nahi kiya gaya.
+                    </p>
                   )}
-                  {calculation?.selectedAddonDetails.map((addon) => (
+                  {selectedEstimate?.calculation.selectedAddonDetails.map((addon) => (
                     <div key={addon.id} className="flex justify-between gap-4">
-                      <span className="text-gray-600">
-                        {ownerConfirmedAddons.includes(addon.id) ? "Owner-confirmed: " : ""}
-                        {addon.label}
-                      </span>
+                      <span className="text-gray-600">{addon.label}</span>
                       <strong>
                         {formatCurrency(addon.price, estimate.currency, locale)}
                         {addon.billingPeriod === "monthly" ? " / month" : ""}
                       </strong>
                     </div>
                   ))}
-                  {(calculation?.monthlyAddonTotal || 0) > 0 && (
+                  {selectedMonthlyAddonTotal > 0 && (
                     <div className="flex justify-between gap-4 border-t border-gray-100 pt-3 text-amber-800">
-                      <strong>Recurring monthly add-ons</strong>
-                      <strong>{formatCurrency(calculation?.monthlyAddonTotal || 0, estimate.currency, locale)} / month</strong>
+                      <strong>Recurring catalog features</strong>
+                      <strong>{formatCurrency(selectedMonthlyAddonTotal, estimate.currency, locale)} / month</strong>
                     </div>
                   )}
-                  {unpricedRepairs.map((feature) => (
-                    <div key={`repair-${feature.id}`} className="text-xs text-amber-700">
-                      Repair / hardening not priced: {feature.title} — confirm scope for a separate quote.
+                  {hasMatchedPackage ? (
+                    <div className="flex justify-between gap-4 border-t border-gray-200 pt-3 text-[#E31E36]">
+                      <strong>Estimated budget for detected scope</strong>
+                      <strong>
+                        {selectedEstimate?.estimatedMaximumTotal
+                          ? `${formatCurrency(selectedEstimate.calculation.estimatedTotal, estimate.currency, locale)}–${formatCurrency(selectedEstimate.estimatedMaximumTotal, estimate.currency, locale)}`
+                          : `${estimate.pricingPackage === "saas_enterprise" ? "From " : ""}${formatCurrency(selectedEstimate?.calculation.estimatedTotal || 0, estimate.currency, locale)}`}
+                      </strong>
                     </div>
-                  ))}
-                  <div className="flex justify-between gap-4 border-t border-gray-200 pt-3 text-[#E31E36]">
-                    <strong>Andazati total</strong>
-                    <strong>{formatCurrency(calculation?.estimatedTotal || 0, estimate.currency, locale)}</strong>
-                  </div>
+                  ) : (
+                    hasPricedSignals ? (
+                      <div className="flex justify-between gap-4 border-t border-gray-200 pt-3 text-[#E31E36]">
+                        <strong>Selected catalog-priced features only</strong>
+                        <strong>{formatCurrency(selectedOneTimeAddonTotal, estimate.currency, locale)}</strong>
+                      </div>
+                    ) : (
+                      <p className="rounded-lg border-t border-gray-200 pt-3 text-xs text-gray-600">
+                        No catalog-priced features were reliably detected, so a numeric project estimate is unavailable from this scan.
+                      </p>
+                    )
+                  )}
+                  <p className="rounded-lg bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">
+                    Budget existing package/add-on prices se calculate hua hai. Private workflows, infrastructure, licenses, transaction fees aur unpriced custom work shamil nahi jab tak public scan ya approved pricing record unhein establish na kare.
+                  </p>
                 </div>
               </div>
             </section>
 
-            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
-              <h3 className="font-extrabold text-sm text-amber-950">Zaroori wazahat</h3>
-              <ul className="mt-3 space-y-2">
-                {estimate.assumptions.map((assumption) => (
-                  <li key={assumption} className="flex items-start gap-2 text-xs text-amber-950 leading-relaxed">
-                    <span className="font-black">•</span><span>{assumption}</span>
-                  </li>
-                ))}
-                {estimate.warnings.map((warning) => (
-                  <li key={warning} className="flex items-start gap-2 text-xs text-amber-950 leading-relaxed">
-                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" /><span>{warning}</span>
-                  </li>
-                ))}
-              </ul>
-              <label className="mt-4 flex items-start gap-2 rounded-xl border border-amber-300 bg-white/70 p-3 text-xs leading-relaxed text-amber-950">
-                <input
-                  type="checkbox"
-                  checked={scopeReviewed}
-                  onChange={(event) => setScopeReviewed(event.target.checked)}
-                  className="mt-0.5"
-                />
-                <span>
-                  I reviewed the detected features and selected add-ons. Public scan signals are not proof of full functionality; I added any private or missed features needed for my request.
-                </span>
-              </label>
-              {estimate.internationalPricing && (
-                <p className="mt-3 text-[11px] text-amber-900">
-                  International base packages use 2x Pakistan rates converted at 1 PKR = {estimate.exchangeRate} {estimate.currency}; each selected one-time add-on is a flat 100 {estimate.currency}. Rates updated {estimate.exchangeRateDate || "by provider"}. Final quotation may differ with rate changes.
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
+                <h3 className="font-extrabold text-base">3. Public pages opened</h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  Yeh scan mein actually khulay pages hain; poori website ki guaranteed list nahi. Private/login routes scan nahi kiye jatay.
                 </p>
-              )}
-              <Link
-                href={nextStepUrl}
-                aria-disabled={!scopeReviewed}
-                onClick={(event) => {
-                  if (!scopeReviewed) event.preventDefault();
-                }}
-                className={`mt-5 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold text-white transition ${
-                  scopeReviewed ? "bg-[#101216] hover:bg-[#E31E36]" : "cursor-not-allowed bg-gray-400"
-                }`}
-              >
-                {estimate.matchedTemplateId
-                  ? "Is estimate ke saath budget calculator kholein"
-                  : "Is tarah ki website apne brand ke liye banwayein"}
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-              {estimate.matchedTemplateId && (
+                <ol className="mt-4 max-h-96 space-y-2 overflow-y-auto pr-1">
+                  {estimate.pageInventory.map((page, index) => (
+                    <li key={page.url} className="flex items-start gap-3 rounded-lg bg-gray-50 p-3">
+                      <span className="mt-0.5 min-w-5 text-xs font-bold text-gray-400">{index + 1}.</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wide text-blue-700">{page.type}</span>
+                          <span className="text-xs font-semibold text-gray-800 break-words">{page.title}</span>
+                        </div>
+                        <a
+                          href={page.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 block break-all text-[10px] text-gray-500 hover:text-[#E31E36]"
+                        >
+                          {new URL(page.url).pathname || "/"}
+                        </a>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div className="space-y-6">
+                <section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
+                  <h3 className="font-extrabold text-base">4. Design and theme clues</h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Static HTML/CSS se nazar aanay wali style clues; exact rendered design ka screenshot-based audit nahi.
+                  </p>
+                  <ul className="mt-4 space-y-2">
+                    {estimate.designSignals.map((signal) => (
+                      <li key={signal} className="flex items-start gap-2 text-xs leading-relaxed text-gray-700">
+                        <span className="font-black text-[#E31E36]">•</span><span>{signal}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+                <section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
+                  <h3 className="font-extrabold text-base">5. Platform and architecture clues</h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Sirf public links aur text se mile ishare; backend, private admin panel, seller workflows ya separate-domain setup inspect nahi hotay.
+                  </p>
+                  {estimate.architectureSignals.length > 0 ? (
+                    <ul className="mt-4 space-y-2">
+                      {estimate.architectureSignals.map((signal) => (
+                        <li key={signal} className="flex items-start gap-2 text-xs leading-relaxed text-gray-700">
+                          <span className="font-black text-[#E31E36]">•</span><span>{signal}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-4 rounded-lg bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">
+                      Scanned public pages par admin, marketplace ya multi-domain architecture ka clear signal nahi mila. Iska matlab yeh nahi ke yeh cheezen backend mein maujood nahi.
+                    </p>
+                  )}
+                </section>
+              </div>
+            </section>
+
+            {(estimate.assumptions.length > 0 || estimate.warnings.length > 0) && (
+              <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
+                <h3 className="font-extrabold text-sm text-amber-950">Estimate assumptions and scan limits</h3>
+                <ul className="mt-3 space-y-2">
+                  {estimate.assumptions.map((assumption) => (
+                    <li key={assumption} className="flex items-start gap-2 text-xs text-amber-950 leading-relaxed">
+                      <span className="font-black">•</span><span>{assumption}</span>
+                    </li>
+                  ))}
+                  {estimate.warnings.map((warning) => (
+                    <li key={warning} className="flex items-start gap-2 text-xs text-amber-950 leading-relaxed">
+                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" /><span>{warning}</span>
+                    </li>
+                  ))}
+                </ul>
+                {estimate.internationalPricing && (
+                  <p className="mt-3 text-[11px] text-amber-900">
+                    International base package pricing uses the current regional rate and exchange rate (1 PKR = {estimate.exchangeRate} {estimate.currency}); add-on prices follow the published regional pricing rules. Rates updated {estimate.exchangeRateDate || "by provider"}.
+                  </p>
+                )}
                 <Link
-                  href={`/templates?template=${encodeURIComponent(estimate.matchedTemplateId)}`}
-                  className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-xs font-bold text-gray-800 hover:border-[#E31E36]"
+                  href={getCalculatorUrl(estimate)}
+                  className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#101216] hover:bg-[#E31E36] px-4 py-2.5 text-xs font-bold text-white transition"
                 >
-                  Ya is ready-made template ko request karein
+                  {estimate.matchedTemplateId
+                    ? "Is estimate ke saath budget calculator kholein"
+                    : "Features select aur customize karne ke liye budget calculator kholein"}
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
-              )}
-            </section>
+                {estimate.matchedTemplateId && (
+                  <Link
+                    href={`/templates?template=${encodeURIComponent(estimate.matchedTemplateId)}`}
+                    className="mt-3 ml-0 sm:ml-3 inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-xs font-bold text-gray-800 hover:border-[#E31E36]"
+                  >
+                    Ya is ready-made template ko request karein
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                )}
+              </section>
+            )}
           </div>
         )}
 
@@ -672,7 +608,7 @@ export default function WebsiteEstimatorPage() {
             <Globe className="w-8 h-8 text-gray-400 mx-auto" />
             <h2 className="font-bold mt-3">Website URL yahan enter karein</h2>
             <p className="text-xs text-gray-500 mt-1 max-w-xl mx-auto leading-relaxed">
-              Tool sitemap aur internal links se maximum 12 relevant public pages check karega. Private admin pages ya JavaScript-only features verify nahi hote; result preliminary feature-based estimate hai, final quotation nahi.
+              Tool sitemap aur internal links se maximum 24 public pages check karega. Yeh opened pages, visible style clues aur public feature signals par based estimate deta hai; private admin functionality aur JavaScript-only behavior verify nahi hotay.
             </p>
           </div>
         )}

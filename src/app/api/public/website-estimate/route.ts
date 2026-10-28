@@ -8,7 +8,7 @@ import { calculateBudget } from "@/lib/constants";
 import { matchesPortfolioProjectUrl } from "@/lib/template-pricing";
 
 export const runtime = "nodejs";
-export const maxDuration = 20;
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";

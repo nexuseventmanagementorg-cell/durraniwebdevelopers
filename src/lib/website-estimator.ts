@@ -17,14 +17,21 @@ import {
 } from "./constants";
 import { getPortfolioFeatureLabels, getTemplatePriceBreakdown, getTemplateRequestPlans } from "./template-pricing";
 import { CurrencyCode, ExchangeRates, getRegionalPricingConfig } from "./currency";
+import {
+  getBusinessAddonDetectionRules,
+  getBusinessAddonCatalog,
+} from "./business-addon-catalog";
 
 const MAX_URL_LENGTH = 2048;
-const MAX_HTML_BYTES = 1_000_000;
+const MAX_HTML_BYTES = 5_000_000;
+const MAX_STYLESHEET_BYTES = 512_000;
+const MAX_STYLESHEETS = 2;
 const MAX_REDIRECTS = 3;
-const MAX_PAGES = 12;
-const MAX_CANDIDATE_URLS = 40;
-const PAGE_FETCH_CONCURRENCY = 4;
-const REQUEST_TIMEOUT_MS = 5000;
+const MAX_PAGES = 24;
+const MAX_CANDIDATE_URLS = 80;
+const PAGE_FETCH_CONCURRENCY = 6;
+const REQUEST_TIMEOUT_MS = 8000;
+const MAX_SCAN_DURATION_MS = 45_000;
 const HOSTED_DOMAIN_SUFFIXES = [
   "vercel.app",
   "netlify.app",
@@ -62,11 +69,53 @@ interface HttpResult {
   location?: string;
   contentType: string;
   body: string;
+  truncated?: boolean;
+}
+
+export function readBoundedHtmlBody(
+  response: NodeJS.ReadableStream & { destroy?: (error?: Error) => unknown },
+  maxBytes = MAX_HTML_BYTES
+): Promise<{ body: string; truncated: boolean }> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
+    let settled = false;
+    const finish = (error?: Error, truncated = false) => {
+      if (settled) return;
+      settled = true;
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve({
+        body: Buffer.concat(chunks).toString("utf8"),
+        truncated,
+      });
+    };
+
+    response.on("data", (chunk: Buffer | string) => {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      const remainingBytes = maxBytes - totalBytes;
+      if (buffer.length > remainingBytes) {
+        if (remainingBytes > 0) chunks.push(buffer.subarray(0, remainingBytes));
+        totalBytes = maxBytes;
+        finish(undefined, true);
+        queueMicrotask(() => response.destroy?.());
+        return;
+      }
+      chunks.push(buffer);
+      totalBytes += buffer.length;
+    });
+
+    response.on("end", () => finish());
+    response.on("error", (error: Error) => finish(error));
+  });
 }
 
 export interface ScannedPage {
   url: string;
   html: string;
+  truncated?: boolean;
 }
 
 export type WebsiteEvidenceStatus =
@@ -106,6 +155,13 @@ export interface WebsiteEstimateResult {
   siteDescription: string;
   pagesScanned: number;
   scannedPages: string[];
+  pageInventory: {
+    url: string;
+    title: string;
+    type: string;
+  }[];
+  designSignals: string[];
+  architectureSignals: string[];
   features: WebsiteEstimateFeature[];
   addonCatalog: {
     id: string;
@@ -114,7 +170,13 @@ export interface WebsiteEstimateResult {
     price: number;
     basePrice?: number;
     billingPeriod?: "one_time" | "monthly";
+    businessCategories?: string[];
+    businessTypes?: string[];
+    pricingLevel?: "basic" | "expanded" | "complex";
+    origin?: "existing" | "new";
+    requiresCustomQuote?: boolean;
   }[];
+  suggestedBusinessCategoryId?: string;
   basePackage: string;
   basePrice: number;
   basePriceWithAdmin: number;
@@ -126,6 +188,8 @@ export interface WebsiteEstimateResult {
   }[];
   monthlyAddonTotal: number;
   estimatedTotal: number;
+  estimatedMaximumTotal?: number;
+  contingencyPercentage?: number;
   assumptions: string[];
   warnings: string[];
 }
@@ -276,7 +340,16 @@ export function applyPortfolioTemplateStartingPrice(
   };
 }
 
-export type WebsiteScopeMode = "new_build" | "existing_site";
+export type WebsiteScopeMode =
+  | "unselected"
+  | "basic_informational"
+  | "standard_ecommerce"
+  | "advanced_ecommerce"
+  | "saas_platform"
+  | "multi_vendor_marketplace"
+  | "enterprise_marketplace"
+  | "existing_site"
+  | "custom_review";
 export type ExistingFeatureScope = "unknown" | "existing" | "new" | "repair";
 
 function isPublicAddress(address: string): boolean {
@@ -317,17 +390,6 @@ function isPublicAddress(address: string): boolean {
   }
 
   return false;
-}
-
-function isPersonalDomainHost(hostname: string): boolean {
-  const host = hostname.toLowerCase().replace(/\.$/, "");
-  if (isIP(host) || HOSTED_DOMAIN_SUFFIXES.some((suffix) =>
-    host === suffix || host.endsWith(`.${suffix}`)
-  )) {
-    return false;
-  }
-  const labels = host.split(".");
-  return labels.length >= 2 && /^[a-z]{2,24}$/.test(labels[labels.length - 1]);
 }
 
 async function validateAndResolveUrl(input: string): Promise<{ url: URL; addresses: PublicAddress[] }> {
@@ -385,7 +447,8 @@ async function validateAndResolveUrl(input: string): Promise<{ url: URL; address
 function requestOnce(
   url: URL,
   addresses: PublicAddress[],
-  allowXml = false
+  allowXml = false,
+  allowCss = false
 ): Promise<HttpResult> {
   return new Promise((resolve, reject) => {
     const client = url.protocol === "https:" ? https : http;
@@ -406,7 +469,7 @@ function requestOnce(
         headers: {
           Accept: "text/html,application/xhtml+xml",
           "Accept-Encoding": "identity",
-          "User-Agent": "DurraniWebDevelopers-FeatureEstimator/1.0",
+          "User-Agent": "curl",
         },
       },
       (response) => {
@@ -428,33 +491,23 @@ function requestOnce(
 
         const isHtml = /^(text\/html|application\/xhtml\+xml)(;|$)/i.test(contentType);
         const isXml = allowXml && /^(application\/xml|text\/xml)(;|$)/i.test(contentType);
-        if (!isHtml && !isXml) {
+        const isCss = allowCss && /^text\/css(?:;|$)/i.test(contentType);
+        if (!isHtml && !isXml && !isCss && contentType) {
           response.resume();
-          reject(new Error("Yeh URL HTML website page nahi hai."));
+          reject(new Error(allowCss
+            ? "Stylesheet response type is not supported."
+            : "Yeh URL HTML website page nahi hai."));
           return;
         }
 
-        const chunks: Buffer[] = [];
-        let totalBytes = 0;
-
-        response.on("data", (chunk: Buffer | string) => {
-          const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-          totalBytes += buffer.length;
-          if (totalBytes > MAX_HTML_BYTES) {
-            request.destroy(new Error("Website page file size limit se bara hai."));
-            return;
-          }
-          chunks.push(buffer);
-        });
-
-        response.on("end", () => {
+        readBoundedHtmlBody(response, allowCss ? MAX_STYLESHEET_BYTES : MAX_HTML_BYTES).then(({ body, truncated }) => {
           resolve({
             statusCode,
             contentType,
-            body: Buffer.concat(chunks).toString("utf8"),
+            body,
+            truncated,
           });
-        });
-        response.on("error", reject);
+        }, reject);
       }
     );
 
@@ -468,23 +521,20 @@ function requestOnce(
 
 async function fetchPublicDocument(input: string, allowXml: boolean): Promise<ScannedPage> {
   let currentInput = input;
-  const initialUrl = new URL(input);
 
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
     const { url, addresses } = await validateAndResolveUrl(currentInput);
-    if (url.origin !== initialUrl.origin) {
-      throw new Error("Cross-origin redirects are not scanned.");
-    }
     const result = await requestOnce(url, addresses, allowXml);
 
     if (!result.location) {
-      if (
-        !allowXml &&
-        !/^(text\/html|application\/xhtml\+xml)(;|$)/i.test(result.contentType)
-      ) {
+      if (!isSupportedPublicDocument(result.contentType, result.body, allowXml)) {
         throw new Error("Yeh URL HTML website page nahi hai.");
       }
-      return { url: url.toString(), html: result.body };
+      return {
+        url: url.toString(),
+        html: result.body,
+        ...(result.truncated ? { truncated: true } : {}),
+      };
     }
     if (redirects === MAX_REDIRECTS) {
       throw new Error("Website par bohat zyada redirects hain.");
@@ -494,6 +544,79 @@ async function fetchPublicDocument(input: string, allowXml: boolean): Promise<Sc
   }
 
   throw new Error("Website ko scan nahi kiya ja saka.");
+}
+
+async function fetchPublicStylesheet(input: string, expectedOrigin: string): Promise<string> {
+  let currentInput = input;
+
+  for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
+    const { url, addresses } = await validateAndResolveUrl(currentInput);
+    if (url.origin !== expectedOrigin) {
+      throw new Error("Cross-origin stylesheets are not scanned.");
+    }
+
+    const result = await requestOnce(url, addresses, false, true);
+    if (!result.location) {
+      if (!/^text\/css(?:;|$)/i.test(result.contentType)) {
+        throw new Error("Stylesheet response type is not supported.");
+      }
+      return result.body;
+    }
+    if (redirects === MAX_REDIRECTS) {
+      throw new Error("Stylesheet has too many redirects.");
+    }
+
+    const nextUrl = new URL(result.location, url);
+    if (nextUrl.origin !== expectedOrigin) {
+      throw new Error("Cross-origin stylesheet redirects are not scanned.");
+    }
+    currentInput = nextUrl.toString();
+  }
+
+  throw new Error("Stylesheet could not be scanned.");
+}
+
+function getStylesheetCandidates(pages: ScannedPage[], origin: string): string[] {
+  const candidates = new Set<string>();
+  for (const page of pages.slice(0, 6)) {
+    const base = new URL(page.url);
+    for (const tag of page.html.match(/<link\b[^>]*>/gi) || []) {
+      const rel = tag.match(/\brel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+      if (!/\bstylesheet\b/i.test(rel?.[1] || rel?.[2] || rel?.[3] || "")) continue;
+      const href = tag.match(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+      const value = decodeHtml(href?.[1] || href?.[2] || href?.[3] || "").trim();
+      if (!value) continue;
+      try {
+        const stylesheet = new URL(value, base);
+        if (stylesheet.origin !== origin || stylesheet.protocol !== base.protocol) continue;
+        stylesheet.hash = "";
+        stylesheet.search = "";
+        candidates.add(stylesheet.toString());
+      } catch {
+        continue;
+      }
+    }
+  }
+  return Array.from(candidates).slice(0, MAX_STYLESHEETS);
+}
+
+async function readPublicStylesheets(
+  pages: ScannedPage[],
+  origin: string,
+  fetchStylesheet: (input: string, expectedOrigin: string) => Promise<string>
+): Promise<{ stylesheets: string[]; incomplete: boolean }> {
+  const candidates = getStylesheetCandidates(pages, origin);
+  const results = await Promise.all(candidates.map(async (candidate) => {
+    try {
+      return await fetchStylesheet(candidate, origin);
+    } catch {
+      return null;
+    }
+  }));
+  return {
+    stylesheets: results.filter((result): result is string => result !== null),
+    incomplete: results.some((result) => result === null),
+  };
 }
 
 function decodeHtml(value: string): string {
@@ -542,6 +665,27 @@ function getPageTitle(html: string): string {
   return title ? decodeHtml(title.replace(/<[^>]+>/g, " ").trim()) : "";
 }
 
+function isScannablePublicPagePath(pathname: string): boolean {
+  return !/\.(?:avif|css|csv|docx?|gif|ico|jpe?g|js|json|pdf|png|svg|txt|webp|xml|zip)$/i.test(pathname) &&
+    !/(?:^|\/)api(?:\/|$)/i.test(pathname);
+}
+
+export function isSupportedPublicDocument(
+  contentType: string,
+  body: string,
+  allowXml = false
+): boolean {
+  const isHtml = /^(text\/html|application\/xhtml\+xml)(;|$)/i.test(contentType);
+  const isXml = allowXml && /^(application\/xml|text\/xml)(;|$)/i.test(contentType);
+  if (isHtml || isXml) return true;
+
+  if (contentType && !/^text\/plain(?:;|$)/i.test(contentType)) return false;
+
+  const prefix = body.replace(/^\uFEFF/, "").trimStart().replace(/^<!--[\s\S]*?-->\s*/, "");
+  return /^(?:<!doctype\s+html\b|<html\b|<head\b|<body\b|<title\b)/i.test(prefix) ||
+    (allowXml && /^(?:<\?xml\b|<(?:urlset|sitemapindex)\b)/i.test(prefix));
+}
+
 function getCandidateLinks(html: string, baseUrl: string): string[] {
   const base = new URL(baseUrl);
   const matches = Array.from(html.matchAll(/<a\b[^>]*href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>/gi));
@@ -557,17 +701,18 @@ function getCandidateLinks(html: string, baseUrl: string): string[] {
         url.origin !== base.origin ||
         url.protocol !== base.protocol ||
         url.username ||
-        url.password
+        url.password ||
+        !isScannablePublicPagePath(url.pathname)
       ) continue;
 
       url.hash = "";
-      if (url.pathname === base.pathname && !url.search) continue;
+      url.search = "";
+      if (url.pathname === base.pathname) continue;
 
       const anchorText = stripHtml(match[0]);
-      const relevance = /product|shop|store|menu|category|order|booking|reservation|pricing|service|feature|about|account|login|dashboard|contact|cart|checkout|track|status|blog|faq|customer|sales|report|credit|payment|delivery|table|qr|staff|admin|integration|subscription|inventory|review/i
-        .test(`${url.pathname} ${url.search} ${anchorText}`)
-        ? 2
-        : 0;
+      const candidateText = `${url.pathname} ${anchorText}`;
+      const relevance = /product|category|collection|shop|store|menu|service|pricing|about|contact|faq|blog|seller|vendor|marketplace|feature|integration|subscription|inventory|review/i
+        .test(candidateText) ? 3 : 1;
       const key = url.toString();
       scored.set(key, Math.max(scored.get(key) ?? -1, relevance));
     } catch {
@@ -621,17 +766,24 @@ async function getSitemapCandidates(
           return (
             parsed.origin === origin &&
             (parsed.protocol === "https:" || parsed.protocol === "http:") &&
-            /product|shop|store|menu|category|order|booking|reservation|pricing|service|about|account|login|dashboard|contact|cart|checkout|track|status|blog|faq|customer|sales|report|credit|payment|delivery|table|qr|staff|admin|feature|integration|subscription|inventory|review/i
-              .test(`${parsed.pathname} ${parsed.search}`)
+          isScannablePublicPagePath(parsed.pathname) &&
+          /product|shop|store|menu|category|order|booking|reservation|pricing|service|about|contact|account|login|dashboard|cart|checkout|track|status|blog|faq|customer|sales|report|credit|payment|delivery|table|qr|staff|admin|feature|seller|vendor|marketplace|integration|subscription|inventory|review/i
+            .test(`${parsed.pathname} ${parsed.search}`)
           );
         } catch {
           return false;
         }
       });
+    const normalizeCandidate = (candidate: string) => {
+      const url = new URL(candidate);
+      url.hash = "";
+      url.search = "";
+      return url.toString();
+    };
     const relevance = (candidate: string) =>
-      /product|shop|store|menu|category|order|booking|reservation|pricing|service|about|account|login|dashboard|contact|cart|checkout|track|status|blog|faq|customer|sales|report|credit|payment|delivery|table|qr|staff|admin|feature|integration|subscription|inventory|review/i
-        .test(candidate) ? 2 : 0;
-    return Array.from(new Set(urls))
+      /product|shop|store|menu|category|pricing|service|about|contact|blog|faq|feature|seller|vendor|marketplace|integration|subscription|inventory|review/i
+        .test(candidate) ? 3 : 1;
+    return Array.from(new Set(urls.map(normalizeCandidate)))
       .sort((left, right) => relevance(right) - relevance(left))
       .slice(0, MAX_CANDIDATE_URLS);
   } catch {
@@ -640,13 +792,141 @@ async function getSitemapCandidates(
 }
 
 function getPageSignalText(page: ScannedPage): string {
+  const markup = page.html
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<(script|style|noscript|svg|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, " ");
   const linkedEvidence = Array.from(
     page.html.matchAll(/<a\b[^>]*href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a\s*>/gi)
-  ).map((match) => `${match[1] || match[2] || match[3] || ""} ${stripHtml(match[4] || "")}`);
+  ).map((match) => {
+    const href = decodeHtml(match[1] || match[2] || match[3] || "").trim();
+    let hrefSignal = href;
+    try {
+      const link = new URL(href, page.url);
+      link.hash = "";
+      link.search = "";
+      hrefSignal = `${link.hostname}${link.pathname}`;
+    } catch {
+      hrefSignal = href.split(/[?#]/, 1)[0];
+    }
+    return `${hrefSignal} ${stripHtml(match[4] || "")}`;
+  });
   const controlEvidence = Array.from(
-    page.html.matchAll(/<(button|input|form|select|textarea|img)\b[^>]*>/gi)
-  ).map((match) => match[0].replace(/<|>/g, " "));
-  return `${stripHtml(page.html)} ${decodeHtml([...linkedEvidence, ...controlEvidence].join(" "))}`;
+    markup.matchAll(/<(a|button|input|form|select|textarea|img|div|span)\b[^>]*>/gi)
+  ).flatMap((match) => {
+    const attributes = match[0].matchAll(
+      /\b(aria-label|alt|data-target|id|name|placeholder|role|title)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi
+    );
+    return Array.from(attributes, (attribute) =>
+      attribute[2] || attribute[3] || attribute[4] || ""
+    );
+  });
+  const metadata = [
+    getPageTitle(page.html),
+    getMetaContent(page.html, "description", "name"),
+    getMetaContent(page.html, "keywords", "name"),
+    getMetaContent(page.html, "og:title", "property"),
+    getMetaContent(page.html, "og:description", "property"),
+    getMetaContent(page.html, "og:type", "property"),
+  ];
+  return `${stripHtml(page.html)} ${decodeHtml([...metadata, ...linkedEvidence, ...controlEvidence].join(" "))}`;
+}
+
+function classifyPublicPage(page: ScannedPage): string {
+  const url = new URL(page.url);
+  const path = `${url.pathname} ${getPageTitle(page.html)}`.toLowerCase();
+  if (url.pathname === "/" || url.pathname === "") return "Home";
+  if (/\/dp\/|\/products?\/[^/]+|\/p\/[^/]+/.test(path)) return "Product detail";
+  if (/product|category|collection|catalog|shop/.test(path)) return "Product/category listing";
+  if (/seller|vendor|marketplace/.test(path)) return "Seller or marketplace";
+  if (/service|solution/.test(path)) return "Services";
+  if (/about|team|company/.test(path)) return "About";
+  if (/contact|support|help/.test(path)) return "Contact/support";
+  if (/pricing|plans/.test(path)) return "Pricing/plans";
+  if (/blog|article|news/.test(path)) return "Blog/article";
+  if (/faq|policy|terms|privacy/.test(path)) return "Information/policy";
+  if (/booking|reservation|appointment/.test(path)) return "Booking";
+  return "Public content";
+}
+
+function getPageInventory(pages: ScannedPage[]): WebsiteEstimateResult["pageInventory"] {
+  return pages.map((page) => ({
+    url: page.url,
+    title: getPageTitle(page.html) || new URL(page.url).pathname || "Home",
+    type: classifyPublicPage(page),
+  }));
+}
+
+function getDesignSignals(pages: ScannedPage[], externalStylesheets: string[] = []): string[] {
+  const html = pages.slice(0, 6).map((page) => page.html).join(" ");
+  const styles = [
+    ...(html.match(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi) || []),
+    ...(html.match(/\bstyle\s*=\s*(?:"[^"]*"|'[^']*')/gi) || []),
+    ...externalStylesheets,
+  ].join(" ");
+  const classNames = Array.from(html.matchAll(/\bclass\s*=\s*(?:"([^"]*)"|'([^']*)')/gi))
+    .map((match) => match[1] || match[2] || "")
+    .join(" ");
+  const signals: string[] = [];
+  const colors = Array.from(new Set([
+    ...Array.from(html.matchAll(/<meta\b[^>]*name\s*=\s*["']theme-color["'][^>]*content\s*=\s*["']([^"']+)["']/gi), (match) => match[1]),
+    ...Array.from(styles.matchAll(/#[0-9a-f]{3,8}\b|rgba?\([^)]{1,80}\)|hsla?\([^)]{1,80}\)/gi), (match) => match[0]),
+  ])).slice(0, 6);
+  if (colors.length) signals.push(`Visible CSS color palette signals: ${colors.join(", ")}`);
+
+  const fonts = Array.from(new Set(
+    Array.from(styles.matchAll(/font-family\s*:\s*([^;}]+)/gi), (match) =>
+      match[1].trim().replace(/!important/gi, "").slice(0, 80)
+    )
+  )).slice(0, 3);
+  if (fonts.length) signals.push(`Typography declarations: ${fonts.join("; ")}`);
+
+  if (/<meta\b[^>]*name\s*=\s*["']viewport["']/i.test(html) || /@media\b/i.test(styles) || /(?:^|\s)(?:sm|md|lg|xl):/i.test(classNames)) {
+    signals.push("Responsive layout signal found (viewport, breakpoints, or responsive utility classes).");
+  }
+  if (/wp-content|wp-includes/i.test(html)) signals.push("WordPress asset/path signal found.");
+  if (/cdn\.shopify\.com|Shopify\.theme|\/cdn\/shop\//i.test(html)) signals.push("Shopify storefront asset signal found.");
+  if (/static\.wixstatic\.com|wix-code/i.test(html)) signals.push("Wix asset/runtime signal found.");
+  if (/squarespace\.com\/static|static1\.squarespace\.com/i.test(html)) signals.push("Squarespace asset signal found.");
+  if (/\b(?:Mui[A-Z]\w*|MuiButton-root)\b/.test(classNames)) signals.push("Material UI component-class signal found.");
+  if (/\b(?:container-fluid|navbar-expand-|btn-primary|col-(?:sm|md|lg)-\d)\b/.test(classNames)) signals.push("Bootstrap-style component classes found.");
+  if (/\b(?:sm|md|lg|xl):(?:flex|grid|block|hidden|w-|text-)/.test(classNames)) signals.push("Tailwind-style responsive utility classes found.");
+  if (!signals.some((signal) => /Responsive layout signal/.test(signal))) {
+    signals.push("Responsive behavior could not be confirmed from the returned static HTML/CSS.");
+  }
+  return signals;
+}
+
+function getArchitectureSignals(pages: ScannedPage[]): string[] {
+  const text = pages.map(getPageSignalText).join(" ");
+  const signals: string[] = [];
+  if (/\b(?:become a seller|sell on (?:our|the|amazon)|seller central|seller dashboard|vendor portal|join (?:our|the) marketplace|multi[- ]vendor marketplace)\b/i.test(text)) {
+    signals.push("Public seller/vendor enrollment or marketplace wording found; seller dashboards, payouts, and backend operations are not verified.");
+  }
+  if (/\b(?:multiple domains per (?:seller|vendor|store)|multi[- ]domain (?:platform|storefront)|custom domains? for (?:each|every) (?:seller|vendor|store)|domain mapping for stores)\b/i.test(text)) {
+    signals.push("Explicit multi-domain storefront wording found; domain routing and tenant isolation are not verified.");
+  }
+  const primaryHost = new URL(pages[0].url).hostname.replace(/^www\./i, "");
+  const linkedSubdomains = new Set<string>();
+  for (const page of pages) {
+    for (const match of Array.from(page.html.matchAll(/<a\b[^>]*href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi))) {
+      try {
+        const host = new URL(decodeHtml(match[1] || match[2] || match[3] || ""), page.url).hostname.toLowerCase();
+        const canonicalHost = host.replace(/^www\./i, "");
+        if (canonicalHost !== primaryHost && canonicalHost.endsWith(`.${primaryHost}`)) {
+          linkedSubdomains.add(host);
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+  if (linkedSubdomains.size > 0) {
+    signals.push(`Public links point to related subdomains: ${Array.from(linkedSubdomains).slice(0, 5).join(", ")}; this does not prove a multi-domain tenant/storefront model.`);
+  }
+  if (/\b(?:admin|staff)\s+(?:dashboard|panel|portal|login|sign[ -]?in)\b|\/admin(?:\/|\b)/i.test(text)) {
+    signals.push("Public admin/staff route or reference found; access and dashboard functionality are not verified.");
+  }
+  return signals;
 }
 
 const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
@@ -662,7 +942,7 @@ const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
   { id: "user_accounts", pattern: /\b(customer accounts?|customer registration|register as a customer|create (a )?customer account|customer login|customer sign[ -]?in)\b/i },
   { id: "role_permissions", pattern: /\b(role[- ]based (access|permissions?)|custom (staff )?roles?|staff permissions?|user permissions?)\b/i },
   { id: "media_uploads", pattern: /\b(file uploads?|media uploads?|upload (images|videos|pdfs|documents))\b/i },
-  { id: "search_filter_sort", pattern: /\b(search and filters?|filter and sort|sorting and filtering|advanced search)\b/i },
+  { id: "search_filter_sort", pattern: /\b(search and filters?|filter and sort|sorting and filtering|advanced search)\b|\b(?:site|nav|product|catalog)[ -]search\b/i },
   { id: "order_invoice_management", pattern: /\b(order management|manage orders|order statuses|order and invoice management)\b/i },
   { id: "activity_logs", pattern: /\b(activity logs?|admin action logs?|user activity history)\b/i },
   { id: "pdf_excel_export", pattern: /\b(pdf|excel) (report|data|records?) export|export (reports?|records?) to (pdf|excel)\b/i },
@@ -680,7 +960,7 @@ const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
   { id: "order_tracking", pattern: /\b(order tracking|track (my |your )?order|shipment tracking)\b/i },
   { id: "abandoned_cart", pattern: /\b(abandoned carts?|recover (unfinished|abandoned) carts?)\b/i },
   { id: "invoice_receipts", pattern: /\b(order invoices?|purchase receipts?|downloadable invoices?)\b/i },
-  { id: "kitchen_order_tickets", pattern: /\b(kitchen order tickets?|kitchen tickets?|kot\b|print(?:able)? kitchen (?:orders?|tickets?)|print kot)\b/i },
+  { id: "kitchen_order_tickets", pattern: /\b(kitchen order tickets?|kitchen tickets?|kot system|print(?:able)? kitchen (?:orders?|tickets?)|print kot)\b/i },
   { id: "product_qr_codes", pattern: /\b(product qr codes?|qr labels? for products?)\b/i },
   { id: "loyalty_rewards", pattern: /\b(loyalty points?|rewards program|repeat[- ]customer rewards?)\b/i },
   { id: "bulk_product_import", pattern: /\b(bulk product imports?|import products? from (csv|excel)|product catalog import)\b/i },
@@ -699,7 +979,7 @@ const ADDON_SCAN_RULES: Array<{ id: string; pattern: RegExp }> = [
   { id: "trial_expiry", pattern: /\b(trial periods?|trial expiry|plan expiration)\b/i },
   { id: "referral_affiliate", pattern: /\b(referral (program|system)|affiliate system|referral links?)\b/i },
   { id: "usage_based_billing", pattern: /\b(usage[- ]based billing|billing by usage|pay per api call)\b/i },
-  { id: "tenant_domains", pattern: /\b(tenant[- ]specific domains?|custom domains? for (each )?tenant)\b/i },
+  { id: "tenant_domains", pattern: /\b(tenant[- ]specific domains?|custom domains? for (each )?(tenant|seller|vendor|store)|multi[- ]domain storefronts?|seller storefront domains?)\b/i },
   { id: "data_import_export", pattern: /\b(tenant data import|data import and export|bulk data export)\b/i },
   { id: "feature_flags", pattern: /\b(feature flags?|plan[- ]based access|plan[- ]gated features?)\b/i },
   { id: "in_app_notifications", pattern: /\b(in[- ]app notifications?|application notifications?)\b/i },
@@ -770,15 +1050,15 @@ export function detectWebsiteFeatures(
   const adminAreaSignal = has(/\b(admin|staff)\s+(dashboard|panel|portal|login|sign[ -]?in)\b|\bmanage products\b|\bproduct management\b|\/admin(?:\/|\b)/i);
   const adminPanel = false;
 
-  const productCatalog = has(/\b(products?|catalog|shop|store|menu|items for sale)\b/);
-  const cartSignal = has(/\b(add to cart|shopping cart|view cart|cart page|\/cart(?:\/|\b))/i);
+  const productCatalog = has(/\b(products?|catalog|shop|shopping|store|menu|items for sale)\b/);
+  const cartSignal = has(/\b(cart|shopping bag|basket)\b|\b(add to cart|view cart|cart page|\/cart(?:\/|\b))/i);
+  const marketplaceSignal = has(/\b(?:become a seller|sell on (?:our|the|amazon)|seller central|seller dashboard|vendor portal|join (?:our|the) marketplace|multi[- ]vendor marketplace)\b/i);
   const checkoutSignal = has(/\b(checkout|\/checkout(?:\/|\b)|complete (your )?order|place (an )?order)\b/i);
   const whatsappSignal = has(/\bwhatsapp\b|wa\.me\/|api\.whatsapp\.com\/send|whatsapp:\/\/send/i);
   const onlineOrderingSignal = has(/\b(order online|online ordering)\b/);
   const ordering = cartSignal || checkoutSignal || has(/\b(order online|online ordering)\b/);
-  const ecommerceCatalog = has(/\b(products?|catalog|shop|store|menu|items for sale)\b/);
-  const ecommerceStore = ecommerceCatalog && cartSignal &&
-    (checkoutSignal || onlineOrderingSignal || whatsappSignal);
+  const ecommerceCatalog = has(/\b(products?|catalog|shop|shopping|store|menu|items for sale)\b/);
+  const ecommerceStore = ecommerceCatalog && cartSignal;
   const explicitSaas = has(/\b(saas|software as a service|subscription software|cloud[ -]based software)\b/i);
   const saasPlatform = has(
     /\b(?:software|crm|erp|project management|team collaboration|invoicing|accounting|hr management)\s+(?:as a )?(?:platform|system|software|tool)\b|\b(?:cloud|online|web)[ -]based platform\b/i
@@ -787,7 +1067,9 @@ export function detectWebsiteFeatures(
     /\b(subscription|free trial|pricing plans|monthly plan|annual plan|per user|workspace|dashboard|customer portal|sign[ -]?in|log[ -]?in)\b/i
   );
   const saasApplication = explicitSaas || (saasPlatform && saasCommercialSignals);
-  const booking = has(/\b(book(ing)?|reservation|appointment|reserve a table|schedule a visit)\b/);
+  const booking = has(
+    /\b(bookings?|reservations?|appointments?)\b|\bbook (?:a|an|your) (?:appointment|table|room|consultation|service|session)\b|\breserve (?:a|your) table\b|\bschedule (?:a|an) (?:visit|appointment)\b/i
+  );
   const accounts = has(/\b(customer registration|register as a customer|create (a )?customer account|customer login|customer sign[ -]?in|my customer account)\b/);
   const payment = has(/\b(stripe|paypal|razorpay|paystack|authorize\.net|credit card|debit card|pay online|online payment gateway|payment gateway|online payment integration)\b/);
   const analytics = has(/\b(analytics dashboard|sales analytics|financial report|business analytics|revenue chart)\b/);
@@ -798,6 +1080,7 @@ export function detectWebsiteFeatures(
   const advancedEcommerce = ecommerceStore && (
     analytics ||
     customIntegration ||
+    marketplaceSignal ||
     has(/\b(advanced inventory|multi[ -]?vendor|enterprise store|custom checkout)\b/)
   );
   const enterpriseSaas = saasApplication && has(
@@ -821,7 +1104,7 @@ export function detectWebsiteFeatures(
       evidence: "Page text mein product/catalog/shop/menu se mutaliq alfaaz mile.",
     });
   }
-  if (has(/\b(search (products?|menu)|filter by categor(y|ies)|menu categor(y|ies)|category filter|filter and sort)\b/i)) {
+  if (has(/\b(search (products?|menu)|filter by categor(y|ies)|menu categor(y|ies)|category filter|filter and sort)\b|\b(?:site|nav|product|catalog)[ -]search\b/i)) {
     features.push({
       title: "Catalog search or category filtering signal",
       explanation: "Public text suggests catalog search or category filtering; the interaction has not been exercised.",
@@ -857,6 +1140,15 @@ export function detectWebsiteFeatures(
       explanation: `Store signals match the ${advancedEcommerce ? ECOMMERCE_PACKAGES.ecommerce_advanced.label : ECOMMERCE_PACKAGES.ecommerce_business.label} starting package; final scope still needs review.`,
       evidence: "Product catalog and online shopping/cart signals were found on the public pages.",
     });
+  }
+  if (marketplaceSignal) {
+    features.push({
+      title: "Multi-vendor marketplace signal",
+      explanation: "Public seller/vendor enrollment or marketplace wording was found; seller dashboards, verification, commissions, and payouts are not verified.",
+      evidence: "A public seller enrollment, vendor portal, or marketplace reference matched.",
+      addonId: "vendor_management",
+    });
+    addonIds.push("vendor_management");
   }
   if (saasApplication && !ecommerceStore) {
     const packageLabel = pricingPackage && isSaasPackageId(pricingPackage)
@@ -907,7 +1199,9 @@ export function detectWebsiteFeatures(
     addonIds.push("advanced_dashboard");
   }
   if (has(/\b(qr|qr code|qr-code)\b/i)) {
-    const tableOrderingSignal = has(/\b(table|dine[- ]in|scan (to )?order|order from (your )?table)\b/i);
+    const tableOrderingSignal = has(
+      /\b(?:scan|use|open)\s+(?:the\s+)?qr(?:\s+code)?\s+(?:at|from|on|for)\s+(?:(?:your|a|the)\s+)?(?:dine[- ]in\s+)?table\b|\btable\s+qr(?:\s+code)?\s+(?:for\s+)?(?:dine[- ]in\s+)?(?:order|ordering|menu)\b|\bqr(?:\s+code)?\s+to\s+(?:place\s+)?order\s+from\s+(?:your\s+)?table\b/i
+    );
     features.push({
       title: tableOrderingSignal ? "Table QR ordering signal" : "QR code reference",
       explanation: tableOrderingSignal
@@ -957,7 +1251,7 @@ export function detectWebsiteFeatures(
   } else if (adminAreaSignal) {
     assumptions.push("A public admin/staff route or label is only a signal; it does not select the client-admin package or prove dashboard functionality.");
   } else {
-    assumptions.push("Client admin panel public page se confirm nahi hua, is liye Package 1 (Durrani-managed) use kiya gaya hai.");
+    assumptions.push("Public page signals did not match a published base package; a basic or admin package is not assumed solely from a limited scan.");
   }
   if (payment && addonIds.includes("payment_gateway")) {
     assumptions.push("Payment add-on sirf visible gateway/card-payment signals par lagaya gaya hai; gateway account, third-party fees, aur exact integration scope shamil nahi.");
@@ -978,6 +1272,22 @@ export function detectWebsiteFeatures(
     if (addon.enabled) detectedAddonIds.add(rule.id);
   }
 
+  const businessAddonRules = getBusinessAddonDetectionRules();
+  for (const rule of businessAddonRules) {
+    if (!has(rule.pattern)) continue;
+    const addon = pricingConfig.addons[rule.id];
+    if (!addon || !addon.enabled) continue;
+    detectedAddonIds.add(rule.id);
+    if (!features.some((feature) => feature.addonId === rule.id)) {
+      features.push({
+        title: addon.label,
+        explanation: addon.description,
+        evidence: `Public page text matched a feature-name signal for ${addon.label.toLowerCase()}.`,
+        addonId: rule.id,
+      });
+    }
+  }
+
   if (features.length === 0) {
     features.push({
       title: "Public informational website",
@@ -989,7 +1299,7 @@ export function detectWebsiteFeatures(
   assumptions.push("Yeh visible public pages par mabni rough development estimate hai, asal invoice ya confirmed project price nahi.");
   assumptions.push("Scanner reads returned HTML only; JavaScript-rendered behavior, forms after submission, private routes, source code, and backend state are not verified.");
   assumptions.push("A feature not detected in the scanned pages may still exist on other pages, behind login, or in JavaScript; it is not proof that the feature is absent.");
-  assumptions.push("Detected priced add-ons are included in the starting new-build estimate; uncheck any item that is not needed. Public signals are not proof that the feature is fully implemented.");
+  assumptions.push("Detected catalog-priced features are listed in the provisional scan estimate. Public signals are not proof that a feature is fully implemented or required in a new build.");
   assumptions.push("Login ke peechay ke features, private admin panels, source code, database, aur hidden integrations scan nahi kiye ja sakte. Unknown backend state is not treated as a Supabase integration.");
   assumptions.push("Personal domain setup is a PKR 10,000 one-time add-on; domain registration and renewal fees charged by the registrar are separate. Third-party subscriptions, payment gateway accounts, and external API accounts are arranged and paid for by the client.");
 
@@ -1010,7 +1320,6 @@ export function detectWebsiteFeatures(
         : {}),
     };
   });
-
   return {
     features: featuresWithEvidence,
     adminPanel,
@@ -1034,11 +1343,16 @@ export async function estimateWebsite(
     allowXml?: boolean
   ) => Promise<ScannedPage> = (input, allowXml = false) =>
     fetchPublicDocument(input, allowXml),
-  configuredPricing: PricingRuleConfig = DEFAULT_PRICING_CONFIG
+  configuredPricing: PricingRuleConfig = DEFAULT_PRICING_CONFIG,
+  fetchStylesheet: (input: string, expectedOrigin: string) => Promise<string> = fetchPublicStylesheet
 ): Promise<WebsiteEstimateResult> {
+  const scanStartedAt = Date.now();
   const firstPage = await fetchDocument(input, false);
   const pages: ScannedPage[] = [firstPage];
   const warnings: string[] = [];
+  if (firstPage.truncated) {
+    warnings.push(`Homepage content was capped at ${MAX_HTML_BYTES / 1_000_000} MB to keep scanning bounded; findings may be incomplete.`);
+  }
   const visited = new Set([new URL(firstPage.url).toString()]);
   const sitemapCandidates = await getSitemapCandidates(new URL(firstPage.url).origin, fetchDocument);
   const queued = new Set<string>();
@@ -1052,7 +1366,12 @@ export async function estimateWebsite(
     return true;
   }).slice(0, MAX_CANDIDATE_URLS);
 
+  let scanTimeLimitReached = false;
   while (candidates.length > 0 && pages.length < MAX_PAGES) {
+    if (Date.now() - scanStartedAt >= MAX_SCAN_DURATION_MS - REQUEST_TIMEOUT_MS * 2) {
+      scanTimeLimitReached = true;
+      break;
+    }
     const batch = candidates.splice(0, Math.min(
       PAGE_FETCH_CONCURRENCY,
       MAX_PAGES - pages.length
@@ -1070,6 +1389,9 @@ export async function estimateWebsite(
     for (const page of fetchedPages) {
       if (!page) continue;
       pages.push(page);
+    if (page.truncated) {
+      warnings.push(`Some page content was capped at ${MAX_HTML_BYTES / 1_000_000} MB to keep scanning bounded; findings may be incomplete.`);
+    }
       for (const candidate of getCandidateLinks(page.html, page.url)) {
         const normalizedCandidate = new URL(candidate).toString();
         if (visited.has(normalizedCandidate) || queued.has(normalizedCandidate)) continue;
@@ -1078,15 +1400,50 @@ export async function estimateWebsite(
       }
     }
   }
-  if (candidates.length > 0) {
+  if (scanTimeLimitReached) {
+    warnings.push("The scan reached its time limit; the estimate uses public pages collected so far.");
+  } else if (candidates.length > 0) {
     warnings.push(`Public scan limit reached (${MAX_PAGES} pages); more same-site pages may contain additional features.`);
   }
-  if (warnings.length > 1) {
+  const stylesheetResult = await readPublicStylesheets(
+    pages,
+    new URL(firstPage.url).origin,
+    fetchStylesheet
+  );
+  if (stylesheetResult.incomplete) {
+    warnings.push("Some same-site stylesheets could not be read; design and theme clues may be incomplete.");
+  }
+  if (warnings.length > 0) {
     warnings.splice(0, warnings.length, ...Array.from(new Set(warnings)));
   }
 
   const text = pages.map(getPageSignalText).join(" ");
   const detected = detectWebsiteFeatures(text, [], configuredPricing);
+  const homepageText = getPageSignalText(firstPage);
+  const homepageIdentity = [
+    getPageTitle(firstPage.html),
+    getMetaContent(firstPage.html, "description", "name"),
+    ...Array.from(firstPage.html.matchAll(/<h[1-2]\b[^>]*>([\s\S]*?)<\/h[1-2]\s*>/gi), (match) => stripHtml(match[1])),
+  ].join(" ");
+  const restaurantBusinessContext =
+    /\b(?:restaurant|caf[eé]|hotel|catering|bakery)\b/i.test(homepageIdentity) ||
+    /\b(?:restaurant|caf[eé]|hotel|catering|bakery)\s+(?:website|web app(?:lication)?|ordering|menu|management|software|system|solution)\b/i.test(homepageText);
+  if (detected.pricingPackage?.startsWith("ecommerce_") && !restaurantBusinessContext) {
+    const foodHospitalityAddonIds = new Set([
+      ...getBusinessAddonDetectionRules()
+        .filter((rule) => rule.categoryId === "food-hospitality")
+        .map((rule) => rule.id),
+      "restaurant_qr_menu",
+      "kitchen_order_tickets",
+      "table_reservations",
+    ]);
+    detected.addonIds = detected.addonIds.filter((id) => !foodHospitalityAddonIds.has(id));
+    detected.features = detected.features.filter((feature) => {
+      const addonId = feature.addonId || Object.entries(configuredPricing.addons)
+        .find(([, addon]) => addon.label === feature.title)?.[0];
+      return !addonId || !foodHospitalityAddonIds.has(addonId);
+    });
+  }
   const featuresByPage = pages.map((page) => ({
     url: page.url,
     ids: new Set(
@@ -1100,17 +1457,20 @@ export async function estimateWebsite(
       .filter((page) => page.ids.has(feature.id))
       .map((page) => page.url),
   }));
-  if (isPersonalDomainHost(new URL(firstPage.url).hostname)) {
-    detected.features.push({
-      id: "personal_domain",
-      title: "Personal domain setup signal",
-      explanation: "The scanned site uses a personal/custom domain. Select this one-time setup add-on for a new build; registrar purchase and renewal fees are separate.",
-      evidence: `The public website uses the custom domain ${new URL(firstPage.url).hostname}.`,
-      evidenceStatus: "public_signal",
-      sourcePages: [firstPage.url],
-      addonId: "personal_domain",
-    });
-  }
+  const pageInventory = getPageInventory(pages);
+  const informationalPageTypes = new Set(
+    pageInventory
+      .map((page) => page.type)
+      .filter((type) =>
+        ["About", "Services", "Contact/support", "Blog/article", "Information/policy"].includes(type)
+      )
+  );
+  const hasBasicInformationalScope = !detected.pricingPackage &&
+    pages.length >= 3 &&
+    informationalPageTypes.size >= 2 &&
+    !detected.features.some((feature) =>
+      ["E-commerce store package", "SaaS application package"].includes(feature.title)
+    );
   const standardPricingConfig = {
     ...configuredPricing,
     baseWithoutAdmin: DEFAULT_PRICING_CONFIG.baseWithoutAdmin,
@@ -1179,37 +1539,67 @@ export async function estimateWebsite(
       };
     }),
   ];
-  const suggestedPricingOptionId = detected.pricingPackage ||
-    (detected.adminPanel ? "package_2" : "package_1");
+  const detectedPricingOptionId = detected.pricingPackage ||
+    (hasBasicInformationalScope ? "package_1" : "");
+  const suggestedPricingOptionId = detectedPricingOptionId;
+  if (hasBasicInformationalScope) {
+    detected.assumptions.unshift(
+      "A basic informational package is included because the scan opened at least three public pages and identified at least two standard page types. This assumes a limited informational rebuild, not an unverified backend or custom platform."
+    );
+  }
   if (currency !== "PKR") {
     detected.assumptions.unshift(
       "International base packages use 2x Pakistan rates converted with the latest available exchange rate; each selected one-time add-on is a flat 100 units in the selected currency."
     );
   }
   const selectedPricingOption = pricingOptions.find(
-    (option) => option.id === suggestedPricingOptionId
+    (option) => option.id === detectedPricingOptionId
   );
   const selectedPackageId = selectedPricingOption?.pricingPackage;
   const requestedAddonIds = Array.from(new Set([
     ...detected.addonIds,
     ...detected.features.flatMap((feature) => feature.addonId ? [feature.addonId] : []),
-    ...(isPersonalDomainHost(new URL(firstPage.url).hostname) ? ["personal_domain"] : []),
   ]));
   const chargeableAddonIds = getChargeableAddonIds(
     requestedAddonIds,
     selectedPackageId,
     selectedPricingOption?.adminPanelType
   );
+  const estimatePricingConfig = selectedPricingOption
+    ? pricingConfig
+    : {
+        ...standardPricing,
+        baseWithoutAdmin: 0,
+        baseWithAdmin: 0,
+      };
   const calculation = calculateBudget(
     selectedPricingOption?.adminPanelType || "none",
     chargeableAddonIds,
-    pricingConfig
+    estimatePricingConfig
   );
-  const adminPanelCalculation = calculateBudget("client_admin", [], pricingConfig);
+  const estimatedMaximumTotal = selectedPricingOption?.maximumPrice === undefined
+    ? undefined
+    : (() => {
+        const maximumSubtotal = calculation.estimatedTotal -
+          calculation.contingencyAmount +
+          selectedPricingOption.maximumPrice -
+          calculation.basePrice;
+        const contingency = Math.round(
+          maximumSubtotal * (estimatePricingConfig.contingencyPercentage || 0) / 100
+        );
+        return maximumSubtotal + contingency;
+      })();
   const siteTitle = getPageTitle(firstPage.html) || new URL(firstPage.url).hostname;
   const siteDescription =
     getMetaContent(firstPage.html, "description", "name") ||
     getMetaContent(firstPage.html, "og:description", "property");
+  const businessCatalog = getBusinessAddonCatalog(pricingConfig.addons);
+  const businessAddonMetadata = new Map(
+    businessCatalog.map((addon) => [addon.id, addon])
+  );
+  const suggestedBusinessCategoryId = businessCatalog.find((addon) =>
+    detected.features.some((feature) => feature.addonId === addon.id)
+  )?.categoryId;
 
   return {
     url: firstPage.url,
@@ -1224,26 +1614,42 @@ export async function estimateWebsite(
     siteDescription,
     pagesScanned: pages.length,
     scannedPages: pages.map((page) => page.url),
+    pageInventory,
+    designSignals: getDesignSignals(pages, stylesheetResult.stylesheets),
+    architectureSignals: getArchitectureSignals(pages),
     features: detected.features,
     addonCatalog: Object.values(pricingConfig.addons)
       .filter((addon) => addon.enabled)
-      .map((addon) => ({
-        id: addon.id,
-        title: addon.label,
-        description: addon.description,
-        price: addon.price,
-        ...(currency === "PKR"
-          ? { basePrice: configuredPricing.addons[addon.id]?.price ?? addon.price }
-          : {}),
-        billingPeriod: addon.billingPeriod || "one_time",
-      })),
-    basePackage: detected.pricingPackage
-      ? isEcommercePackageId(detected.pricingPackage)
-        ? ECOMMERCE_PACKAGES[detected.pricingPackage].label
-        : SAAS_PACKAGES[detected.pricingPackage].label
-      : detected.adminPanel ? "Package 2: Client Admin Panel" : "Package 1: Durrani-Managed",
-    basePrice: calculation.basePrice,
-    basePriceWithAdmin: adminPanelCalculation.basePrice,
+      .map((addon) => {
+        const businessMetadata = businessAddonMetadata.get(addon.id);
+        const businessCategories = addon.businessCategories ||
+          (businessMetadata ? [businessMetadata.categoryId] : undefined);
+        return {
+          id: addon.id,
+          title: addon.label,
+          description: addon.description,
+          price: addon.price,
+          ...(currency === "PKR"
+            ? { basePrice: configuredPricing.addons[addon.id]?.price ?? addon.price }
+            : {}),
+          billingPeriod: addon.billingPeriod || "one_time",
+          ...(businessCategories ? { businessCategories } : {}),
+          ...(addon.businessTypes || businessMetadata?.businessTypes
+            ? { businessTypes: addon.businessTypes || businessMetadata?.businessTypes }
+            : {}),
+          ...(addon.pricingLevel || businessMetadata?.level
+            ? { pricingLevel: addon.pricingLevel || businessMetadata?.level }
+            : {}),
+          origin: addon.origin || businessMetadata?.origin || "existing",
+          ...(addon.requiresCustomQuote || businessMetadata?.requiresCustomQuote
+            ? { requiresCustomQuote: true }
+            : {}),
+        };
+      }),
+    ...(suggestedBusinessCategoryId ? { suggestedBusinessCategoryId } : {}),
+    basePackage: selectedPricingOption?.label || "Public scan feature estimate",
+    basePrice: selectedPricingOption ? calculation.basePrice : 0,
+    basePriceWithAdmin: selectedPricingOption?.basePriceWithAdmin || 0,
     addons: calculation.selectedAddonDetails.map((addon) => ({
       id: addon.id,
       title: addon.label,
@@ -1252,6 +1658,8 @@ export async function estimateWebsite(
     })),
     monthlyAddonTotal: calculation.monthlyAddonTotal,
     estimatedTotal: calculation.estimatedTotal,
+    ...(estimatedMaximumTotal !== undefined ? { estimatedMaximumTotal } : {}),
+    contingencyPercentage: estimatePricingConfig.contingencyPercentage || 0,
     assumptions: detected.assumptions,
     warnings,
   };

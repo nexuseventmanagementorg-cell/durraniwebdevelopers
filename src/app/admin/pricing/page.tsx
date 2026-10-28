@@ -93,6 +93,7 @@ export default function AdminPricingPage() {
         [id]: {
           ...prev.addons[id],
           enabled,
+          status: enabled ? "active" : "inactive",
         },
       },
     }));
@@ -258,14 +259,16 @@ export default function AdminPricingPage() {
                               required
                             />
                           </>
-                        ) : addon.category === "ecommerce" || addon.category === "saas" || addon.category === "propertytech" ? (
+                        ) : addon.category === "ecommerce" || addon.category === "saas" || addon.category === "propertytech" || addon.category === "businesscatalog" ? (
                           <>
                             <label className="block text-[11px] font-bold text-gray-600 mb-1">
                               One-time Add-on Price (PKR)
                             </label>
                             <input
                               type="number"
-                              min={addon.category === "ecommerce" || addon.category === "propertytech" ? 20000 : 50000}
+                              min={addon.category === "businesscatalog"
+                                ? addon.pricingLevel === "complex" ? 70000 : addon.pricingLevel === "expanded" ? 25000 : 10000
+                                : addon.category === "ecommerce" || addon.category === "propertytech" ? 20000 : 50000}
                               value={addon.price}
                               onChange={(e) =>
                                 handleUpdateAddonPrice(addon.id, Number(e.target.value))

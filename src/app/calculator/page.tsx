@@ -22,6 +22,11 @@ import {
   mergePricingConfigWithDefaults,
 } from "@/lib/constants";
 import type { PricingPackageId } from "@/lib/constants";
+import {
+  BUSINESS_CATEGORIES,
+  getBusinessAddonCatalog,
+  inferBusinessCategoryForLabels,
+} from "@/lib/business-addon-catalog";
 import type { AddonOption, InquiryScanFeature, PortfolioProject, PricingRuleConfig } from "@/lib/types";
 import { getBeginnerBudgetPlan } from "@/lib/calculator-guide";
 import type { BeginnerBudgetBand, BeginnerProjectGoal, CalculatorGuideLanguage } from "@/lib/calculator-guide";
@@ -338,6 +343,10 @@ function CalculatorContent() {
 
   // Step 6: Advanced Features
   const [selectedAddons, setSelectedAddons] = useState<string[]>(seededAddons);
+  const [businessCategoryFilter, setBusinessCategoryFilter] = useState("");
+  const [businessTypeFilter, setBusinessTypeFilter] = useState("all");
+  const [businessLevelFilter, setBusinessLevelFilter] = useState("basic");
+  const [businessAddonSearch, setBusinessAddonSearch] = useState("");
   const [customFeatureNotes, setCustomFeatureNotes] = useState("");
   const [scanFeatures] = useState(initialScanFeatures);
 
@@ -544,12 +553,31 @@ function CalculatorContent() {
 
   const addonOptions = Object.values(pricingConfig.addons);
   const groupedAddonOptions = addonOptions
-    .filter((addon) => addon.enabled)
+    .filter((addon) => addon.enabled && addon.category !== "businesscatalog")
     .reduce<Record<string, AddonOption[]>>((groups, addon) => {
       const category = ADDON_CATEGORY_LABELS[addon.category];
       (groups[category] ||= []).push(addon);
       return groups;
     }, {});
+  const inferredBusinessCategoryId = inferBusinessCategoryForLabels(selectedProjectTypes);
+  const effectiveBusinessCategoryId = businessCategoryFilter || inferredBusinessCategoryId || "";
+  const selectedBusinessCategory = BUSINESS_CATEGORIES.find(
+    (category) => category.id === effectiveBusinessCategoryId
+  );
+  const filteredBusinessAddons = getBusinessAddonCatalog(selectedPricingConfig.addons)
+    .filter((addon) =>
+      !effectiveBusinessCategoryId || addon.categoryId === effectiveBusinessCategoryId
+    )
+    .filter((addon) =>
+      businessTypeFilter === "all" || addon.businessTypes.includes(businessTypeFilter)
+    )
+    .filter((addon) =>
+      businessLevelFilter === "all" || addon.level === businessLevelFilter
+    )
+    .filter((addon) =>
+      !businessAddonSearch.trim() ||
+      `${addon.label} ${addon.description}`.toLowerCase().includes(businessAddonSearch.trim().toLowerCase())
+    );
 
   // Toggle helpers
   const toggleProjectType = (type: string) => {
@@ -1979,6 +2007,144 @@ function CalculatorContent() {
               </h2>
               <p className="text-xs text-gray-600 mt-1">
                 Add-on prices vary by feature complexity and selected e-commerce or SaaS plan. E-commerce add-ons start at PKR 20,000. Personal domain setup is PKR 10,000; registrar purchase and renewal fees are separate. Monthly maintenance is shown separately.
+              </p>
+            </div>
+
+            <section className="rounded-xl border border-red-100 bg-white p-4 sm:p-5">
+              <div>
+                <h3 className="text-sm font-extrabold text-[#101216]">Business-specific add-ons</h3>
+                <p className="mt-1 text-[11px] leading-5 text-gray-600">
+                  {selectedBusinessCategory
+                    ? `Showing features for ${selectedBusinessCategory.label}. Choose a business type to narrow the results.`
+                    : "Choose a business category and type to browse relevant features."}
+                  {" "}Prices are estimates; complex integrations and custom-quote features need scope confirmation.
+                </p>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-bold text-gray-700">
+                  Business category
+                  <select
+                    value={effectiveBusinessCategoryId}
+                    onChange={(event) => {
+                      setBusinessCategoryFilter(event.target.value);
+                      setBusinessTypeFilter("all");
+                    }}
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5"
+                  >
+                    <option value="">All business categories</option>
+                    {BUSINESS_CATEGORIES.map((category) => (
+                      <option key={category.id} value={category.id}>{category.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs font-bold text-gray-700">
+                  Business type
+                  <select
+                    value={businessTypeFilter}
+                    onChange={(event) => setBusinessTypeFilter(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5"
+                  >
+                    <option value="all">All applicable business types</option>
+                    {selectedBusinessCategory?.businessTypes.map((type) => (
+                      <option key={type.id} value={type.id}>{type.label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {[
+                  ["all", "All levels"],
+                  ["basic", "Basic"],
+                  ["expanded", "Expanded"],
+                  ["complex", "Complex"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={businessLevelFilter === value}
+                    onClick={() => setBusinessLevelFilter(value)}
+                    className={`rounded-full border px-3 py-1.5 text-[10px] font-bold ${
+                      businessLevelFilter === value
+                        ? "border-[#E31E36] bg-[#E31E36] text-white"
+                        : "border-gray-300 bg-white text-gray-600"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+                <label className="min-w-[180px] flex-1">
+                  <span className="sr-only">Search business add-ons</span>
+                  <input
+                    value={businessAddonSearch}
+                    onChange={(event) => setBusinessAddonSearch(event.target.value)}
+                    placeholder="Search business add-ons"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs"
+                  />
+                </label>
+                <span className="text-[10px] text-gray-500">{filteredBusinessAddons.length} features</span>
+              </div>
+              {filteredBusinessAddons.length === 0 ? (
+                <p className="mt-4 rounded-lg border border-dashed border-gray-300 p-4 text-xs text-gray-500">
+                  No business add-ons match these filters. Choose another category, level, or search term.
+                </p>
+              ) : (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {filteredBusinessAddons.map((addon) => {
+                    const isIncluded = getChargeableAddonIds(
+                      [addon.id], selectedPricingPackage, adminPanelType
+                    ).length === 0;
+                    const isSelected = selectedAddons.includes(addon.id);
+                    return (
+                      <label
+                        key={`${addon.categoryId}-${addon.id}`}
+                        className={`flex cursor-pointer flex-col justify-between rounded-xl border p-4 transition ${
+                          isIncluded
+                            ? "border-emerald-200 bg-emerald-50"
+                            : isSelected
+                              ? "border-[#E31E36] bg-red-50/40 ring-1 ring-[#E31E36]"
+                              : "border-gray-200 bg-white hover:border-[#E31E36]"
+                        }`}
+                      >
+                        <span className="flex items-start justify-between gap-2">
+                          <span>
+                            <span className="block text-[10px] font-extrabold uppercase tracking-wide text-gray-500">
+                              {addon.level} · {addon.origin}
+                            </span>
+                            <strong className="mt-1 block text-xs text-[#101216]">{addon.label}</strong>
+                          </span>
+                          <strong className={`shrink-0 text-[11px] ${isIncluded ? "text-emerald-700" : "text-[#E31E36]"}`}>
+                            {isIncluded ? "Included" : formatEstimate(addon.price)}
+                          </strong>
+                        </span>
+                        <span className="mt-2 flex-1 text-[10px] leading-4 text-gray-600">{addon.description}</span>
+                        {addon.requiresCustomQuote && (
+                          <span className="mt-2 text-[10px] font-semibold text-amber-800">
+                            Custom scope quotation required; displayed amount is indicative.
+                          </span>
+                        )}
+                        <span className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2 text-[10px] font-bold">
+                          <span className={isIncluded ? "text-emerald-700" : isSelected ? "text-[#E31E36]" : "text-gray-500"}>
+                            {isIncluded ? "Included in selected package" : isSelected ? "Added to estimate" : "Add to estimate"}
+                          </span>
+                          <input
+                            type="checkbox"
+                            checked={isIncluded || isSelected}
+                            disabled={isIncluded}
+                            onChange={() => { if (!isIncluded) toggleAddon(addon.id); }}
+                            className="accent-[#E31E36]"
+                          />
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <h3 className="text-sm font-extrabold text-[#101216]">Shared add-ons</h3>
+              <p className="mt-1 text-[11px] text-gray-600">
+                Browse the existing website, business tools, commerce, SaaS, automation, security, and industry add-ons below. Shared records keep their current IDs and prices.
               </p>
             </div>
 
