@@ -1,6 +1,16 @@
 # DWD Project Handoff
 
-Last updated: 2026-10-24
+Last updated: 2026-10-28
+
+## Current delivery checkpoint (2026-10-28)
+
+- Workspace: `D:\website-projects-backup\durrani-web-developers`; GitHub repository: `nexuseventmanagementorg-cell/durraniwebdevelopers`; branch: `main`.
+- Latest pushed source commit: `54f93c15f99ff3e4beffbeeff147c9b98fb683ed` (`Add selectable add-ons to website estimator`). The worktree was clean after publishing except for generated, tracked `tsconfig.tsbuildinfo`; do not commit that cache without an explicit need.
+- The URL Budget Estimator now renders a searchable add-on catalog below each scan result. Scan-detected chargeable add-ons start selected, package-included add-ons are not charged twice, and selected one-time/monthly amounts update live using existing catalog pricing. Regression coverage verifies package price-range and included add-on behavior. Tests, TypeScript, lint, production build, and desktop browser selection check passed before deployment.
+- Vercel production deployment `dpl_6371qVQYWeMNbSS3TBCwigu5ggab` reached `READY`; production alias is `https://durraniwebdevelopers.vercel.app`. The deployed estimator JavaScript chunk includes `Choose add-ons and update the budget` and `estimator-addon-search`. The public estimator route returned HTTP 200, but an HTML response was CDN-cached and did not contain those strings; verify in a fresh browser session and investigate cache only if the page still fails to hydrate/show the selector.
+- New user screenshots (2026-10-28) show AliExpress URL scan returns only **1 public page**, no detected features, and “Insufficient priced signals”; Alibaba returned 4 pages and a price range, while Shopify and Amazon returned 24 pages. AliExpress failure cause has **not yet been verified**. Next task: reproduce a single bounded scan, inspect scanner warnings and fetched-page/status evidence, determine whether the host blocks automated requests or the crawler misses links/sitemaps, and report a truthful reason. Do not invent detected features/prices or imply a blocked scan proves the features are absent.
+- Scope reminder: this is a public-page, comparable-build estimator, not a website valuation or a verified inventory of backend/private functionality. Keep existing package/add-on prices unchanged; distinguish public evidence from assumptions.
+- Suggested new-session prompt: “Read `PROJECT_HANDOFF.md` first. Continue from the 2026-10-28 checkpoint. The latest pushed commit is `54f93c15f99ff3e4beffbeeff147c9b98fb683ed`, deployed to `https://durraniwebdevelopers.vercel.app`. First diagnose why the URL Budget Estimator scans AliExpress as only one public page and shows no priced signals. Inspect the scanner response/warnings and provide the evidence-based cause before making a small, tested fix. Preserve catalog/package prices and do not claim blocked/private functionality was detected.”
 
 ## Current delivery checkpoint (2026-10-24)
 
