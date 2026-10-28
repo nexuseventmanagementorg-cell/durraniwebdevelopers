@@ -95,7 +95,7 @@ export default function ContactPage() {
     setErrorMsg("");
 
     // 🚀 APNA LOCALTUNNEL LINK YAHAN DALIEN
-    const aiAgencyBridgeUrl = "https://blue-mice-prove.loca.lt"; 
+    const aiAgencyBridgeUrl = "https://average-upright-yippee.ngrok-free.dev"; 
 
     try {
       // 1. Original Vercel Backend Call
