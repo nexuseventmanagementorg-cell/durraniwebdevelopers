@@ -2,19 +2,29 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { BUSINESS_INFO, buildWhatsAppLink } from "@/lib/constants";
-import {
-  Mail,
-  Phone,
-  MessageSquare,
-  Clock,
-  MapPin,
-  Send,
-  CheckCircle2,
-  AlertCircle,
-  Calculator,
-  ShieldCheck,
+import { 
+  Mail, 
+  Phone, 
+  MessageSquare, 
+  Send, 
+  CheckCircle2, 
+  AlertCircle, 
+  Calculator 
 } from "lucide-react";
+
+// -----------------------------------------------------------------------
+// 🚀 KALEEM BHAI: APKI BUSINESS DETAILS (FIXED)
+// -----------------------------------------------------------------------
+const MY_BUSINESS_INFO = {
+  email: "durraniwebdevelopers@gmail.com",
+  phone: "00923054359098",
+  phoneDisplay: "+92 305 4359098",
+};
+
+const buildWhatsAppLink = (msg: string) => {
+  return `https://wa.me/${MY_BUSINESS_INFO.phone}?text=${encodeURIComponent(msg)}`;
+};
+// -----------------------------------------------------------------------
 
 export default function ContactPage() {
   const [name, setName] = useState("");
@@ -67,12 +77,12 @@ export default function ContactPage() {
           );
         }
       } catch {
-        setErrorMsg("Some scope answers could not be prefilled. Please review the project requirements before sending.");
+        setErrorMsg("Some scope answers could not be prefilled.");
       }
     }
     const notes = params.get("notes")?.trim();
     if (notes) details.push(`Other requirements:\n${notes}`);
-    details.push("A detailed technical review and custom quotation are required; URL scan signals are not a full implementation audit.");
+    details.push("A detailed technical review is required.");
 
     setSubject(`${scopeLabel} inquiry`);
     setMessage(details.join("\n\n"));
@@ -84,14 +94,11 @@ export default function ContactPage() {
     setSuccessMsg("");
     setErrorMsg("");
 
-    // -----------------------------------------------------------------------
-    // 🚀 KALEEM BHAI: YAHAN APNA LOCALTUNNEL LINK DALIEN 🚀
-    // Example: "https://bright-cats-jump.localtunnel.me"
-    const aiAgencyBridgeUrl = "https://gentle-moles-help.loca.lt"; 
-    // -----------------------------------------------------------------------
+    // 🚀 APNA LOCALTUNNEL LINK YAHAN DALIEN
+    const aiAgencyBridgeUrl = "https://blue-mice-prove.loca.lt"; 
 
     try {
-      // 1. Original Backend Call (Taaki aapko notification milti rahe)
+      // 1. Original Vercel Backend Call
       const res = await fetch("/api/public/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -103,20 +110,21 @@ export default function ContactPage() {
         throw new Error(data.error || "Failed to submit message.");
       }
 
-      // 2. AI Agency Call (Ye data aapke local PC par bhejega)
-      // Hum isay 'async' chalayenge taaki agar AI server off ho, toh website crash na ho
-      fetch(`${aiAgencyBridgeUrl}/submit-inquiry`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          name: name, 
-          email: email, 
-          message: `${subject}\n\n${message}`,
-          phone: phone 
-        }),
-      }).catch(err => console.log("AI Agency is currently offline, but lead saved in DB."));
+      // 2. AI Agency Call (Safe implementation)
+      if (aiAgencyBridgeUrl !== "https://YOUR_LOCALTUNNEL_LINK_HERE.localtunnel.me") {
+        fetch(`${aiAgencyBridgeUrl}/submit-inquiry`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            name: name, 
+            email: email, 
+            message: `${subject}\n\n${message}`,
+            phone: phone 
+          }),
+        }).catch(err => console.log("AI Agency Offline: ", err));
+      }
 
-      setSuccessMsg(data.message || "Thank you! Our AI Agents are now processing your request. We will reach out shortly.");
+      setSuccessMsg("Thank you! Our AI Agents are now processing your request. We will reach out shortly.");
       setName("");
       setEmail("");
       setPhone("");
@@ -130,7 +138,6 @@ export default function ContactPage() {
 
   return (
     <div className="bg-[#FFFFFF] text-[#101216] min-h-screen">
-      {/* Header Banner */}
       <section className="bg-[#101216] text-white py-14 border-b border-[#242830]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-3">
           <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest bg-[#242830] px-3.5 py-1 rounded-full border border-[#E31E36]/30">
@@ -147,7 +154,6 @@ export default function ContactPage() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          {/* Left Column: Direct Contact Info */}
           <div className="lg:col-span-5 space-y-6">
             <div>
               <span className="text-xs font-bold text-[#E31E36] uppercase tracking-wider">
@@ -157,11 +163,10 @@ export default function ContactPage() {
                 We Are Fast & Responsive
               </h2>
               <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                We work directly with founders, business owners, and managers across Pakistan and globally. No convoluted agency layers.
+                We work directly with founders, business owners, and managers across Pakistan and globally.
               </p>
             </div>
 
-            {/* WhatsApp Card */}
             <div className="bg-[#F4F5F7] p-6 rounded-2xl border border-gray-200 space-y-4">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -180,56 +185,50 @@ export default function ContactPage() {
                     rel="noopener noreferrer"
                     className="mt-3 inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold text-xs shadow transition"
                   >
-                    <span>Chat Now: {BUSINESS_INFO.phoneDisplay}</span>
+                    <span>Chat Now: {MY_BUSINESS_INFO.phoneDisplay}</span>
                   </a>
                 </div>
               </div>
             </div>
 
-            {/* Email & Phone Cards */}
             <div className="space-y-3">
               <a
-                href={`mailto:${BUSINESS_INFO.email}`}
+                href={`mailto:${MY_BUSINESS_INFO.email}`}
                 className="flex items-center gap-4 p-4 rounded-xl bg-[#F4F5F7] hover:bg-gray-100 border border-gray-200 transition group"
               >
                 <div className="w-10 h-10 rounded-lg bg-white group-hover:bg-[#E31E36] text-[#E31E36] group-hover:text-white flex items-center justify-center transition shadow-sm">
                   <Mail className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold uppercase text-gray-400 block">
-                    Official Email
-                  </span>
+                  <span className="text-[10px] font-bold uppercase text-gray-400 block">Official Email</span>
                   <span className="text-xs font-bold text-[#101216] group-hover:text-[#E31E36]">
-                    {BUSINESS_INFO.email}
+                    {MY_BUSINESS_INFO.email}
                   </span>
                 </div>
               </a>
 
               <a
-                href={`tel:${BUSINESS_INFO.phone}`}
+                href={`tel:${MY_BUSINESS_INFO.phone}`}
                 className="flex items-center gap-4 p-4 rounded-xl bg-[#F4F5F7] hover:bg-gray-100 border border-gray-200 transition group"
               >
                 <div className="w-10 h-10 rounded-lg bg-white group-hover:bg-[#E31E36] text-[#E31E36] group-hover:text-white flex items-center justify-center transition shadow-sm">
                   <Phone className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold uppercase text-gray-400 block">
-                    Phone / Call
-                  </span>
+                  <span className="text-[10px] font-bold uppercase text-gray-400 block">Phone / Call</span>
                   <span className="text-xs font-bold text-[#101216] group-hover:text-[#E31E36]">
-                    {BUSINESS_INFO.phoneDisplay}
+                    {MY_BUSINESS_INFO.phoneDisplay}
                   </span>
                 </div>
               </a>
             </div>
 
-            {/* Calculator CTA Box */}
             <div className="bg-[#101216] text-white p-6 rounded-2xl border border-gray-800 shadow-card-dark space-y-3">
               <span className="text-xs font-bold text-[#E31E36] uppercase tracking-wider block">
                 Need an immediate cost estimate?
               </span>
               <p className="text-xs text-gray-300 leading-relaxed">
-                Use our dynamic 8-step budget calculator to configure specific features and generate an exact breakdown right away.
+                Use our dynamic budget calculator to generate an exact breakdown.
               </p>
               <Link
                 href="/calculator"
@@ -241,12 +240,9 @@ export default function ContactPage() {
             </div>
           </div>
 
-          {/* Right Column: Contact Form */}
           <div className="lg:col-span-7 bg-[#F4F5F7] p-8 sm:p-10 rounded-3xl border border-gray-200 shadow-sm">
             <div className="mb-6">
-              <h3 className="text-xl font-black text-[#101216]">
-                Send Us a Message
-              </h3>
+              <h3 className="text-xl font-black text-[#101216]">Send Us a Message</h3>
               <p className="text-xs text-gray-600 mt-1">
                 Fill out the form and our technical lead will contact you directly.
               </p>
@@ -281,7 +277,6 @@ export default function ContactPage() {
                     required
                   />
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
                     Email Address <span className="text-[#E31E36]">*</span>
@@ -310,7 +305,6 @@ export default function ContactPage() {
                     className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
                   />
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
                     Subject / Project Category
@@ -331,7 +325,7 @@ export default function ContactPage() {
                 </label>
                 <textarea
                   rows={5}
-                  placeholder="Misal: Hamein apne kapron ke business ke liye online store chahiye..."
+                  placeholder="Apni requirements yahan likhein..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   className="w-full bg-white text-xs text-[#101216] px-3.5 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-[#E31E36]"
