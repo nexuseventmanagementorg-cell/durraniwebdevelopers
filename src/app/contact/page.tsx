@@ -88,13 +88,13 @@ export default function ContactPage() {
     setMessage(details.join("\n\n"));
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSuccessMsg("");
     setErrorMsg("");
 
-    // 🚀 APNA LOCALTUNNEL LINK YAHAN DALIEN
+    // 🚀 APNA NGROK LINK (FIXED)
     const aiAgencyBridgeUrl = "https://average-upright-yippee.ngrok-free.dev"; 
 
     try {
@@ -110,19 +110,17 @@ export default function ContactPage() {
         throw new Error(data.error || "Failed to submit message.");
       }
 
-      // 2. AI Agency Call (Safe implementation)
-      if (aiAgencyBridgeUrl !== "https://YOUR_LOCALTUNNEL_LINK_HERE.localtunnel.me") {
-        fetch(`${aiAgencyBridgeUrl}/submit-inquiry`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            name: name, 
-            email: email, 
-            message: `${subject}\n\n${message}`,
-            phone: phone 
-          }),
-        }).catch(err => console.log("AI Agency Offline: ", err));
-      }
+      // 2. AI Agency Call (Directly calling now - No more checks)
+      fetch(`${aiAgencyBridgeUrl}/submit-inquiry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: name, 
+          email: email, 
+          message: `${subject}\n\n${message}`,
+          phone: phone 
+        }),
+      }).catch(err => console.log("AI Agency Offline: ", err));
 
       setSuccessMsg("Thank you! Our AI Agents are now processing your request. We will reach out shortly.");
       setName("");
@@ -135,6 +133,7 @@ export default function ContactPage() {
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <div className="bg-[#FFFFFF] text-[#101216] min-h-screen">
