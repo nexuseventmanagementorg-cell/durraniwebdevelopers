@@ -23,6 +23,7 @@ import {
   Users,
   Store,
   ShoppingBag,
+  FileText,
 } from "lucide-react";
 
 export default function Header() {
@@ -39,6 +40,7 @@ export default function Header() {
     { name: "Add-on Catalog", href: "/add-ons", icon: ShoppingBag },
     { name: "AI Workforce", href: "/workforce", icon: Users },
     { name: "Portfolio", href: "/portfolio", icon: Briefcase },
+    { name: "CV", href: "/cv", icon: FileText },
     { name: "Website Templates", href: "/templates", icon: Store },
     { name: "Pricing & Rates", href: "/pricing", icon: Sparkles },
     { name: "Budget Calculator", href: "/calculator", icon: Calculator },

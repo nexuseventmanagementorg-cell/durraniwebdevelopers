@@ -141,6 +141,32 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     featured: true,
     clientConsentForBudget: false,
   },
+  {
+    id: "mesm-gems",
+    title: "MESM - Personalized Accoutrements for Ladies",
+    category: "Jewellery stores",
+    shortDescription: "A personalized jewellery and accessories e-commerce website with 22 publicly scanned pages.",
+    fullDescription: "MESM is an e-commerce website for personalized jewellery and accessories. A public scan covered 22 pages and produced a preliminary comparable-build estimate of PKR 175,000. This is a scope-based estimate, not a confirmed project fee; private admin workflows, integrations, and other features that are not visible publicly may change the final scope and price.",
+    imageUrl: "https://esdonuxggfyyostvcmfl.supabase.co/storage/v1/object/public/meems-gems-media/local-import/images/c36658ffb6f20220164b4837138055d936fad9d863f4bb3a15c156b9d97785e2.png",
+    technologies: [
+      "E-Commerce Website",
+      "Personalized Jewellery",
+      "22 Public Pages",
+    ],
+    status: "Live",
+    availabilityStatus: "Online",
+    templateAvailable: false,
+    demoUrl: "https://mesm-gems.vercel.app/",
+    isPublic: true,
+    approvedPublicBudget: 175000,
+    budgetLabel: "Estimated Build Price",
+    offerEnabled: true,
+    offerTag: "3-Day Half-Price Deal",
+    offerDiscountPercent: 50,
+    offerEndsAt: "2026-11-03T20:00:00.000Z",
+    featured: true,
+    clientConsentForBudget: false,
+  },
 ];
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -302,7 +328,13 @@ export function mergePortfolioSeedProjects(
       !savedProjects.some((savedProject) => savedProject.id === project.id)
   );
 
-  return [...newSeedProjects, ...updatedSavedProjects];
+  const mergedProjects = [...newSeedProjects, ...updatedSavedProjects];
+  const mesmIndex = mergedProjects.findIndex((project) => project.id === "mesm-gems");
+  if (mesmIndex >= 0 && mesmIndex !== 2) {
+    const [mesmProject] = mergedProjects.splice(mesmIndex, 1);
+    mergedProjects.splice(Math.min(2, mergedProjects.length), 0, mesmProject);
+  }
+  return mergedProjects;
 }
 
 function getInitialData(): DatabaseSchema {

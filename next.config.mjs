@@ -21,6 +21,11 @@ const nextConfig = {
         hostname: "dwdtemplate1.vercel.app",
         pathname: "/images/**",
       },
+      {
+        protocol: "https",
+        hostname: "esdonuxggfyyostvcmfl.supabase.co",
+        pathname: "/storage/v1/object/public/meems-gems-media/**",
+      },
     ],
   },
 };

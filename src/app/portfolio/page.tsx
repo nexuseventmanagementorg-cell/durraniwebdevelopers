@@ -190,7 +190,11 @@ export default function PortfolioPage() {
                       fill
                       sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
                       priority={index === 0}
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      className={`${
+                        project.id === "mesm-gems"
+                          ? "object-contain bg-[#F4F5F7]"
+                          : "object-cover"
+                      } group-hover:scale-105 transition-transform duration-500`}
                     />
                     <div className="absolute top-3 left-3 bg-[#101216]/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-white border border-gray-700">
                       {project.category}

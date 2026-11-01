@@ -17,7 +17,6 @@ export function getPortfolioOffer(
   const discountPercent = project.offerDiscountPercent;
   if (
     !project.offerEnabled ||
-    project.templateAvailable === false ||
     !project.offerTag?.trim() ||
     !Number.isFinite(endsAt) ||
     endsAt <= now ||

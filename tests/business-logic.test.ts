@@ -977,6 +977,17 @@ test("Portfolio offers expire at their configured deadline and ignore invalid di
   );
 });
 
+test("MESM is third in the portfolio and has a live three-day half-price offer", () => {
+  const portfolio = mergePortfolioSeedProjects([...INITIAL_PORTFOLIO_PROJECTS].reverse());
+  const mesm = portfolio[2];
+  assert.equal(mesm?.id, "mesm-gems");
+  assert.equal(mesm?.offerEndsAt, "2026-11-03T20:00:00.000Z");
+  assert.equal(
+    getPortfolioOffer(mesm, Date.parse("2026-11-01T04:00:00.000Z"))?.offerPrice,
+    87500
+  );
+});
+
 test("Deleted seeded portfolio projects stay removed until restored", () => {
   const savedProjects = [INITIAL_PORTFOLIO_PROJECTS[0]];
   const withoutSeededProject = mergePortfolioSeedProjects(

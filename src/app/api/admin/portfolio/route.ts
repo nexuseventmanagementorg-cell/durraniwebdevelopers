@@ -141,12 +141,11 @@ export async function POST(request: NextRequest) {
         offerTag.trim().length > 40 ||
         !Number.isFinite(endTime) ||
         endTime <= Date.now() ||
-        templateAvailable === false ||
         !effectiveBudget ||
         !Number.isFinite(effectiveBudget)
       ) {
         return NextResponse.json(
-          { success: false, error: "Active offers need an available template, a budget, a tag, a 1–99% discount, and a future end time." },
+          { success: false, error: "Active offers need a budget, a tag, a 1–99% discount, and a future end time." },
           { status: 400 }
         );
       }
