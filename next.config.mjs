@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    outputFileTracingIncludes: {
+      "/cvs/[filename]": ["./public/cvs/*.html", "./public/cvs/*.pdf"],
+    },
+  },
   images: {
     remotePatterns: [
       {
