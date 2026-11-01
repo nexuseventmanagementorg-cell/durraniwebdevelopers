@@ -115,7 +115,11 @@ export default function CreativeStudioClient() {
       .then(async (response) => {
         const result = await response.json();
         if (!response.ok || !result.success) {
-          throw new Error(result.error || "Creative Studio pricing could not be loaded.");
+          throw new Error(
+            result.readiness?.message ||
+            result.error ||
+            "Creative Studio pricing could not be loaded."
+          );
         }
         if (active) {
           setConfig(result.config as CreativeStudioConfig);

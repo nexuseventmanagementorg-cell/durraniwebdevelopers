@@ -38,6 +38,19 @@ export interface CreativeReferenceFile {
   size: number;
 }
 
+export type CreativeStudioReadinessStatus =
+  | "NOT_INSTALLED"
+  | "PARTIALLY_INSTALLED"
+  | "READY"
+  | "CONFIGURATION_ERROR"
+  | "UNAVAILABLE";
+
+export interface CreativeStudioReadiness {
+  status: CreativeStudioReadinessStatus;
+  missing: string[];
+  message: string;
+}
+
 function isProductionWithoutSupabase(): boolean {
   return process.env.NODE_ENV === "production" && !hasPaymentSupabaseConfiguration();
 }
@@ -93,6 +106,80 @@ function describeStorageError(error: { code?: string }): CreativeStudioStorageEr
   return new CreativeStudioStorageError(
     "Creative Studio storage is unavailable. Check Supabase connectivity and service-role permissions."
   );
+}
+
+export async function getCreativeStudioReadiness(): Promise<CreativeStudioReadiness> {
+  if (!hasPaymentSupabaseConfiguration()) {
+    const production = process.env.NODE_ENV === "production";
+    return {
+      status: production ? "CONFIGURATION_ERROR" : "NOT_INSTALLED",
+      missing: production
+        ? ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]
+        : [SETTINGS_TABLE, INQUIRIES_TABLE, FILE_BUCKET],
+      message: production
+        ? "Creative Studio Supabase configuration is missing."
+        : "Creative Studio is using local development storage; the Supabase schema is not installed.",
+    };
+  }
+
+  try {
+    const supabase = getPaymentSupabase();
+    const [settings, inquiries, buckets] = await Promise.all([
+      supabase.from(SETTINGS_TABLE).select("id", { head: true }).limit(0),
+      supabase.from(INQUIRIES_TABLE).select("inquiry_id", { head: true }).limit(0),
+      supabase.storage.listBuckets(),
+    ]);
+    const tableErrors = [
+      { name: SETTINGS_TABLE, error: settings.error },
+      { name: INQUIRIES_TABLE, error: inquiries.error },
+    ];
+    const unexpectedError = tableErrors.find(({ error }) =>
+      error && !isStorageTableMissing(error)
+    )?.error || buckets.error;
+
+    if (unexpectedError) {
+      const code = "code" in unexpectedError ? String(unexpectedError.code || "unknown") : "unknown";
+      console.error("Creative Studio readiness check failed", { code });
+      return {
+        status: "UNAVAILABLE",
+        missing: [],
+        message: "Creative Studio storage could not be verified. Check Supabase connectivity and service-role permissions.",
+      };
+    }
+
+    const missing = tableErrors
+      .filter(({ error }) => error && isStorageTableMissing(error))
+      .map(({ name }) => name);
+    if (!buckets.data?.some((bucket) => bucket.name === FILE_BUCKET)) {
+      missing.push(FILE_BUCKET);
+    }
+
+    if (missing.length === 0) {
+      return { status: "READY", missing, message: "Creative Studio storage is ready." };
+    }
+
+    const status = missing.length === 3 ? "NOT_INSTALLED" : "PARTIALLY_INSTALLED";
+    return {
+      status,
+      missing,
+      message: status === "NOT_INSTALLED"
+        ? "Creative Studio database is not installed. Apply supabase/creative-studio.sql to the configured DWD Supabase project."
+        : `Creative Studio setup is incomplete. Missing: ${missing.join(", ")}. Apply supabase/creative-studio.sql to the configured DWD Supabase project.`,
+    };
+  } catch (error) {
+    const code = typeof error === "object" && error !== null && "code" in error
+      ? String(error.code || "unknown")
+      : "unknown";
+    console.error("Creative Studio readiness check failed", {
+      code,
+      errorType: error instanceof Error ? error.name : typeof error,
+    });
+    return {
+      status: "UNAVAILABLE",
+      missing: [],
+      message: "Creative Studio storage could not be verified. Check Supabase connectivity and service-role permissions.",
+    };
+  }
 }
 
 export function isValidCreativeStudioConfig(value: unknown): value is CreativeStudioConfig {
