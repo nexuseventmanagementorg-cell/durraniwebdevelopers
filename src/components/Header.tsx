@@ -45,6 +45,7 @@ export default function Header() {
     { name: "Pricing & Rates", href: "/pricing", icon: Sparkles },
     { name: "Budget Calculator", href: "/calculator", icon: Calculator },
     { name: "URL Budget Estimator", href: "/website-estimator", icon: Globe },
+    { name: "Creative Studio", href: "/creative-studio", icon: Sparkles },
     { name: "Track Order", href: "/track-order", icon: Search },
     { name: "Payments", href: "/payment", icon: CreditCard },
     { name: "Contact", href: "/contact", icon: PhoneCall },

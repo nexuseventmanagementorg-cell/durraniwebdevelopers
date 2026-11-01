@@ -207,6 +207,14 @@ The integration uses Safepay's official Node SDK and hosted checkout. Card data 
 
 Card checkout remains unavailable if required configuration or the database migration is missing. Valid webhook confirmations are recorded in the Supabase gateway table; they do not automatically modify the separate legacy project-finance ledger.
 
+### AI Creative Studio
+
+The public project calculator and inquiry form are at `/creative-studio`; authenticated administrators manage rate cards, quotes, private reference files, and project approval stages at `/admin/creative-studio`.
+
+Before using inquiry or pricing administration, review and manually run [`supabase/creative-studio.sql`](./supabase/creative-studio.sql) in the dedicated DWD Supabase project. Configure `NEXT_PUBLIC_SUPABASE_URL` and the server-only `SUPABASE_SERVICE_ROLE_KEY`, then restart the app. The migration is not applied automatically. If it is missing, the API reports that setup is required and the customer form remains unavailable rather than storing real inquiries in an ephemeral deployment filesystem.
+
+The initial Pakistan video rate is PKR 10,000 per minute; image, international, and add-on rates require administrator configuration or a manual quotation. New inquiries preserve a pricing snapshot. Customer quote acceptance uses a private browser-session token; project production is gated on customer approval, manually verified full payment, admin approval, and complete requirements. There is no payment gateway, automated media-generation service, or automatic deployment in this feature.
+
 ---
 
 ## ☁ Vercel Deployment Instructions
