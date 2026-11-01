@@ -6,8 +6,10 @@ import {
   createCreativeInquiry,
   CreativeStudioStorageError,
   getCreativeStudioConfig,
+  removeCreativeReferenceFiles,
   saveCreativeReferenceFile,
 } from "@/lib/creative-studio-storage";
+import type { CreativeReferenceFile } from "@/lib/creative-studio-storage";
 import { notifyAdminOfSubmission } from "@/lib/admin-notifications";
 
 export const runtime = "nodejs";
@@ -39,6 +41,18 @@ function hasExpectedFileSignature(type: string, bytes: Uint8Array): boolean {
     return bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3;
   }
   return false;
+}
+
+function hasExpectedFileExtension(name: string, type: string): boolean {
+  const allowedExtensions: Record<string, string[]> = {
+    "image/jpeg": ["jpg", "jpeg"],
+    "image/png": ["png"],
+    "image/webp": ["webp"],
+    "video/mp4": ["mp4"],
+    "video/webm": ["webm"],
+  };
+  const extension = name.slice(name.lastIndexOf(".") + 1).toLowerCase();
+  return allowedExtensions[type]?.includes(extension) ?? false;
 }
 
 function parseQuoteInput(value: unknown): CreativeQuoteInput | null {
@@ -90,13 +104,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const contentLength = Number(request.headers.get("content-length") || 0);
+  const contentLengthHeader = request.headers.get("content-length");
+  if (contentLengthHeader && !/^\d+$/.test(contentLengthHeader)) {
+    return NextResponse.json({ success: false, error: "The request content length is invalid." }, { status: 400 });
+  }
+  const contentLength = Number(contentLengthHeader || 0);
   if (contentLength > MAX_TOTAL_FILE_BYTES + 100_000) {
     return NextResponse.json({ success: false, error: "Reference uploads exceed the 20 MB request limit." }, { status: 413 });
   }
 
+  const uploadedReferences: CreativeReferenceFile[] = [];
+  let inquirySaved = false;
   try {
-    const form = await request.formData();
+    let form: FormData;
+    try {
+      form = await request.formData();
+    } catch {
+      return NextResponse.json({ success: false, error: "The inquiry form data is invalid." }, { status: 400 });
+    }
     const customerValue = form.get("customer");
     const projectValue = form.get("project");
     if (typeof customerValue !== "string" || typeof projectValue !== "string") {
@@ -147,7 +172,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Upload up to 3 image or video reference files." }, { status: 400 });
     }
     let totalFileBytes = 0;
-    const references = [];
+    const filesToUpload: { name: string; type: string; bytes: Uint8Array }[] = [];
     for (const file of files as File[]) {
       if (file.size < 1 || file.size > MAX_FILE_BYTES) {
         return NextResponse.json({ success: false, error: "Each reference file must be 10 MB or smaller." }, { status: 413 });
@@ -157,10 +182,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: "Reference uploads exceed the 20 MB total limit." }, { status: 413 });
       }
       const bytes = new Uint8Array(await file.arrayBuffer());
-      if (!hasExpectedFileSignature(file.type, bytes)) {
+      if (!hasExpectedFileExtension(file.name, file.type) ||
+          !hasExpectedFileSignature(file.type, bytes)) {
         return NextResponse.json({ success: false, error: "A reference file does not match its allowed image/video format." }, { status: 400 });
       }
-      references.push(await saveCreativeReferenceFile(file.name, file.type, bytes));
+      filesToUpload.push({ name: file.name, type: file.type, bytes });
     }
 
     const languageValues = isRecord(project.languages) ? project.languages : {};
@@ -184,6 +210,10 @@ export async function POST(request: NextRequest) {
     };
     const quote = calculateCreativeQuote(safeQuoteInput, config);
 
+    for (const file of filesToUpload) {
+      uploadedReferences.push(await saveCreativeReferenceFile(file.name, file.type, file.bytes));
+    }
+
     const result = await createCreativeInquiry({
       customer: {
         name,
@@ -202,11 +232,12 @@ export async function POST(request: NextRequest) {
         languages,
         resolution,
         aspectRatio,
-        referenceFiles: references,
+        referenceFiles: uploadedReferences,
       },
       quote,
       quoteSnapshot: config,
     });
+    inquirySaved = true;
 
     await notifyAdminOfSubmission({
       type: "Creative Studio inquiry",
@@ -223,11 +254,30 @@ export async function POST(request: NextRequest) {
       trackingToken: result.trackingToken,
     }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
+    if (!inquirySaved && uploadedReferences.length > 0) {
+      try {
+        await removeCreativeReferenceFiles(uploadedReferences);
+      } catch (cleanupError) {
+        const code = typeof cleanupError === "object" && cleanupError !== null && "code" in cleanupError
+          ? String(cleanupError.code || "unknown")
+          : "unknown";
+        console.error("Creative Studio reference cleanup failed", {
+          code,
+          errorType: cleanupError instanceof Error ? cleanupError.name : typeof cleanupError,
+        });
+      }
+    }
     const message = error instanceof CreativeStudioStorageError
       ? error.message
       : "Creative inquiry could not be saved. Please try again or contact us directly.";
     if (!(error instanceof CreativeStudioStorageError)) {
-      console.error("Creative Studio inquiry submission failed", error);
+      const code = typeof error === "object" && error !== null && "code" in error
+        ? String(error.code || "unknown")
+        : "unknown";
+      console.error("Creative Studio inquiry submission failed", {
+        code,
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
     }
     return NextResponse.json({ success: false, error: message }, { status: 503 });
   }

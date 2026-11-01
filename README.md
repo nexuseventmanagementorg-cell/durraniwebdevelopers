@@ -211,7 +211,7 @@ Card checkout remains unavailable if required configuration or the database migr
 
 The public project calculator and inquiry form are at `/creative-studio`; authenticated administrators manage rate cards, quotes, private reference files, and project approval stages at `/admin/creative-studio`.
 
-Before using inquiry or pricing administration, review and manually run [`supabase/creative-studio.sql`](./supabase/creative-studio.sql) in the dedicated DWD Supabase project. Configure `NEXT_PUBLIC_SUPABASE_URL` and the server-only `SUPABASE_SERVICE_ROLE_KEY`, then restart the app. The migration is not applied automatically. If it is missing, the API reports that setup is required and the customer form remains unavailable rather than storing real inquiries in an ephemeral deployment filesystem.
+Before using inquiry or pricing administration, verify the linked DWD Supabase project and review the versioned SQL files in [`supabase/migrations`](./supabase/migrations). Apply only after reviewing the remote schema and approving the exact changes; the application never applies migrations automatically. Configure `NEXT_PUBLIC_SUPABASE_URL` and the server-only `SUPABASE_SERVICE_ROLE_KEY`, then restart the app. The standalone [`supabase/creative-studio.sql`](./supabase/creative-studio.sql) is retained for fresh-install/reference use and should not be used as an incremental repair on an existing project.
 
 `GET /api/public/creative-studio/readiness` reports whether the required pricing and inquiry tables and private reference bucket are `NOT_INSTALLED`, `PARTIALLY_INSTALLED`, or `READY`; configuration and connectivity failures are reported separately. It never returns credentials or customer data.
 

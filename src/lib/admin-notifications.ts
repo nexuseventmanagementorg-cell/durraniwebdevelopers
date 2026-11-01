@@ -67,7 +67,9 @@ export async function sendInquiryWhatsappConfirmation(input: {
     }
     return "sent";
   } catch (error) {
-    console.error(`Customer WhatsApp confirmation failed for ${input.reference}`, error);
+    console.error(`Customer WhatsApp confirmation failed for ${input.reference}`, {
+      errorType: error instanceof Error ? error.name : typeof error,
+    });
     return "failed";
   }
 }
@@ -183,7 +185,9 @@ export async function notifyAdminOfSubmission(alert: AdminSubmissionAlert): Prom
   channels.forEach((result, index) => {
     const channel = names[index];
     if (result.status === "rejected") {
-      console.error(`Admin ${channel} notification failed for ${alert.reference}`, result.reason);
+      console.error(`Admin ${channel} notification failed for ${alert.reference}`, {
+        errorType: result.reason instanceof Error ? result.reason.name : typeof result.reason,
+      });
     } else if (result.value === "not_configured") {
       console.warn(`Admin ${channel} notification is not configured; ${alert.reference} was saved without this alert.`);
     }

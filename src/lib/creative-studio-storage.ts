@@ -1,5 +1,5 @@
 import { randomBytes, randomInt, timingSafeEqual, createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   CREATIVE_STATUSES,
@@ -88,7 +88,7 @@ async function writeLocalData(data: LocalCreativeData): Promise<void> {
 function requireBackend(): void {
   if (isProductionWithoutSupabase()) {
     throw new CreativeStudioStorageError(
-      "Creative Studio storage is not configured. Configure Supabase and apply supabase/creative-studio.sql."
+      "Creative Studio storage is not configured. Configure Supabase and apply the approved Creative Studio migrations."
     );
   }
 }
@@ -100,7 +100,7 @@ function isStorageTableMissing(error: { code?: string }): boolean {
 function describeStorageError(error: { code?: string }): CreativeStudioStorageError {
   if (isStorageTableMissing(error)) {
     return new CreativeStudioStorageError(
-      "Creative Studio database is not installed. Run supabase/creative-studio.sql in the DWD Supabase project."
+      "Creative Studio database tables are missing. Review and apply the approved Creative Studio migrations to the DWD Supabase project."
     );
   }
   return new CreativeStudioStorageError(
@@ -125,8 +125,8 @@ export async function getCreativeStudioReadiness(): Promise<CreativeStudioReadin
   try {
     const supabase = getPaymentSupabase();
     const [settings, inquiries, buckets] = await Promise.all([
-      supabase.from(SETTINGS_TABLE).select("id", { head: true }).limit(0),
-      supabase.from(INQUIRIES_TABLE).select("inquiry_id", { head: true }).limit(0),
+      supabase.from(SETTINGS_TABLE).select("id").limit(1),
+      supabase.from(INQUIRIES_TABLE).select("inquiry_id").limit(1),
       supabase.storage.listBuckets(),
     ]);
     const tableErrors = [
@@ -158,13 +158,12 @@ export async function getCreativeStudioReadiness(): Promise<CreativeStudioReadin
       return { status: "READY", missing, message: "Creative Studio storage is ready." };
     }
 
-    const status = missing.length === 3 ? "NOT_INSTALLED" : "PARTIALLY_INSTALLED";
+    const tablesMissing = missing.includes(SETTINGS_TABLE) && missing.includes(INQUIRIES_TABLE);
+    const status = tablesMissing ? "NOT_INSTALLED" : "PARTIALLY_INSTALLED";
     return {
       status,
       missing,
-      message: status === "NOT_INSTALLED"
-        ? "Creative Studio database is not installed. Apply supabase/creative-studio.sql to the configured DWD Supabase project."
-        : `Creative Studio setup is incomplete. Missing: ${missing.join(", ")}. Apply supabase/creative-studio.sql to the configured DWD Supabase project.`,
+      message: `Creative Studio setup is incomplete. Missing: ${missing.join(", ")}. Review and apply the approved Creative Studio migrations to the configured DWD Supabase project.`,
     };
   } catch (error) {
     const code = typeof error === "object" && error !== null && "code" in error
@@ -562,13 +561,69 @@ export async function saveCreativeReferenceFile(
   if (error) {
     if (error.message.toLowerCase().includes("bucket")) {
       throw new CreativeStudioStorageError(
-        `Private reference storage is not installed. Run supabase/creative-studio.sql.`
+        "Private reference storage is not installed. Apply the approved Creative Studio bucket migration."
       );
     }
-    console.error("Creative Studio reference upload failed", { error: error.message });
+    console.error("Creative Studio reference upload failed", {
+      errorType: error.constructor.name,
+    });
     throw new CreativeStudioStorageError("Reference file could not be uploaded.");
   }
   return { name: safeName, path: storagePath, type: mimeType, size: bytes.byteLength };
+}
+
+export async function removeCreativeReferenceFiles(
+  files: readonly CreativeReferenceFile[]
+): Promise<void> {
+  const localPaths: string[] = [];
+  const remotePaths: string[] = [];
+
+  for (const file of files) {
+    if (file.path.startsWith("local:")) {
+      const relativePath = file.path.slice("local:".length);
+      if (!/^\d{4}\/[0-9a-f-]{36}\.(?:jpg|png|webp|mp4|webm)$/i.test(relativePath)) {
+        throw new CreativeStudioStorageError("Reference cleanup path is invalid.");
+      }
+      const resolvedPath = path.resolve(LOCAL_FILES_DIR, relativePath);
+      if (!resolvedPath.startsWith(`${LOCAL_FILES_DIR}${path.sep}`)) {
+        throw new CreativeStudioStorageError("Reference cleanup path is invalid.");
+      }
+      localPaths.push(resolvedPath);
+      continue;
+    }
+
+    if (!/^\d{4}\/[0-9a-f-]{36}\.(?:jpg|png|webp|mp4|webm)$/i.test(file.path)) {
+      throw new CreativeStudioStorageError("Reference cleanup path is invalid.");
+    }
+    remotePaths.push(file.path);
+  }
+
+  for (const localPath of localPaths) {
+    try {
+      await unlink(localPath);
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  if (remotePaths.length > 0) {
+    if (!hasPaymentSupabaseConfiguration()) {
+      throw new CreativeStudioStorageError("Supabase is not configured for reference cleanup.");
+    }
+    const { error } = await getPaymentSupabase()
+      .storage
+      .from(FILE_BUCKET)
+      .remove(remotePaths);
+    if (error) {
+      console.error("Creative Studio reference cleanup failed", {
+        errorType: error.constructor.name,
+      });
+      throw new CreativeStudioStorageError("Uploaded reference files could not be cleaned up.");
+    }
+  }
 }
 
 export async function getCreativeReferenceUrl(filePath: string): Promise<string | null> {
@@ -581,7 +636,9 @@ export async function getCreativeReferenceUrl(filePath: string): Promise<string 
     .from(FILE_BUCKET)
     .createSignedUrl(filePath, 60);
   if (error) {
-    console.error("Creative Studio reference link failed", { error: error.message });
+    console.error("Creative Studio reference link failed", {
+      errorType: error.constructor.name,
+    });
     throw new CreativeStudioStorageError("Reference file could not be accessed.");
   }
   return data.signedUrl;

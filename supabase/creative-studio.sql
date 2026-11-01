@@ -1,6 +1,6 @@
--- AI Creative Studio: pricing configuration, private inquiries, and reference files.
--- Safe to apply to the existing DWD Supabase project; this migration does not
--- modify or delete existing tables.
+-- AI Creative Studio standalone fresh-install script and schema reference.
+-- This is not an incremental migration: the bucket upsert updates settings on
+-- conflict. Use reviewed versioned migrations for repairs to an existing project.
 
 CREATE TABLE IF NOT EXISTS creative_studio_settings (
   id TEXT PRIMARY KEY CHECK (id = 'default'),
