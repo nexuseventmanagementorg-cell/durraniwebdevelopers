@@ -11,6 +11,7 @@ import {
 } from "@/lib/creative-studio-storage";
 import type { CreativeReferenceFile } from "@/lib/creative-studio-storage";
 import { notifyAdminOfSubmission } from "@/lib/admin-notifications";
+import { isValidCreativeReferenceFile } from "@/lib/creative-reference-files";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,36 +24,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function text(value: unknown, maxLength: number): string {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
-}
-
-function hasExpectedFileSignature(type: string, bytes: Uint8Array): boolean {
-  if (type === "image/jpeg") return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  if (type === "image/png") {
-    return bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
-  }
-  if (type === "image/webp") {
-    return bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
-      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
-  }
-  if (type === "video/mp4") {
-    return bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70;
-  }
-  if (type === "video/webm") {
-    return bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3;
-  }
-  return false;
-}
-
-function hasExpectedFileExtension(name: string, type: string): boolean {
-  const allowedExtensions: Record<string, string[]> = {
-    "image/jpeg": ["jpg", "jpeg"],
-    "image/png": ["png"],
-    "image/webp": ["webp"],
-    "video/mp4": ["mp4"],
-    "video/webm": ["webm"],
-  };
-  const extension = name.slice(name.lastIndexOf(".") + 1).toLowerCase();
-  return allowedExtensions[type]?.includes(extension) ?? false;
 }
 
 function parseQuoteInput(value: unknown): CreativeQuoteInput | null {
@@ -89,6 +60,7 @@ function parseQuoteInput(value: unknown): CreativeQuoteInput | null {
     imageCount,
     complexity: value.complexity,
     quality: value.quality,
+    aspectRatio: "9:16",
     languageCount: 1,
     addonIds,
   };
@@ -157,7 +129,7 @@ export async function POST(request: NextRequest) {
     const style = text(project.style, 80);
     const resolution = text(project.resolution, 20);
     const aspectRatio = text(project.aspectRatio, 30);
-    if (!quoteInput || !brief || !style ||
+    if (!quoteInput || brief.length < 10 || !style ||
         !["720p", "1080p", "2K", "4K"].includes(resolution) ||
         !["9:16", "16:9", "1:1", "4:5"].includes(aspectRatio) &&
           !/^([1-9]\d?):([1-9]\d?)$/.test(aspectRatio)) {
@@ -168,8 +140,8 @@ export async function POST(request: NextRequest) {
     }
 
     const files = form.getAll("references");
-    if (files.length > 3 || files.some((file) => !(file instanceof File))) {
-      return NextResponse.json({ success: false, error: "Upload up to 3 image or video reference files." }, { status: 400 });
+    if (files.length > 20 || files.some((file) => !(file instanceof File))) {
+      return NextResponse.json({ success: false, error: "Upload up to 20 reference files." }, { status: 400 });
     }
     let totalFileBytes = 0;
     const filesToUpload: { name: string; type: string; bytes: Uint8Array }[] = [];
@@ -182,9 +154,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: "Reference uploads exceed the 20 MB total limit." }, { status: 413 });
       }
       const bytes = new Uint8Array(await file.arrayBuffer());
-      if (!hasExpectedFileExtension(file.name, file.type) ||
-          !hasExpectedFileSignature(file.type, bytes)) {
-        return NextResponse.json({ success: false, error: "A reference file does not match its allowed image/video format." }, { status: 400 });
+      if (!isValidCreativeReferenceFile(file.name, file.type, bytes)) {
+        return NextResponse.json({ success: false, error: "A reference file does not match an allowed image, video, or script format." }, { status: 400 });
       }
       filesToUpload.push({ name: file.name, type: file.type, bytes });
     }
@@ -205,6 +176,7 @@ export async function POST(request: NextRequest) {
     const safeQuoteInput = {
       ...quoteInput,
       country,
+      aspectRatio,
       languageCount: new Set(Object.values(languages).filter(Boolean)).size || 1,
       addonIds: quoteInput.addonIds.filter((id) => enabledAddonIds.has(id)),
     };

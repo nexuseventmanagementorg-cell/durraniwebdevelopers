@@ -28,6 +28,7 @@ export interface CreativeStudioConfig {
   categoryMultipliers: Record<string, number>;
   complexityMultipliers: Record<string, number>;
   qualityMultipliers: Record<string, number>;
+  aspectRatioMultipliers: Record<string, number>;
   addons: CreativeAddon[];
 }
 
@@ -41,6 +42,7 @@ export interface CreativeQuoteInput {
   imageCount: number;
   complexity: string;
   quality: string;
+  aspectRatio: string;
   languageCount: number;
   addonIds: string[];
 }
@@ -52,6 +54,7 @@ export interface CreativeQuote {
   categoryCharge: number;
   complexityCharge: number;
   qualityCharge: number;
+  aspectRatioCharge: number;
   addonCharges: { id: string; label: string; amount: number | null }[];
   requiresManualReview: boolean;
   reason: string | null;
@@ -379,8 +382,15 @@ export const DEFAULT_CREATIVE_STUDIO_CONFIG: CreativeStudioConfig = {
     mvp: 3,
     custom: 1,
   },
-  complexityMultipliers: { basic: 1, standard: 1, advanced: 1, premium: 1 },
-  qualityMultipliers: { "720p": 1, "1080p": 1, "2K": 1, "4K": 1 },
+  complexityMultipliers: { basic: 0.8, standard: 1, advanced: 1.5, premium: 2 },
+  qualityMultipliers: { "720p": 0.85, "1080p": 1, "2K": 1.25, "4K": 1.5 },
+  aspectRatioMultipliers: {
+    "9:16": 1,
+    "16:9": 1.1,
+    "1:1": 1.05,
+    "4:5": 1.05,
+    custom: 1.15,
+  },
   addons: CREATIVE_ADDON_NAMES.map((name) => ({
     id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
     name,
@@ -429,6 +439,8 @@ export function calculateCreativeQuote(
     config.categoryMultipliers[effectiveMultiplierKey] ?? 1;
   const complexityMultiplier = config.complexityMultipliers[input.complexity] ?? 1;
   const qualityMultiplier = config.qualityMultipliers[input.quality] ?? 1;
+  const aspectRatioMultiplier = config.aspectRatioMultipliers[input.aspectRatio] ??
+    config.aspectRatioMultipliers.custom ?? 1;
   const countryConfigured = Boolean(countryRate);
   const baseRate = input.projectKind === "image"
     ? countryRate?.imagePerImage
@@ -479,17 +491,22 @@ export function calculateCreativeQuote(
   const qualityCharge = base === null
     ? 0
     : roundToHundred(afterComplexity * (qualityMultiplier - 1));
+  const afterQuality = afterComplexity + qualityCharge;
+  const aspectRatioCharge = base === null
+    ? 0
+    : roundToHundred(afterQuality * (aspectRatioMultiplier - 1));
   const configuredAddonsTotal = addonCharges.reduce((total, item) => total + (item.amount ?? 0), 0);
 
   return {
     currency: input.currency,
     total: needsReview || base === null
       ? null
-      : roundToHundred(base + categoryCharge + complexityCharge + qualityCharge + configuredAddonsTotal),
+      : roundToHundred(base + categoryCharge + complexityCharge + qualityCharge + aspectRatioCharge + configuredAddonsTotal),
     base,
     categoryCharge,
     complexityCharge,
     qualityCharge,
+    aspectRatioCharge,
     addonCharges,
     requiresManualReview: needsReview || featureFilmReview,
     reason: featureFilmReview

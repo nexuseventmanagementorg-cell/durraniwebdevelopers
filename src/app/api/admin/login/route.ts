@@ -20,8 +20,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const { username, password } = body;
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Request body must contain valid JSON." },
+        { status: 400 }
+      );
+    }
+
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      return NextResponse.json(
+        { success: false, error: "Request body must be a JSON object." },
+        { status: 400 }
+      );
+    }
+
+    const credentials = body as Record<string, unknown>;
+    const { username, password } = credentials;
 
     if (typeof username !== "string" || typeof password !== "string" || !username || !password) {
       return NextResponse.json(

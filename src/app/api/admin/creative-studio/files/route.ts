@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     if (file.path.startsWith("local:")) {
       const relativePath = file.path.slice("local:".length);
-      if (!/^\d{4}\/[0-9a-f-]{36}\.(?:jpg|png|webp|mp4|webm)$/i.test(relativePath)) {
+      if (!/^\d{4}\/[0-9a-f-]{36}\.(?:jpg|png|webp|mp4|webm|txt|srt|pdf|doc|docx|rtf)$/i.test(relativePath)) {
         return NextResponse.json({ success: false, error: "Reference file path is invalid." }, { status: 400 });
       }
       const root = path.resolve(process.cwd(), "data", "creative-studio-references");

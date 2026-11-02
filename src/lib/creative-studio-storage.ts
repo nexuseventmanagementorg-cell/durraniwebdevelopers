@@ -209,6 +209,7 @@ export function isValidCreativeStudioConfig(value: unknown): value is CreativeSt
     validNumberMap(config.categoryMultipliers) &&
     validNumberMap(config.complexityMultipliers) &&
     validNumberMap(config.qualityMultipliers) &&
+    (config.aspectRatioMultipliers === undefined || validNumberMap(config.aspectRatioMultipliers)) &&
     Array.isArray(addons) && addons.length <= 100 &&
     addons.every((addon) =>
       isRecord(addon) &&
@@ -230,10 +231,33 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function normalizeCreativeStudioConfig(config: CreativeStudioConfig): CreativeStudioConfig {
+  const isLegacyDefaultConfig = config.aspectRatioMultipliers === undefined;
+  const isUnchangedMultiplierMap = (values: Record<string, number>) =>
+    Object.values(values).length > 0 && Object.values(values).every((value) => value === 1);
+  return {
+    ...config,
+    complexityMultipliers: isLegacyDefaultConfig && isUnchangedMultiplierMap(config.complexityMultipliers)
+      ? DEFAULT_CREATIVE_STUDIO_CONFIG.complexityMultipliers
+      : { ...DEFAULT_CREATIVE_STUDIO_CONFIG.complexityMultipliers, ...config.complexityMultipliers },
+    qualityMultipliers: isLegacyDefaultConfig && isUnchangedMultiplierMap(config.qualityMultipliers)
+      ? DEFAULT_CREATIVE_STUDIO_CONFIG.qualityMultipliers
+      : { ...DEFAULT_CREATIVE_STUDIO_CONFIG.qualityMultipliers, ...config.qualityMultipliers },
+    aspectRatioMultipliers: {
+      ...DEFAULT_CREATIVE_STUDIO_CONFIG.aspectRatioMultipliers,
+      ...config.aspectRatioMultipliers,
+    },
+  };
+}
+
 export async function getCreativeStudioConfig(): Promise<CreativeStudioConfig> {
   requireBackend();
   if (!hasPaymentSupabaseConfiguration()) {
-    return (await readLocalData()).config;
+    const config = (await readLocalData()).config;
+    if (!isValidCreativeStudioConfig(config)) {
+      throw new CreativeStudioStorageError("Saved Creative Studio pricing configuration is invalid.");
+    }
+    return normalizeCreativeStudioConfig(config);
   }
 
   const { data, error } = await getPaymentSupabase()
@@ -246,7 +270,7 @@ export async function getCreativeStudioConfig(): Promise<CreativeStudioConfig> {
   if (!isValidCreativeStudioConfig(data.config)) {
     throw new CreativeStudioStorageError("Saved Creative Studio pricing configuration is invalid.");
   }
-  return data.config;
+  return normalizeCreativeStudioConfig(data.config);
 }
 
 export async function saveCreativeStudioConfig(
@@ -257,7 +281,7 @@ export async function saveCreativeStudioConfig(
   if (!isValidCreativeStudioConfig(config)) {
     throw new CreativeStudioStorageError("Pricing configuration contains invalid rates or add-ons.");
   }
-  const updated = { ...config, version: Math.max(1, config.version) + 1 };
+  const updated = { ...normalizeCreativeStudioConfig(config), version: Math.max(1, config.version) + 1 };
   if (!hasPaymentSupabaseConfiguration()) {
     const local = await readLocalData();
     local.config = updated;
@@ -541,9 +565,17 @@ export async function saveCreativeReferenceFile(
     "image/webp": "webp",
     "video/mp4": "mp4",
     "video/webm": "webm",
+    "text/plain": "txt",
+    "application/x-subrip": "srt",
+    "application/pdf": "pdf",
+    "application/msword": "doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+    "application/rtf": "rtf",
+    "text/rtf": "rtf",
+    "application/x-rtf": "rtf",
   };
   const extension = extensions[mimeType];
-  if (!extension) throw new CreativeStudioStorageError("Reference must be a JPEG, PNG, WebP, MP4, or WebM file.");
+  if (!extension) throw new CreativeStudioStorageError("Reference file type is not supported.");
   const safeName = name.replace(/[^\w.-]+/g, "-").slice(-120) || `reference.${extension}`;
   const storagePath = `${new Date().getUTCFullYear()}/${randomUUID()}.${extension}`;
 
@@ -581,7 +613,7 @@ export async function removeCreativeReferenceFiles(
   for (const file of files) {
     if (file.path.startsWith("local:")) {
       const relativePath = file.path.slice("local:".length);
-      if (!/^\d{4}\/[0-9a-f-]{36}\.(?:jpg|png|webp|mp4|webm)$/i.test(relativePath)) {
+      if (!/^\d{4}\/[0-9a-f-]{36}\.(?:jpg|png|webp|mp4|webm|txt|srt|pdf|doc|docx|rtf)$/i.test(relativePath)) {
         throw new CreativeStudioStorageError("Reference cleanup path is invalid.");
       }
       const resolvedPath = path.resolve(LOCAL_FILES_DIR, relativePath);
@@ -592,7 +624,7 @@ export async function removeCreativeReferenceFiles(
       continue;
     }
 
-    if (!/^\d{4}\/[0-9a-f-]{36}\.(?:jpg|png|webp|mp4|webm)$/i.test(file.path)) {
+    if (!/^\d{4}\/[0-9a-f-]{36}\.(?:jpg|png|webp|mp4|webm|txt|srt|pdf|doc|docx|rtf)$/i.test(file.path)) {
       throw new CreativeStudioStorageError("Reference cleanup path is invalid.");
     }
     remotePaths.push(file.path);

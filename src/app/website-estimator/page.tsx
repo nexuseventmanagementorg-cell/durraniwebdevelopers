@@ -118,7 +118,7 @@ export default function WebsiteEstimatorPage() {
             Kisi Website Ka Andazati Budget Maloom Karein
           </h1>
           <p className="text-sm text-gray-300 max-w-2xl mx-auto mt-4 leading-relaxed">
-            Public website URL dein. Tool accessible pages ke feature signals aur un par lagu existing package/add-on prices se provisional rebuild estimate banata hai.
+            <span lang="ur-Latn" translate="yes">Public website URL dein. Tool accessible pages ke feature signals aur un par lagu existing package/add-on prices se provisional rebuild estimate banata hai.</span>
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 max-w-2xl mx-auto">
@@ -149,11 +149,11 @@ export default function WebsiteEstimatorPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E31E36] hover:bg-[#C8162D] disabled:opacity-60 text-white px-6 py-3.5 text-sm font-bold transition"
               >
                 {loading ? <LoaderCircle className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                {loading ? "Website check ho rahi hai..." : "Features aur Budget Check Karein"}
+                <span lang="ur-Latn" translate="yes">{loading ? "Website check ho rahi hai..." : "Features aur Budget Check Karein"}</span>
               </button>
             </div>
             <p className="text-[11px] text-gray-400 mt-3">
-              Scanner sitemap aur internal links se maximum 24 same-site public HTML pages tak check karta hai. Login ke peechay workflows, source code, aur database verify nahi hotay.
+              <span lang="ur-Latn" translate="yes">Scanner sitemap aur internal links se maximum 24 same-site public HTML pages tak check karta hai. Login ke peechay workflows, source code, aur database verify nahi hotay.</span>
             </p>
           </form>
         </div>
@@ -161,7 +161,7 @@ export default function WebsiteEstimatorPage() {
 
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {error && (
-          <div role="alert" className="mb-6 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <div role="alert" lang="ur-Latn" translate="yes" className="mb-6 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
             <AlertTriangle className="w-5 h-5 flex-shrink-0" />
             <p>{error}</p>
           </div>
@@ -170,10 +170,10 @@ export default function WebsiteEstimatorPage() {
         {loading && (
           <div role="status" className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
             <LoaderCircle className="w-8 h-8 animate-spin text-[#E31E36] mx-auto" />
-            <p className="mt-3 text-sm font-semibold text-gray-700">
+            <p lang="ur-Latn" translate="yes" className="mt-3 text-sm font-semibold text-gray-700">
               Public pages aur feature signals check kiye ja rahe hain...
             </p>
-            <p className="mt-1 text-xs text-gray-500">Large ya slow websites par scan ko kuch zyada waqt lag sakta hai.</p>
+            <p lang="ur-Latn" translate="yes" className="mt-1 text-xs text-gray-500">Large ya slow websites par scan ko kuch zyada waqt lag sakta hai.</p>
           </div>
         )}
 
@@ -227,7 +227,7 @@ export default function WebsiteEstimatorPage() {
               </div>
               <p className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">
                 <strong>Public-scan based build estimate — some requirements cannot be verified.</strong>{" "}
-                Yeh estimate scanned public pages, matched features aur aapke existing package/add-on prices ko use karke isi tarah ka visible website scope build karne ka andaza deta hai. Private admin workflows, seller operations, integrations, infrastructure aur hidden functionality source code ke baghair verify nahi hotay; agar woh scan mein nazar na aayein to final scope aur budget badal sakta hai.
+                <span lang="ur-Latn" translate="yes">Yeh estimate scanned public pages, matched features aur aapke existing package/add-on prices ko use karke isi tarah ka visible website scope build karne ka andaza deta hai. Private admin workflows, seller operations, integrations, infrastructure aur hidden functionality source code ke baghair verify nahi hotay; agar woh scan mein nazar na aayein to final scope aur budget badal sakta hai.</span>
               </p>
             </section>
 
@@ -235,7 +235,7 @@ export default function WebsiteEstimatorPage() {
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-black">Choose add-ons and update the budget</h3>
-                  <p className="mt-1 max-w-2xl text-xs leading-relaxed text-gray-600">
+                  <p lang="ur-Latn" translate="yes" className="mt-1 max-w-2xl text-xs leading-relaxed text-gray-600">
                     Scan se detected, chargeable features pehle se selected hain. Mazeed features select ya unselect karein; package mein included features dobara charge nahi honge.
                   </p>
                 </div>
@@ -331,15 +331,15 @@ export default function WebsiteEstimatorPage() {
               </div>
               {estimate.addonCatalog.length === 0 && (
                 <p className="mt-4 rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
-                  Is scan ke liye koi active catalog add-on available nahi.
+                  <span lang="ur-Latn" translate="yes">Is scan ke liye koi active catalog add-on available nahi.</span>
                 </p>
               )}
               {estimate.addonCatalog.length > 0 && visibleAddons.length === 0 && (
                 <p className="mt-4 rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
-                  Is search ke liye koi add-on match nahi hua.
+                  <span lang="ur-Latn" translate="yes">Is search ke liye koi add-on match nahi hua.</span>
                 </p>
               )}
-              <p className="mt-3 text-[10px] leading-relaxed text-gray-500">
+              <p lang="ur-Latn" translate="yes" className="mt-3 text-[10px] leading-relaxed text-gray-500">
                 Prices existing add-on catalog se li gayi hain. Public scan mein nazar na aane wali functionality, custom integrations, hosting aur maintenance is selection total mein shamil nahi.
               </p>
             </section>
@@ -433,7 +433,7 @@ export default function WebsiteEstimatorPage() {
                   })}
                   {estimate.features.length === 0 && (
                     <p className="rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
-                      Koi supported feature signal scan kiye gaye public pages par nahi mila. Yeh proof nahi ke website mein features maujood nahi.
+                      <span lang="ur-Latn" translate="yes">Koi supported feature signal scan kiye gaye public pages par nahi mila. Yeh proof nahi ke website mein features maujood nahi.</span>
                     </p>
                   )}
                 </div>
@@ -448,7 +448,7 @@ export default function WebsiteEstimatorPage() {
                       <strong>{formatCurrency(estimate.basePrice, estimate.currency, locale)}</strong>
                     </div>
                   ) : (
-                    <p className="rounded-lg bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">
+                    <p lang="ur-Latn" translate="yes" className="rounded-lg bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">
                       Public scan ne kisi priced base package ko sufficiently match nahi kiya. Basic/starter package ko automatically assume nahi kiya gaya.
                     </p>
                   )}
@@ -498,7 +498,7 @@ export default function WebsiteEstimatorPage() {
             <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
                 <h3 className="font-extrabold text-base">3. Public pages opened</h3>
-                <p className="text-xs text-gray-500 mt-1">
+                <p lang="ur-Latn" translate="yes" className="text-xs text-gray-500 mt-1">
                   Yeh scan mein actually khulay pages hain; poori website ki guaranteed list nahi. Private/login routes scan nahi kiye jatay.
                 </p>
                 <ol className="mt-4 max-h-96 space-y-2 overflow-y-auto pr-1">
@@ -553,7 +553,7 @@ export default function WebsiteEstimatorPage() {
                     </ul>
                   ) : (
                     <p className="mt-4 rounded-lg bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">
-                      Scanned public pages par admin, marketplace ya multi-domain architecture ka clear signal nahi mila. Iska matlab yeh nahi ke yeh cheezen backend mein maujood nahi.
+                      <span lang="ur-Latn" translate="yes">Scanned public pages par admin, marketplace ya multi-domain architecture ka clear signal nahi mila. Iska matlab yeh nahi ke yeh cheezen backend mein maujood nahi.</span>
                     </p>
                   )}
                 </section>
@@ -594,7 +594,7 @@ export default function WebsiteEstimatorPage() {
                     href={`/templates?template=${encodeURIComponent(estimate.matchedTemplateId)}`}
                     className="mt-3 ml-0 sm:ml-3 inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-xs font-bold text-gray-800 hover:border-[#E31E36]"
                   >
-                    Ya is ready-made template ko request karein
+                    <span lang="ur-Latn" translate="yes">Ya is ready-made template ko request karein</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 )}
@@ -606,8 +606,8 @@ export default function WebsiteEstimatorPage() {
         {!estimate && !loading && !error && (
           <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
             <Globe className="w-8 h-8 text-gray-400 mx-auto" />
-            <h2 className="font-bold mt-3">Website URL yahan enter karein</h2>
-            <p className="text-xs text-gray-500 mt-1 max-w-xl mx-auto leading-relaxed">
+            <h2 lang="ur-Latn" translate="yes" className="font-bold mt-3">Website URL yahan enter karein</h2>
+            <p lang="ur-Latn" translate="yes" className="text-xs text-gray-500 mt-1 max-w-xl mx-auto leading-relaxed">
               Tool sitemap aur internal links se maximum 24 public pages check karega. Yeh opened pages, visible style clues aur public feature signals par based estimate deta hai; private admin functionality aur JavaScript-only behavior verify nahi hotay.
             </p>
           </div>

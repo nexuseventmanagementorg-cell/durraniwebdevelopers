@@ -106,6 +106,58 @@ export interface InquiryScopeReview {
   recommendedNextAction: string;
 }
 
+export type ScopePricingPackageId =
+  | "package_1"
+  | "package_2"
+  | "ecommerce_starter"
+  | "ecommerce_business"
+  | "ecommerce_advanced"
+  | "saas_starter"
+  | "saas_business"
+  | "saas_enterprise";
+
+export interface InquiryScopeEstimateLine {
+  id: string;
+  label: string;
+  amount: number;
+  kind: "base" | "addon" | "included";
+  note?: string;
+}
+
+export interface InquiryScopeEstimate {
+  engineVersion: string;
+  estimatedAt: string;
+  pricingPackageId: ScopePricingPackageId | null;
+  packageLabel: string | null;
+  selectedAddonIds: string[];
+  currency: string;
+  exchangeRate?: number;
+  calculation: CalculationBreakdown | null;
+  regionalCalculation?: CalculationBreakdown;
+  maximumEstimatedTotal?: number;
+  regionalMaximumEstimatedTotal?: number;
+  lines: InquiryScopeEstimateLine[];
+  matchedFeatures: string[];
+  includedFeatures: string[];
+  missingDetails: string[];
+  reviewReasons: string[];
+  recommendedPackage?: {
+    id: ScopePricingPackageId;
+    label: string;
+    reason: string;
+  };
+  confidence: "low" | "medium" | "high";
+  estimateStatus:
+    | "preliminary_estimate"
+    | "admin_review_required"
+    | "insufficient_information";
+  scopeStatus: "needs_follow_up" | "ready_for_quotation";
+  pricingSnapshot: {
+    basePrice: number;
+    addonPrices: Record<string, number>;
+  };
+}
+
 export type CalculatorLeadStatus = "New" | "Contacted" | "Qualified" | "Converted" | "Closed";
 
 export interface CalculatorLead {
@@ -238,6 +290,8 @@ export interface Inquiry {
   selectedAddons: string[];
   scanFeatures?: InquiryScanFeature[];
   scopeReview?: InquiryScopeReview;
+  originalScopeEstimate?: InquiryScopeEstimate;
+  adminScopeEstimate?: InquiryScopeEstimate;
   customFeatureNotes?: string;
   websiteCreationPrompt?: string;
   pricingPackage?: "ecommerce_starter" | "ecommerce_business" | "ecommerce_advanced" | "saas_starter" | "saas_business" | "saas_enterprise";

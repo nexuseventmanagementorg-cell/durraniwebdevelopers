@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import WhatsAppMessageComposer from "@/components/admin/WhatsAppMessageComposer";
 import {
   CREATIVE_CATEGORIES,
   DEFAULT_CREATIVE_STUDIO_CONFIG,
@@ -14,6 +15,13 @@ import type {
   CreativeInquiry,
   CreativeStudioConfig,
 } from "@/lib/creative-studio";
+import {
+  getCreativeInquiryTemplateValues,
+  getWhatsAppReadyReplyOptions,
+  type WhatsAppTemplate,
+  type WhatsAppReplyOption,
+} from "@/lib/whatsapp-message-templates";
+import { MessageSquare } from "lucide-react";
 
 const BILLING_UNITS: CreativeAddon["billingUnit"][] = [
   "fixed", "per_minute", "per_image", "per_language", "percentage", "custom_quote",
@@ -31,9 +39,44 @@ export default function CreativeStudioAdminPage() {
   const [quoteAmount, setQuoteAmount] = useState("");
   const [payment, setPayment] = useState({ amount: "", reference: "", note: "", confirmed: false });
   const [newCountry, setNewCountry] = useState({ country: "", currency: "USD", videoPerMinute: "", imagePerImage: "" });
+  const [whatsappMessage, setWhatsappMessage] = useState<{
+    inquiryId: string;
+    customerName: string;
+    recipientPhone: string;
+    templateOptions: WhatsAppReplyOption[];
+  } | null>(null);
 
   const selected = inquiries.find((inquiry) => inquiry.id === selectedId) || null;
   const selectedQuoteTotal = selected?.quote.total;
+
+  const openWhatsAppComposer = async () => {
+    if (!selected) return;
+    setError("");
+    try {
+      const response = await fetch("/api/admin/whatsapp-templates", { cache: "no-store" });
+      if (response.status === 401) {
+        window.location.href = "/admin/login";
+        return;
+      }
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "WhatsApp template could not be loaded.");
+      }
+      const template = (result.templates as WhatsAppTemplate[]).find(
+        (item) => item.category === "creative_studio"
+      );
+      if (!template) throw new Error("AI Creative Studio WhatsApp template is unavailable.");
+      const values = getCreativeInquiryTemplateValues(selected);
+      setWhatsappMessage({
+        inquiryId: selected.id,
+        customerName: selected.customer.name,
+        recipientPhone: selected.customer.whatsapp,
+        templateOptions: getWhatsAppReadyReplyOptions("creative_studio", values, template),
+      });
+    } catch (composeError) {
+      setError(composeError instanceof Error ? composeError.message : "WhatsApp message could not be prepared.");
+    }
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -235,6 +278,7 @@ export default function CreativeStudioAdminPage() {
               onUpdateCategory={(key, value) => setConfig((current) => ({ ...current, categoryMultipliers: { ...current.categoryMultipliers, [key]: value } }))}
               onUpdateComplexity={(key, value) => setConfig((current) => ({ ...current, complexityMultipliers: { ...current.complexityMultipliers, [key]: value } }))}
               onUpdateQuality={(key, value) => setConfig((current) => ({ ...current, qualityMultipliers: { ...current.qualityMultipliers, [key]: value } }))}
+              onUpdateAspectRatio={(key, value) => setConfig((current) => ({ ...current, aspectRatioMultipliers: { ...current.aspectRatioMultipliers, [key]: value } }))}
               onUpdateAddon={updateAddon}
               onMoveAddon={moveAddon}
               onSave={() => void saveConfig()}
@@ -264,7 +308,12 @@ export default function CreativeStudioAdminPage() {
                 <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div><p className="text-xs font-bold uppercase tracking-widest text-indigo-600">{selected.id}</p><h2 className="mt-1 text-2xl font-black">{selected.customer.name}</h2><p className="mt-1 text-sm text-slate-500">{selected.customer.email} · {selected.customer.whatsapp} · {selected.customer.country}</p></div>
-                    <span className="rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-800">{selected.status.replaceAll("_", " ")}</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-800">{selected.status.replaceAll("_", " ")}</span>
+                      <button type="button" onClick={() => void openWhatsAppComposer()} className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-800">
+                        <MessageSquare className="h-4 w-4" /> Generate WhatsApp message
+                      </button>
+                    </div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <InfoCard title="Project scope">
@@ -345,6 +394,16 @@ export default function CreativeStudioAdminPage() {
           )}
         </main>
       </div>
+      {whatsappMessage && (
+        <WhatsAppMessageComposer
+          key={whatsappMessage.inquiryId}
+          title="AI Creative Studio WhatsApp Message"
+          customerName={whatsappMessage.customerName}
+          recipientPhone={whatsappMessage.recipientPhone}
+          templateOptions={whatsappMessage.templateOptions}
+          onClose={() => setWhatsappMessage(null)}
+        />
+      )}
     </div>
   );
 }
@@ -360,6 +419,7 @@ function PricingEditor({
   onUpdateCategory,
   onUpdateComplexity,
   onUpdateQuality,
+  onUpdateAspectRatio,
   onUpdateAddon,
   onMoveAddon,
   onSave,
@@ -374,6 +434,7 @@ function PricingEditor({
   onUpdateCategory: (key: string, value: number) => void;
   onUpdateComplexity: (key: string, value: number) => void;
   onUpdateQuality: (key: string, value: number) => void;
+  onUpdateAspectRatio: (key: string, value: number) => void;
   onUpdateAddon: (index: number, field: keyof CreativeAddon, value: string | boolean) => void;
   onMoveAddon: (index: number, direction: -1 | 1) => void;
   onSave: () => void;
@@ -406,7 +467,7 @@ function PricingEditor({
           <button type="button" onClick={onAddCountry} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white">Add rate card</button>
         </div>
       </div>
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-4">
         <MultiplierEditor title="Category multipliers" values={config.categoryMultipliers} onChange={onUpdateCategory} labels={{
           social: "Social media", business: "Business / lifestyle", film: "Film / entertainment",
           featureFilm: "Feature film starting rate", music: "Music", education: "Education / documentary",
@@ -414,6 +475,7 @@ function PricingEditor({
         }} />
         <MultiplierEditor title="Complexity multipliers" values={config.complexityMultipliers} onChange={onUpdateComplexity} labels={{ basic: "Basic", standard: "Standard", advanced: "Advanced", premium: "Premium" }} />
         <MultiplierEditor title="Quality multipliers" values={config.qualityMultipliers} onChange={onUpdateQuality} labels={{ "720p": "720p", "1080p": "1080p Full HD", "2K": "2K", "4K": "4K" }} />
+        <MultiplierEditor title="Aspect ratio multipliers" values={config.aspectRatioMultipliers} onChange={onUpdateAspectRatio} labels={{ "9:16": "Vertical · 9:16", "16:9": "Horizontal · 16:9", "1:1": "Square · 1:1", "4:5": "Portrait · 4:5", custom: "Custom ratio" }} />
       </div>
       <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
         <h2 className="text-lg font-black">Add-on marketplace</h2>

@@ -7,6 +7,7 @@ import {
   getPricingPackageConfig,
   isPricingPackageId,
 } from "@/lib/constants";
+import { calculateInquiryScopeEstimate } from "@/lib/inquiry-budget-estimate";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { Inquiry, InquiryScanFeature } from "@/lib/types";
 import { CurrencyCode, isCurrencyCode, getRegionalPricingConfig } from "@/lib/currency";
@@ -172,6 +173,11 @@ export async function POST(request: NextRequest) {
       disclaimerAccepted: true,
       adminNotes: `Submitted via online interactive budget calculator.${pricingPackage ? ` Selected package: ${pricingPackage}.` : ""}${scanFeatures.length ? ` Includes ${scanFeatures.length} URL scan evidence items.` : ""}`,
     };
+    newInquiry.originalScopeEstimate = calculateInquiryScopeEstimate(
+      newInquiry,
+      storedPricingConfig,
+      { exchangeRate: exchangeSnapshot?.rates[currency] }
+    );
 
     const savedInquiry = await saveInquiry(newInquiry);
     const calculatorLead = body.calculatorLead;

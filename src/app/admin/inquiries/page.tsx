@@ -3,11 +3,21 @@
 import React, { useState, useEffect } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
-import { Inquiry, OrderStatus, PaymentMethod } from "@/lib/types";
-import { formatPKR, buildWhatsAppLinkTo } from "@/lib/constants";
+import WhatsAppMessageComposer from "@/components/admin/WhatsAppMessageComposer";
+import InquiryBudgetReview from "@/components/admin/InquiryBudgetReview";
+import { Inquiry, OrderStatus, PaymentMethod, PricingRuleConfig, ScopePricingPackageId } from "@/lib/types";
+import { formatPKR } from "@/lib/constants";
 import { formatCurrency, isCurrencyCode } from "@/lib/currency";
 import { reviewInquiryScope } from "@/lib/inquiry-review";
+import { calculateInquiryScopeEstimate } from "@/lib/inquiry-budget-estimate";
 import { buildWebsiteCreationPrompt } from "@/lib/project-brief";
+import {
+  getWhatsAppReadyReplyOptions,
+  getWebsiteInquiryTemplateValues,
+  WHATSAPP_TEMPLATE_CATEGORY_LABELS,
+  type WhatsAppTemplate,
+  type WhatsAppReplyOption,
+} from "@/lib/whatsapp-message-templates";
 import {
   Inbox,
   Search,
@@ -25,6 +35,29 @@ import {
 } from "lucide-react";
 
 function formatInquiryEstimate(inquiry: Inquiry): string {
+  const scopeEstimate = inquiry.adminScopeEstimate || inquiry.originalScopeEstimate;
+  if (scopeEstimate) {
+    if (!scopeEstimate.calculation || scopeEstimate.estimateStatus === "insufficient_information") {
+      return "Needs scope estimate";
+    }
+    if (scopeEstimate.regionalCalculation && isCurrencyCode(scopeEstimate.currency)) {
+      return `${formatCurrency(scopeEstimate.regionalCalculation.estimatedTotal, scopeEstimate.currency)} (PKR base ${formatPKR(scopeEstimate.calculation.estimatedTotal)})`;
+    }
+    return formatPKR(scopeEstimate.calculation.estimatedTotal);
+  }
+  if (
+    inquiry.internationalPricing &&
+    inquiry.internationalCalculation &&
+    isCurrencyCode(inquiry.currency)
+  ) {
+    return `${formatCurrency(inquiry.internationalCalculation.estimatedTotal, inquiry.currency)} (PKR base ${formatPKR(inquiry.calculation.estimatedTotal)})`;
+  }
+  if (inquiry.calculation.estimatedTotal <= 0) return "Estimate pending";
+  return formatPKR(inquiry.calculation.estimatedTotal);
+}
+
+function formatOriginalInquiryEstimate(inquiry: Inquiry): string {
+  if (inquiry.calculation.estimatedTotal <= 0) return "Not provided with this inquiry";
   if (
     inquiry.internationalPricing &&
     inquiry.internationalCalculation &&
@@ -39,6 +72,9 @@ export default function AdminInquiriesPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  const [pricingConfig, setPricingConfig] = useState<PricingRuleConfig | null>(null);
+  const [pricingConfigError, setPricingConfigError] = useState("");
+  const [scopeEstimateSaving, setScopeEstimateSaving] = useState(false);
   const [briefCopied, setBriefCopied] = useState(false);
   const [briefSaving, setBriefSaving] = useState(false);
   const [websitePromptDraft, setWebsitePromptDraft] = useState("");
@@ -62,6 +98,12 @@ export default function AdminInquiriesPage() {
   const [manualAdvanceConfirmed, setManualAdvanceConfirmed] = useState(false);
   const [converting, setConverting] = useState(false);
   const [actionSuccess, setActionSuccess] = useState("");
+  const [whatsappMessage, setWhatsappMessage] = useState<{
+    inquiryId: string;
+    customerName: string;
+    recipientPhone: string;
+    templateOptions: WhatsAppReplyOption[];
+  } | null>(null);
 
   const statusOptions: OrderStatus[] = [
     "New Inquiry",
@@ -82,17 +124,33 @@ export default function AdminInquiriesPage() {
 
   const fetchInquiries = async () => {
     try {
-      const res = await fetch("/api/admin/inquiries");
-      if (res.status === 401) {
+      const [res, pricingResponse] = await Promise.all([
+        fetch("/api/admin/inquiries", { cache: "no-store" }),
+        fetch("/api/admin/pricing", { cache: "no-store" }),
+      ]);
+      if (res.status === 401 || pricingResponse.status === 401) {
         window.location.href = "/admin/login";
         return;
       }
       const data = await res.json();
-      if (data.success) {
-        setInquiries(data.inquiries);
+      const pricingData = await pricingResponse.json();
+      if (pricingResponse.ok && pricingData.success && pricingData.config) {
+        setPricingConfig(pricingData.config);
+        setPricingConfigError("");
+        if (data.success) {
+          setInquiries(data.inquiries.map((inquiry: Inquiry) => ({
+            ...inquiry,
+            originalScopeEstimate: inquiry.originalScopeEstimate ||
+              calculateInquiryScopeEstimate(inquiry, pricingData.config),
+          })));
+        }
+      } else {
+        setPricingConfigError(pricingData.error || "Published pricing configuration could not be loaded.");
+        if (data.success) setInquiries(data.inquiries);
       }
     } catch (e) {
       console.error(e);
+      setPricingConfigError("Published pricing configuration could not be loaded.");
     } finally {
       setLoading(false);
     }
@@ -106,6 +164,36 @@ export default function AdminInquiriesPage() {
     setWebsitePromptDraft(selectedInquiry?.websiteCreationPrompt || "");
     setWebsitePromptCopied(false);
   }, [selectedInquiry?.id, selectedInquiry?.websiteCreationPrompt]);
+
+  const handleSaveScopeEstimate = async (selection: {
+    packageId: ScopePricingPackageId | null;
+    addonIds: string[];
+  }) => {
+    if (!selectedInquiry) throw new Error("Select an inquiry before saving an estimate.");
+    setScopeEstimateSaving(true);
+    try {
+      const response = await fetch("/api/admin/inquiries", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedInquiry.id,
+          scopeEstimateAdjustment: selection,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "The revised estimate could not be saved.");
+      }
+      setSelectedInquiry(result.inquiry);
+      setInquiries((previous) => previous.map((inquiry) =>
+        inquiry.id === result.inquiry.id ? result.inquiry : inquiry
+      ));
+      setActionSuccess("Admin-adjusted estimate saved separately from the original inquiry and calculator price.");
+      setTimeout(() => setActionSuccess(""), 3000);
+    } finally {
+      setScopeEstimateSaving(false);
+    }
+  };
 
   const handleUpdateStatus = async (inquiryId: string, newStatus: OrderStatus) => {
     try {
@@ -160,6 +248,33 @@ export default function AdminInquiriesPage() {
     if (!selectedInquiry) return;
     setWebsitePromptDraft(buildWebsiteCreationPrompt(selectedInquiry));
     setWebsitePromptCopied(false);
+  };
+
+  const openWebsiteWhatsAppComposer = async (inquiry: Inquiry) => {
+    try {
+      const response = await fetch("/api/admin/whatsapp-templates", { cache: "no-store" });
+      if (response.status === 401) {
+        window.location.href = "/admin/login";
+        return;
+      }
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "WhatsApp template could not be loaded.");
+      }
+      const template = (result.templates as WhatsAppTemplate[]).find(
+        (item) => item.category === "website_development"
+      );
+      if (!template) throw new Error("Website Development WhatsApp template is unavailable.");
+      const values = getWebsiteInquiryTemplateValues(inquiry);
+      setWhatsappMessage({
+        inquiryId: inquiry.id,
+        customerName: inquiry.customerName,
+        recipientPhone: inquiry.phone,
+        templateOptions: getWhatsAppReadyReplyOptions("website_development", values, template),
+      });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "WhatsApp message could not be prepared.");
+    }
   };
 
   const handleSaveWebsitePrompt = async () => {
@@ -294,13 +409,6 @@ export default function AdminInquiriesPage() {
       inq.phone.includes(searchQuery);
     return matchesStatus && matchesSearch;
   });
-  const selectedInquiryWhatsAppLink = selectedInquiry
-    ? buildWhatsAppLinkTo(
-        selectedInquiry.phone,
-        `Assalam-o-Alaikum ${selectedInquiry.customerName}! This is Durrani Web Developers regarding your inquiry ${selectedInquiry.id}.`
-      )
-    : null;
-
   return (
     <div className="min-h-screen bg-[#F4F5F7] flex">
       <AdminSidebar />
@@ -378,10 +486,6 @@ export default function AdminInquiriesPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {filteredInquiries.map((inq) => {
-                      const whatsappLink = buildWhatsAppLinkTo(
-                        inq.phone,
-                        `Assalam-o-Alaikum ${inq.customerName}! This is Durrani Web Developers regarding your inquiry ${inq.id} for "${inq.businessName || inq.customerName}" (Estimated ${formatInquiryEstimate(inq)}). Let's discuss your timeline and technical scope.`
-                      );
                       return (
                       <tr key={inq.id} className="hover:bg-gray-50/80 transition">
                         <td className="py-3.5 px-4 font-black text-[#E31E36]">
@@ -433,22 +537,15 @@ export default function AdminInquiriesPage() {
                           >
                             View Scope
                           </button>
-                          {whatsappLink ? (
-                            <a
-                              href={whatsappLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white p-1.5 rounded-lg inline-flex items-center text-[11px] font-bold transition"
-                              title={`Message ${inq.customerName} on WhatsApp`}
-                              aria-label={`Message ${inq.customerName} on WhatsApp`}
-                            >
-                              <MessageSquare className="w-3.5 h-3.5" />
-                            </a>
-                          ) : (
-                            <span title="Customer phone number is unavailable" className="inline-flex p-1.5 text-gray-300">
-                              <MessageSquare className="w-3.5 h-3.5" />
-                            </span>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => void openWebsiteWhatsAppComposer(inq)}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white p-1.5 rounded-lg inline-flex items-center text-[11px] font-bold transition"
+                            title={`Generate a WhatsApp message for ${inq.customerName}`}
+                            aria-label={`Generate WhatsApp message for ${inq.customerName}`}
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                          </button>
                         </td>
                       </tr>
                       );
@@ -567,6 +664,15 @@ export default function AdminInquiriesPage() {
                   )}
                 </section>
               )}
+
+              <InquiryBudgetReview
+                key={selectedInquiry.id}
+                inquiry={selectedInquiry}
+                pricingConfig={pricingConfig}
+                pricingConfigError={pricingConfigError}
+                saving={scopeEstimateSaving}
+                onSave={handleSaveScopeEstimate}
+              />
 
               {selectedInquiry.scanFeatures && selectedInquiry.scanFeatures.length > 0 && (
                 <section className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
@@ -728,10 +834,13 @@ export default function AdminInquiriesPage() {
                 )}
               </section>
 
-              {/* Add-ons & Admin Tier */}
+              {/* Original customer-submitted estimate snapshot */}
               <div className="bg-red-50/60 p-4 rounded-xl border border-red-200 space-y-2">
+                <p className="text-[11px] leading-relaxed text-gray-600">
+                  This is the customer&apos;s original calculator snapshot. The scope-based estimate above is calculated separately for admin review and does not replace this amount.
+                </p>
                 <div className="flex justify-between items-center font-bold">
-                  <span className="text-gray-700">Selected Administrative Package:</span>
+                  <span className="text-gray-700">Package in original inquiry:</span>
                   <span className="text-[#E31E36]">
                     {selectedInquiry.adminPanelType === "client_admin"
                       ? "Package 2: With Client Admin Support"
@@ -740,7 +849,7 @@ export default function AdminInquiriesPage() {
                 </div>
 
                 <div className="flex justify-between items-center pt-2 border-t border-red-200 text-gray-700">
-                  <span>Selected Modular Add-ons:</span>
+                  <span>Customer-selected modular add-ons:</span>
                   <span className="font-bold">
                     {selectedInquiry.selectedAddons.length > 0
                       ? selectedInquiry.calculation.selectedAddonDetails?.map((addon) => addon.label).join(", ") || selectedInquiry.selectedAddons.join(", ")
@@ -760,9 +869,9 @@ export default function AdminInquiriesPage() {
                 )}
 
                 <div className="flex justify-between items-baseline pt-2 border-t border-red-200">
-                  <span className="text-xs uppercase font-extrabold text-gray-600">Calculated Budget:</span>
+                  <span className="text-xs uppercase font-extrabold text-gray-600">Customer-submitted calculator amount:</span>
                   <strong className="text-xl font-black text-[#E31E36]">
-                    {formatInquiryEstimate(selectedInquiry)}
+                    {formatOriginalInquiryEstimate(selectedInquiry)}
                   </strong>
                 </div>
                 {selectedInquiry.internationalPricing && (
@@ -775,18 +884,13 @@ export default function AdminInquiriesPage() {
 
             {/* Conversion CTA Footer */}
             <div className="pt-4 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3">
-              {selectedInquiryWhatsAppLink ? (
-                <a
-                  href={selectedInquiryWhatsAppLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow"
-                >
-                  <MessageSquare className="w-4 h-4" /> Message {selectedInquiry.customerName} on WhatsApp
-                </a>
-              ) : (
-                <span className="text-xs text-gray-500">Customer WhatsApp number unavailable</span>
-              )}
+              <button
+                type="button"
+                onClick={() => void openWebsiteWhatsAppComposer(selectedInquiry)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow"
+              >
+                <MessageSquare className="w-4 h-4" /> Generate {WHATSAPP_TEMPLATE_CATEGORY_LABELS.website_development} Message
+              </button>
 
               {selectedInquiry.convertedProjectId ? (
                 <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
@@ -975,6 +1079,16 @@ export default function AdminInquiriesPage() {
             </div>
           </div>
         </div>
+      )}
+      {whatsappMessage && (
+        <WhatsAppMessageComposer
+          key={whatsappMessage.inquiryId}
+          title="Website Development WhatsApp Message"
+          customerName={whatsappMessage.customerName}
+          recipientPhone={whatsappMessage.recipientPhone}
+          templateOptions={whatsappMessage.templateOptions}
+          onClose={() => setWhatsappMessage(null)}
+        />
       )}
     </div>
   );

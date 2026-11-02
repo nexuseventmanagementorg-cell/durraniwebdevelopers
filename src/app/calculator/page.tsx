@@ -1305,7 +1305,7 @@ function CalculatorContent() {
     : null;
   if (currentStep === 0) {
     return (
-      <div className="min-h-screen bg-white text-[#101216]">
+      <div lang={guideLanguage === "roman-ur" ? "ur-Latn" : "en"} translate="yes" className="min-h-screen bg-white text-[#101216]">
         <section className="border-b border-[#242830] bg-[#101216] py-10 text-white sm:py-14">
           <div className="mx-auto max-w-5xl space-y-4 px-4 text-center sm:px-6 lg:px-8">
             <span className="inline-flex rounded-full border border-[#E31E36]/40 bg-[#242830] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-red-300">
@@ -1324,7 +1324,7 @@ function CalculatorContent() {
           </div>
         </section>
 
-        <main className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
+        <main lang={guideLanguage === "roman-ur" ? "ur-Latn" : "en"} translate="yes" className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
           <div className="mb-7 grid grid-cols-3 gap-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:gap-4 sm:p-4">
             {[
               guideLanguage === "roman-ur" ? "1. Maqsad chunein" : "1. Choose your goal",
@@ -1606,7 +1606,7 @@ function CalculatorContent() {
   }
 
   return (
-    <div className="bg-[#FFFFFF] text-[#101216] min-h-screen">
+    <div lang={guideLanguage === "roman-ur" ? "ur-Latn" : "en"} translate="yes" className="bg-[#FFFFFF] text-[#101216] min-h-screen">
       {/* Top Banner */}
       <section className="bg-[#101216] text-white py-12 border-b border-[#242830]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-3">

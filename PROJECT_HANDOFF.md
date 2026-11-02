@@ -1,6 +1,18 @@
 # DWD Project Handoff
 
-Last updated: 2026-10-28
+Last updated: 2026-11-02
+
+## Latest resume point — website inquiry estimate release (2026-11-02)
+
+- Workspace: `D:\website-projects-backup\durrani-web-developers`; GitHub `main`; production Vercel project `nexuseventmanagementorg-2858/durraniwebdevelopers` (`prj_S3HMr6NkIl9fr6qUWU7OR1NdEnXc`), production alias `https://durraniwebdevelopers.vercel.app`.
+- The website-build inquiry inbox now calculates a preliminary scope estimate from published packages/add-ons, displays line items, confidence, follow-up gaps, and supported international currency conversions. Admin package/add-on adjustments are server-recalculated and stored separately from customer-submitted price/payment amounts; changes lock after quotation/project progression. New website inquiries persist the automated estimate. Legacy inquiries get an in-memory estimate and are explicitly labeled as historical/unsubmitted calculator amount where appropriate.
+- The “Customer-submitted calculator amount” is only the customer's original calculator snapshot; it is not the admin's scope estimate. Old inquiries without a stored calculator total cannot have that original amount reconstructed. The UI now explains this difference.
+- This estimate work is for the regular website-build inquiry path only; **AI Creator Studio pricing/estimate snapshots are not yet integrated**. Next Copilot session: continue from the Creative Studio request/inbox path (`src/app/creative-studio/studio-client.tsx`, `src/app/api/public/creative-studio/inquiries/route.ts`, `src/app/admin/creative-studio/page.tsx`). First trace the existing Studio quote/pricing contract end to end; then design a separate scope-aware Studio estimate and preserve the submitted quote/snapshot independently. Do not reuse website packages or change Creative Studio prices without verifying its existing pricing configuration.
+- Other pending app work in this release includes the Creative Studio reference upload changes, editable admin WhatsApp reply templates, the website inquiry estimator, admin authentication fixes, and CV page/assets. Do not deploy the local `supabase/.temp` directory or `tsconfig.tsbuildinfo`.
+- Pricing discrepancy to retain: the earlier brief describes Admin Dashboard at PKR 15,000, while published add-on config returned PKR 10,000. The estimator uses the published/live config; do not silently change pricing.
+- Validation before release: all 209 project tests passed; ESLint, TypeScript, and production build passed. The final admin label/explanation edit also passed ESLint and TypeScript and was verified in the localhost inquiry modal. No production deployment has yet been confirmed for this checkpoint; add the resulting commit/deployment ID and live verification here after release.
+- Database note: `supabase/migrations/20261101132000_expand_creative_studio_reference_types.sql` changes only the Creative Studio reference bucket MIME/file-size configuration. It was dry-run reviewed, applied to the linked production Supabase project on 2026-11-02, and `supabase migration list --remote` verified it as applied. No inquiry/payment records were changed.
+- Resume by confirming the production release and handoff commit, then work only on the separate AI Creator Studio estimate/snapshot flow. Keep the existing website estimator and inquiry/payment calculations unchanged.
 
 ## Latest resume point — DW-944529 AI workforce test (2026-10-28 03:24 PKT)
 

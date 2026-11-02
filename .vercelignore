@@ -1,4 +1,5 @@
 .env*
 .vercel/
+/supabase/.temp/
 /data/db.json
 /public/Screenshot 2026-10-17 *.png

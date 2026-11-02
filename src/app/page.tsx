@@ -974,22 +974,22 @@ export default function HomePage() {
                   <h3 className="font-extrabold text-sm text-[#101216] mb-2">
                     {step.title}
                   </h3>
-                  <p className="text-xs text-gray-600 leading-relaxed">
+                  <p lang="ur-Latn" translate="yes" className="text-xs text-gray-600 leading-relaxed">
                     {step.desc}
                   </p>
                   <ul className="mt-4 space-y-2.5">
                     {step.details.map((detail) => (
-                      <li key={detail} className="flex items-start gap-2 text-xs leading-relaxed text-gray-600">
+                      <li key={detail} lang="ur-Latn" translate="yes" className="flex items-start gap-2 text-xs leading-relaxed text-gray-600">
                         <Check className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-600" />
                         <span>{detail}</span>
                       </li>
                     ))}
                   </ul>
                   <div className="mt-5 border-t border-gray-100 pt-4">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#E31E36]">
-                      Aapko kya faida?
+                    <span lang="ur-Latn" translate="yes" className="text-[10px] font-extrabold uppercase tracking-wider text-[#E31E36]">
+                      <span lang="ur-Latn" translate="yes">Aapko kya faida?</span>
                     </span>
-                    <p className="mt-1 text-xs font-semibold leading-relaxed text-[#101216]">
+                    <p lang="ur-Latn" translate="yes" className="mt-1 text-xs font-semibold leading-relaxed text-[#101216]">
                       {step.benefit}
                     </p>
                   </div>
@@ -999,14 +999,14 @@ export default function HomePage() {
           </div>
 
           <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-white p-5 sm:flex-row sm:px-7">
-            <p className="max-w-3xl text-xs leading-relaxed text-gray-600">
+            <p lang="ur-Latn" translate="yes" className="max-w-3xl text-xs leading-relaxed text-gray-600">
               Note: Personal domain setup (jese .com) optional PKR 10,000 add-on hai; domain purchase/renewal registrar fees client alag pay karta hai. Hum paid third-party subscriptions, payment gateway accounts ya external API accounts provide nahi karte. Vercel par app deploy karne ka hamara kaam web-app budget mein included hai, alag deployment fee nahi; Vercel ka paid plan/hosting subscription ismein shamil nahi. Payment verify hone ke baad hi received mark hoti hai.
             </p>
             <Link
               href="/calculator"
               className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-xl bg-[#E31E36] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#C8162D]"
             >
-              Apna Project Shuru Karein <ArrowRight className="h-4 w-4" />
+              <span lang="ur-Latn" translate="yes">Apna Project Shuru Karein</span> <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -1032,7 +1032,7 @@ export default function HomePage() {
                   <span>{faq.q}</span>
                 </h3>
                 <p className="text-xs text-gray-600 leading-relaxed mt-2.5 pl-6.5">
-                  {faq.a}
+                  <span lang={idx === 2 ? "ur-Latn" : "en"} translate="yes">{faq.a}</span>
                 </p>
               </div>
             ))}

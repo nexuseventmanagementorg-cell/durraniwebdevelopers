@@ -23,6 +23,7 @@ import {
   ShoppingBag,
   Bot,
   WandSparkles,
+  MessageSquareText,
 } from "lucide-react";
 
 export default function AdminSidebar() {
@@ -36,6 +37,7 @@ export default function AdminSidebar() {
     { name: "Active Projects", href: "/admin/projects", icon: Briefcase },
     { name: "AI Workforce", href: "/admin/workforce", icon: Bot },
     { name: "AI Creative Studio", href: "/admin/creative-studio", icon: WandSparkles },
+    { name: "WhatsApp Templates", href: "/admin/whatsapp-templates", icon: MessageSquareText },
     { name: "Clients Directory", href: "/admin/clients", icon: Users },
     { name: "Payments & Verification", href: "/admin/payments", icon: CreditCard },
     { name: "Receipt Reviews", href: "/admin/payment-proofs", icon: ReceiptText },

@@ -11,6 +11,7 @@ import {
 } from "../src/lib/creative-studio";
 import type { CreativeQuoteInput, CreativeStudioConfig } from "../src/lib/creative-studio";
 import { isValidCreativeStudioConfig } from "../src/lib/creative-studio-storage";
+import { isValidCreativeReferenceFile } from "../src/lib/creative-reference-files";
 import { GET as getAdminCreativeInquiries } from "../src/app/api/admin/creative-studio/route";
 import { POST as submitCreativeInquiry } from "../src/app/api/public/creative-studio/inquiries/route";
 
@@ -25,13 +26,14 @@ function input(overrides: Partial<CreativeQuoteInput> = {}): CreativeQuoteInput 
     imageCount: 1,
     complexity: "standard",
     quality: "1080p",
+    aspectRatio: "9:16",
     languageCount: 1,
     addonIds: [],
     ...overrides,
   };
 }
 
-function validInquiryForm(file?: File): FormData {
+function validInquiryForm(file?: File, brief = "A test project brief for Creative Studio validation."): FormData {
   const form = new FormData();
   form.set("customer", JSON.stringify({
     name: "Test Customer",
@@ -42,7 +44,7 @@ function validInquiryForm(file?: File): FormData {
   }));
   form.set("project", JSON.stringify({
     quoteInput: input({ durationSeconds: 30 }),
-    brief: "A test project brief for Creative Studio validation.",
+    brief,
     vision: "",
     style: "Cinematic",
     languages: { video: "English" },
@@ -83,6 +85,21 @@ test("video quotes prorate the country rate and round to the nearest hundred", (
   assert.equal(thirtySeconds.total, 5000);
   assert.equal(oneMinute.base, 10000);
   assert.equal(oneMinute.total, 10000);
+});
+
+test("complexity, resolution, and aspect ratio all affect the video estimate", () => {
+  const standard = calculateCreativeQuote(input(), DEFAULT_CREATIVE_STUDIO_CONFIG);
+  const advanced = calculateCreativeQuote(input({ complexity: "advanced" }), DEFAULT_CREATIVE_STUDIO_CONFIG);
+  const premiumResolution = calculateCreativeQuote(input({ quality: "4K" }), DEFAULT_CREATIVE_STUDIO_CONFIG);
+  const horizontal = calculateCreativeQuote(input({ aspectRatio: "16:9" }), DEFAULT_CREATIVE_STUDIO_CONFIG);
+  const customRatio = calculateCreativeQuote(input({ aspectRatio: "4:3" }), DEFAULT_CREATIVE_STUDIO_CONFIG);
+
+  assert.equal(standard.total, 10000);
+  assert.equal(advanced.total, 15000);
+  assert.equal(premiumResolution.total, 15000);
+  assert.equal(horizontal.total, 11000);
+  assert.equal(customRatio.total, 11500);
+  assert.equal(horizontal.aspectRatioCharge, 1000);
 });
 
 test("long video estimates use the configured Pakistan per-minute rate", () => {
@@ -217,6 +234,10 @@ test("pricing configuration validation rejects malformed records without throwin
   assert.equal(isValidCreativeStudioConfig(DEFAULT_CREATIVE_STUDIO_CONFIG), true);
   assert.equal(isValidCreativeStudioConfig({
     ...DEFAULT_CREATIVE_STUDIO_CONFIG,
+    aspectRatioMultipliers: undefined,
+  }), true);
+  assert.equal(isValidCreativeStudioConfig({
+    ...DEFAULT_CREATIVE_STUDIO_CONFIG,
     countries: [null],
   }), false);
   assert.equal(isValidCreativeStudioConfig({
@@ -240,6 +261,16 @@ test("public inquiry endpoint rejects malformed form data without reporting succ
 
   assert.equal(response.status, 400);
   assert.equal(result.success, false);
+});
+
+test("public inquiry endpoint requires a non-empty project brief of at least 10 characters", async () => {
+  for (const brief of ["", "         ", "Too short"]) {
+    const response = await submitCreativeInquiry(requestWithForm(validInquiryForm(undefined, brief)));
+    const result = await response.json();
+
+    assert.equal(response.status, 400);
+    assert.equal(result.success, false);
+  }
 });
 
 test("admin inquiry endpoint rejects unauthenticated requests", async () => {
@@ -273,5 +304,26 @@ test("public inquiry endpoint enforces the 10 MiB reference-file limit", async (
   const result = await response.json();
 
   assert.equal(response.status, 413);
+  assert.equal(result.success, false);
+});
+
+test("reference validation accepts scripts and documents only when extension and signature match", () => {
+  assert.equal(isValidCreativeReferenceFile("scene.txt", "text/plain", new TextEncoder().encode("Scene 1: opening")), true);
+  assert.equal(isValidCreativeReferenceFile("captions.srt", "application/x-subrip", new TextEncoder().encode("1\n00:00:00,000 --> 00:00:01,000\nHello")), true);
+  assert.equal(isValidCreativeReferenceFile("script.pdf", "application/pdf", new TextEncoder().encode("%PDF-1.7")), true);
+  assert.equal(isValidCreativeReferenceFile("script.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", new Uint8Array([0x50, 0x4b, 0x03, 0x04])), true);
+  assert.equal(isValidCreativeReferenceFile("script.jpg", "text/plain", new TextEncoder().encode("Scene 1")), false);
+  assert.equal(isValidCreativeReferenceFile("script.txt", "text/plain", new Uint8Array([0xff, 0xfe, 0x00])), false);
+});
+
+test("public inquiry endpoint rejects more than 20 reference files", async () => {
+  const form = validInquiryForm();
+  for (let index = 0; index < 21; index += 1) {
+    form.append("references", new File(["reference"], `reference-${index}.txt`, { type: "text/plain" }));
+  }
+  const response = await submitCreativeInquiry(requestWithForm(form));
+  const result = await response.json();
+
+  assert.equal(response.status, 400);
   assert.equal(result.success, false);
 });

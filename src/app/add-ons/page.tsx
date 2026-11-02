@@ -122,7 +122,7 @@ export default function AddOnsPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#E31E36]">Feature catalog</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">Business Add-on Specifications</h1>
-          <p className="mt-4 max-w-3xl text-sm leading-6 text-gray-300">
+          <p lang="ur-Latn" translate="yes" className="mt-4 max-w-3xl text-sm leading-6 text-gray-300">
             Yeh page sirf features ki maloomat ke liye hai. Har card mein English specification ke neeche Roman Urdu mein samjhaya gaya hai ke feature add karne se kya hoga. Saath andazati qeemat bhi dekhein.
           </p>
         </div>
@@ -227,7 +227,7 @@ export default function AddOnsPage() {
                 </div>
                 <div className="mt-3 flex-1">
                   <p className="text-xs leading-5 text-gray-700">{addon.description}</p>
-                  <p className="mt-2 border-t border-gray-100 pt-2 text-xs leading-5 text-gray-600">
+                  <p lang="ur-Latn" translate="yes" className="mt-2 border-t border-gray-100 pt-2 text-xs leading-5 text-gray-600">
                     <span className="font-bold text-[#101216]">Roman Urdu: </span>
                     {getRomanUrduAddonExplanation(addon.id, addon.label, addon.description, addon.level)}
                   </p>

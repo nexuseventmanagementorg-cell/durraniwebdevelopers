@@ -1,4 +1,4 @@
-import { randomBytes, scrypt, timingSafeEqual } from "crypto";
+import { createHash, randomBytes, scrypt, timingSafeEqual } from "crypto";
 import { hasPaymentSupabaseConfiguration, getPaymentSupabase } from "@/lib/payment-server";
 
 const PASSWORD_HASH_BYTES = 64;
@@ -30,6 +30,12 @@ function derivePasswordHash(password: string, salt: Buffer): Promise<Buffer> {
       }
     );
   });
+}
+
+function verifyBootstrapPassword(password: string, expectedPassword: string): boolean {
+  const actual = createHash("sha256").update(password, "utf8").digest();
+  const expected = createHash("sha256").update(expectedPassword, "utf8").digest();
+  return timingSafeEqual(actual, expected);
 }
 
 export async function hashAdminPassword(password: string): Promise<string> {
@@ -101,9 +107,8 @@ export async function verifyAdminCredentials(
       "Admin login is not configured. Set ADMIN_USERNAME in .env.local and restart the server."
     );
   }
-  if (username.trim().toLowerCase() !== configuredUsername.trim().toLowerCase()) {
-    return false;
-  }
+  const usernameMatches = username.trim().toLowerCase() === configuredUsername.trim().toLowerCase();
+  if (!usernameMatches) return false;
 
   const storedHash = await readStoredPasswordHash();
   if (storedHash) return verifyAdminPasswordHash(password, storedHash);
@@ -114,7 +119,7 @@ export async function verifyAdminCredentials(
       "Admin password is not configured. Set ADMIN_PASSWORD in .env.local or save a password in Supabase."
     );
   }
-  return password === bootstrapPassword;
+  return verifyBootstrapPassword(password, bootstrapPassword);
 }
 
 export async function saveAdminPassword(password: string): Promise<void> {

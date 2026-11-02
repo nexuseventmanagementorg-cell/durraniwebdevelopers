@@ -46,7 +46,12 @@ VALUES (
   'creative-studio-references',
   FALSE,
   10485760,
-  ARRAY['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm']
+  ARRAY[
+    'image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm',
+    'text/plain', 'application/x-subrip', 'application/pdf', 'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/rtf', 'text/rtf', 'application/x-rtf'
+  ]
 )
 ON CONFLICT (id) DO UPDATE SET
   public = FALSE,

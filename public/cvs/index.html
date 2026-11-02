@@ -1,0 +1,865 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111216">
+  <meta name="description" content="Kaleem Durrani builds responsive business websites, restaurant ordering systems, e-commerce stores, SaaS platforms, and custom web applications at Durrani Web Developers.">
+  <meta property="og:title" content="Kaleem Durrani - Full-Stack Web Developer">
+  <meta property="og:description" content="Explore Kaleem Durrani's live website templates, web development services, optional application modules, and professional tools.">
+  <meta property="og:type" content="website">
+  <title>Kaleem Durrani - Full-Stack Web Developer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17181c;
+      --muted: #666971;
+      --blue: #e51d3a;
+      --blue-dark: #c91530;
+      --line: #e5e5e8;
+      --paper: #fff;
+      --canvas: #fff;
+      --soft-blue: #fff0f2;
+      --radius: 18px;
+      --shadow: 0 16px 48px rgb(12 13 16 / 14%);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 88px; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font: 16px/1.65 "DM Sans", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    a:focus-visible, button:focus-visible {
+      outline: 3px solid #f37487;
+      outline-offset: 3px;
+      border-radius: 5px;
+    }
+    .shell { width: min(1120px, calc(100% - 48px)); margin-inline: auto; }
+    .site-header {
+      position: sticky;
+      z-index: 10;
+      top: 0;
+      border-bottom: 1px solid #2a2b30;
+      background: rgb(25 26 31 / 96%);
+      backdrop-filter: blur(16px);
+    }
+    .announcement {
+      padding: 7px 16px;
+      background: #e51d3a;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+    }
+    .announcement a { margin-left: 8px; color: white; text-underline-offset: 3px; }
+    .nav {
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      color: white;
+      text-decoration: none;
+      font: 800 14px/1 "Manrope", sans-serif;
+      letter-spacing: -.025em;
+    }
+    .brand-mark {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 11px;
+      background: var(--blue);
+      color: white;
+      font-size: 13px;
+      letter-spacing: -.08em;
+    }
+    .nav-links { display: flex; align-items: center; gap: 26px; }
+    .nav-links a {
+      color: #c5c6cb;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color .18s ease;
+    }
+    .nav-links a:hover { color: white; }
+    .nav-links .nav-cta { color: var(--blue); }
+
+    .hero {
+      position: relative;
+      padding: 76px 0 66px;
+      overflow: hidden;
+      background-color: #111216;
+      background-image: linear-gradient(rgb(255 255 255 / 3%) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 3%) 1px, transparent 1px), radial-gradient(ellipse at 85% 12%, rgb(229 29 58 / 15%), transparent 42%);
+      background-size: 52px 52px, 52px 52px, auto;
+      color: white;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.48fr) minmax(275px, .72fr);
+      align-items: center;
+      gap: 74px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 22px;
+      color: #c4c5cb;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before {
+      width: 22px;
+      height: 1px;
+      background: var(--blue);
+      content: "";
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { font-family: "Manrope", sans-serif; }
+    h1 {
+      max-width: 720px;
+      margin-bottom: 20px;
+      font-size: clamp(42px, 6vw, 68px);
+      font-weight: 800;
+      letter-spacing: -.065em;
+      line-height: 1.08;
+    }
+    .hero h1 { color: white; }
+    h1 span { color: var(--blue); }
+    .hero-title {
+      margin-bottom: 18px;
+      color: #f1f1f3;
+      font-size: clamp(16px, 2vw, 19px);
+      font-weight: 600;
+      letter-spacing: -.015em;
+    }
+    .hero-copy {
+      max-width: 650px;
+      margin-bottom: 28px;
+      color: #b6b7be;
+      font-size: 16px;
+      line-height: 1.8;
+    }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 11px; }
+    .button {
+      min-height: 46px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 0 17px;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      background: var(--blue);
+      color: white;
+      font: 700 13px "DM Sans", sans-serif;
+      text-decoration: none;
+      transition: background .18s ease, transform .18s ease, border-color .18s ease;
+    }
+    .button:hover { transform: translateY(-1px); background: var(--blue-dark); }
+    .button-secondary { border-color: var(--line); background: var(--paper); color: var(--ink); }
+    .button-secondary:hover { border-color: #f0a3ae; background: white; }
+    .hero .button-secondary { border-color: #44454d; background: #24252b; color: white; }
+    .hero .button-secondary:hover { border-color: #777880; background: #2d2e35; }
+    .button svg { width: 16px; height: 16px; }
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 22px;
+      margin-top: 28px;
+      color: #b6b7be;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .meta-item { display: inline-flex; align-items: center; gap: 7px; }
+    .meta-item svg { width: 15px; height: 15px; color: var(--blue); }
+    .hero-card {
+      position: relative;
+      padding: 28px;
+      overflow: hidden;
+      border: 1px solid #34353c;
+      border-radius: 22px;
+      background:
+        radial-gradient(ellipse at 82% 2%, rgb(229 29 58 / 16%), transparent 48%),
+        #202127;
+      box-shadow: var(--shadow);
+    }
+    .hero-card::after {
+      position: absolute;
+      top: -50px;
+      right: -58px;
+      width: 180px;
+      height: 180px;
+      border: 1px solid rgb(229 29 58 / 20%);
+      border-radius: 50%;
+      content: "";
+      pointer-events: none;
+    }
+    .hero-profile-logo { display: block; width: 132px; height: 132px; margin-bottom: 22px; border: 1px solid #5b2630; border-radius: 24px; object-fit: cover; background: #111216; }
+    .card-label { margin-bottom: 5px; color: #c4c5cb; font-size: 11px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+    .hero-card h2 { margin-bottom: 17px; color: white; font-size: 21px; letter-spacing: -.04em; }
+    .card-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+    .card-list li { display: flex; align-items: flex-start; gap: 10px; color: #c5c6cb; font-size: 13px; }
+    .card-list svg { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 3px; color: var(--blue); }
+    .card-divider { height: 1px; margin: 21px 0 17px; background: #393a40; }
+    .status-line { display: flex; align-items: center; gap: 8px; color: #c5c6cb; font-size: 12px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #8d99ad; }
+    .hero-link { color: var(--blue); font-size: 12px; font-weight: 700; text-decoration: none; }
+
+    .proof-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      margin: 0 0 28px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--line);
+    }
+    .proof-item { min-height: 90px; padding: 20px 24px; background: white; }
+    .proof-item strong { display: block; margin-bottom: 3px; font: 700 14px "Manrope", sans-serif; letter-spacing: -.02em; }
+    .proof-item span { color: var(--muted); font-size: 12px; }
+
+    .section { padding: 64px 0; }
+    .section + .section { border-top: 1px solid var(--line); }
+    .section-head { max-width: 660px; margin-bottom: 30px; }
+    .section-kicker { margin-bottom: 8px; color: var(--blue); font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+    .section-title {
+      margin-bottom: 10px;
+      font-size: clamp(29px, 4vw, 40px);
+      font-weight: 800;
+      letter-spacing: -.055em;
+      line-height: 1.2;
+    }
+    .section-intro { margin-bottom: 0; color: var(--muted); font-size: 14px; line-height: 1.8; }
+    .summary-card {
+      padding: 27px 30px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: white;
+    }
+    .summary-card p { margin: 0; color: #50525a; font-size: 15px; line-height: 1.9; }
+    .focus-grid, .skill-grid, .service-grid, .project-grid { display: grid; gap: 15px; }
+    .focus-grid { grid-template-columns: repeat(4, 1fr); margin-top: 17px; }
+    .focus-card, .skill-card, .service-card, .project-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: white;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .focus-card:hover, .skill-card:hover, .service-card:hover, .project-card:hover {
+      transform: translateY(-2px);
+      border-color: #f1aab5;
+      box-shadow: 0 12px 30px rgb(26 26 30 / 7%);
+    }
+    .focus-card { padding: 19px; }
+    .icon-box {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 13px;
+      border-radius: 10px;
+      background: var(--soft-blue);
+      color: var(--blue);
+    }
+    .icon-box svg { width: 17px; height: 17px; }
+    .focus-card h3, .service-card h3 { margin-bottom: 5px; font-size: 14px; letter-spacing: -.025em; }
+    .focus-card p, .service-card p { margin-bottom: 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .skill-grid { grid-template-columns: repeat(2, 1fr); }
+    .skill-card { padding: 22px; }
+    .skill-card h3 { margin-bottom: 14px; font-size: 15px; letter-spacing: -.03em; }
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag {
+      display: inline-flex;
+      min-height: 27px;
+      align-items: center;
+      padding: 4px 10px;
+      border: 1px solid #e8ebf1;
+      border-radius: 6px;
+      background: #fafbfc;
+      color: #50525a;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .skills-note { margin: 15px 0 0; color: #7a8598; font-size: 11px; line-height: 1.7; }
+    .platform-tags { margin-top: 14px; }
+    .project-grid { grid-template-columns: repeat(2, 1fr); }
+    .project-card { display: flex; flex-direction: column; min-height: 276px; padding: 23px; }
+    .project-image { display: block; width: calc(100% + 46px); height: 190px; margin: -23px -23px 20px; border-bottom: 1px solid var(--line); object-fit: cover; background: #f0f0f2; }
+    .project-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .project-index { color: #9aa4b6; font: 700 11px "Manrope", sans-serif; letter-spacing: .08em; }
+    .project-kind {
+      padding: 5px 8px;
+      border-radius: 5px;
+      background: #f1f4fb;
+      color: #63718c;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .project-card h3 { margin-bottom: 9px; font-size: 19px; letter-spacing: -.04em; }
+    .project-card p { margin-bottom: 15px; color: var(--muted); font-size: 13px; line-height: 1.75; }
+    .project-bottom { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-top: auto; }
+    .project-link { display: inline-flex; align-items: center; gap: 6px; color: var(--blue); font-size: 12px; font-weight: 700; text-decoration: none; }
+    .project-link svg { width: 14px; height: 14px; }
+    .project-link.muted { color: #768197; font-weight: 600; }
+    .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+    .template-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+    .template-card { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: white; transition: transform .18s ease, box-shadow .18s ease; }
+    .template-card:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgb(20 20 24 / 9%); }
+    .template-preview { display: block; width: 100%; aspect-ratio: 16 / 8.5; object-fit: cover; background: #f0f0f2; }
+    .template-content { padding: 21px; }
+    .template-content h3 { margin: 7px 0 8px; font-size: 19px; letter-spacing: -.04em; }
+    .template-content p { margin: 0 0 14px; color: var(--muted); font-size: 13px; line-height: 1.75; }
+    .template-category { color: var(--blue); font-size: 10px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+    .template-actions { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 17px; }
+    .template-demo { display: inline-flex; align-items: center; gap: 6px; color: var(--blue); font-size: 12px; font-weight: 700; text-decoration: none; }
+    .template-demo:hover { color: var(--blue-dark); }
+    .platform-skill { grid-column: 1 / -1; }
+    .solution-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+    .solution-card { min-height: 190px; padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: white; }
+    .solution-card h3 { margin: 0 0 8px; font-size: 16px; letter-spacing: -.035em; }
+    .solution-card p { margin: 0 0 13px; color: var(--muted); font-size: 12px; line-height: 1.75; }
+    .solution-card .solution-type { color: var(--blue); font-size: 10px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+    .addon-groups { display: grid; gap: 11px; }
+    .addon-group { overflow: hidden; border: 1px solid var(--line); border-radius: 13px; background: white; }
+    .addon-group summary { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 17px 19px; cursor: pointer; font: 700 14px "Manrope", sans-serif; list-style: none; }
+    .addon-group summary::-webkit-details-marker { display: none; }
+    .addon-group summary::after { color: var(--blue); content: "+"; font: 700 20px "DM Sans", sans-serif; }
+    .addon-group[open] summary::after { content: "-"; }
+    .addon-group summary:hover { background: #fff8f9; }
+    .addon-group-body { padding: 0 19px 18px; border-top: 1px solid #f0f0f2; }
+    .addon-group-body p { margin: 13px 0 11px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .addon-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 22px; margin: 0; padding: 0; list-style: none; }
+    .addon-list li { position: relative; padding-left: 14px; color: #4f5158; font-size: 11px; line-height: 1.55; }
+    .addon-list li::before { position: absolute; top: .55em; left: 0; width: 5px; height: 5px; border-radius: 50%; background: var(--blue); content: ""; }
+    .addon-note { margin: 17px 0 0; padding: 15px 17px; border-left: 3px solid var(--blue); border-radius: 0 9px 9px 0; background: #fff5f6; color: #5f6067; font-size: 11px; line-height: 1.75; }
+    .tool-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .tool-card { padding: 19px; border: 1px solid var(--line); border-radius: 13px; background: white; }
+    .tool-card h3 { margin: 0 0 8px; font-size: 14px; letter-spacing: -.025em; }
+    .tool-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .tool-cloud { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+    .service-card { padding: 20px; }
+    .service-card .icon-box { margin-bottom: 14px; }
+    .experience-card {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 30px;
+      padding: 26px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: white;
+    }
+    .experience-role { color: var(--blue); font-size: 11px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+    .experience-card h3 { margin: 8px 0 4px; font-size: 18px; letter-spacing: -.035em; }
+    .experience-card .org { margin: 0; color: #7b869a; font-size: 12px; }
+    .experience-content p { margin: 0 0 13px; color: #565860; font-size: 13px; line-height: 1.8; }
+    .experience-content ul { display: grid; gap: 8px; margin: 0; padding-left: 18px; color: #565860; font-size: 12px; }
+    .contact-band {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 30px;
+      border: 1px solid #38393f;
+      border-radius: var(--radius);
+      background: linear-gradient(115deg, #25262c 0%, #17181c 80%);
+      color: white;
+    }
+    .contact-band .section-kicker { color: #ff667b; }
+    .contact-band h2 { margin-bottom: 6px; font-size: 23px; letter-spacing: -.045em; }
+    .contact-band p { margin: 0; color: #c5c6cb; font-size: 13px; }
+    .site-footer { padding: 25px 0 35px; border-top: 1px solid #2a2b30; background: #191a1f; color: #b6b7be; font-size: 11px; }
+    .footer-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .footer-row p { margin: 0; }
+    .footer-links { display: flex; gap: 16px; }
+    .footer-links a { color: #c5c6cb; text-decoration: none; }
+    .footer-links a:hover { color: var(--blue); }
+
+    @media (max-width: 850px) {
+      .nav-links { gap: 16px; }
+      .nav-links a { font-size: 11px; }
+      .nav-links a:nth-child(2), .nav-links a:nth-child(3), .nav-links a:nth-child(4) { display: none; }
+      .hero-grid { grid-template-columns: minmax(0, 1.25fr) minmax(250px, .75fr); gap: 30px; }
+      .hero-card { padding: 22px; }
+      .focus-grid { grid-template-columns: repeat(2, 1fr); }
+      .services-grid { grid-template-columns: repeat(2, 1fr); }
+      .solution-grid { grid-template-columns: repeat(2, 1fr); }
+      .tool-grid { grid-template-columns: repeat(2, 1fr); }
+      .experience-card { grid-template-columns: 175px 1fr; gap: 20px; }
+    }
+    @media (max-width: 640px) {
+      .shell { width: min(100% - 36px, 520px); }
+      .nav { min-height: 64px; }
+      .brand span:last-child { display: none; }
+      .nav-links { gap: 14px; }
+      .nav-links a { font-size: 11px; }
+      .nav-links a:nth-child(2), .nav-links a:nth-child(3), .nav-links a:nth-child(4) { display: none; }
+      .hero { padding: 54px 0 46px; }
+      .hero-grid { grid-template-columns: 1fr; gap: 30px; }
+      h1 { font-size: clamp(42px, 12vw, 58px); }
+      .hero-copy { font-size: 14px; }
+      .hero-card { max-width: 430px; }
+      .proof-strip { grid-template-columns: 1fr; }
+      .proof-item { min-height: auto; padding: 15px 18px; }
+      .section { padding: 48px 0; }
+      .summary-card { padding: 21px; }
+      .summary-card p { font-size: 14px; }
+      .skill-grid, .project-grid, .services-grid { grid-template-columns: 1fr; }
+      .template-grid { grid-template-columns: 1fr; }
+      .solution-grid, .tool-grid { grid-template-columns: 1fr; }
+      .addon-list { grid-template-columns: 1fr; }
+      .platform-skill { grid-column: auto; }
+      .project-card { min-height: 0; }
+      .experience-card { grid-template-columns: 1fr; gap: 16px; padding: 21px; }
+      .contact-band { align-items: flex-start; flex-direction: column; padding: 24px; }
+      .footer-row { align-items: flex-start; flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      body { background: white; font-size: 8.5pt; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .site-header, .announcement, .actions, .site-footer, .contact-band .button { display: none !important; }
+      .shell { width: 100%; }
+      .hero { padding: 0 0 10px; background: #111216 !important; break-inside: avoid; }
+      .hero-grid { grid-template-columns: 1fr; gap: 8px; }
+      .hero h1 { margin-bottom: 8px; }
+      h1 { color: white; font-size: 30pt; }
+      .hero-title { margin-bottom: 6px; font-size: 11pt; }
+      .hero-copy { margin-bottom: 6px; font-size: 8.5pt; line-height: 1.5; }
+      .hero-meta { margin-top: 6px; }
+      .hero-card { display: none; }
+      .proof-strip { margin-top: 8px; }
+      .proof-item { min-height: 0; padding: 8px 10px; }
+      .section { padding: 12px 0; }
+      .section-head { margin-bottom: 10px; }
+      .section-title { margin-bottom: 5px; font-size: 17pt; }
+      .section-intro { font-size: 8pt; line-height: 1.45; }
+      .focus-grid, .skill-grid, .project-grid, .template-grid, .solution-grid, .tool-grid { gap: 8px; }
+      .focus-card, .skill-card, .service-card, .project-card, .summary-card, .experience-card, .template-card, .solution-card, .tool-card { break-inside: avoid; box-shadow: none; }
+      .focus-card, .skill-card, .solution-card, .tool-card { min-height: 0; padding: 10px; }
+      .project-card { min-height: 0; padding: 10px; }
+      .project-image { width: calc(100% + 20px); height: 100px; margin: -10px -10px 9px; }
+      .template-preview { height: 95px; aspect-ratio: auto; }
+      .template-content { padding: 10px; }
+      .template-content p, .project-card p, .solution-card p, .tool-card p { font-size: 7.5pt; line-height: 1.45; }
+      .tags { gap: 4px; }
+      .tag { min-height: 0; padding: 2px 5px; font-size: 7pt; }
+      .addon-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+      .addon-group { break-inside: avoid; }
+      .addon-group summary { display: block; padding: 7px 9px; font-size: 8pt; }
+      .addon-group summary::after { display: none; }
+      .addon-group:not([open]) > .addon-group-body { display: block !important; }
+      .addon-group-body { padding: 0 9px 7px; }
+      .addon-group-body p, .addon-list li { font-size: 7pt; line-height: 1.35; }
+      .addon-group-body p { margin: 5px 0; }
+      .addon-list { grid-template-columns: 1fr; gap: 3px; }
+      .addon-list li { padding-left: 9px; }
+      .addon-note { padding: 8px; font-size: 7pt; }
+      .services-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .experience-card { grid-template-columns: 150px 1fr; gap: 14px; padding: 12px; }
+      .contact-band { padding: 14px; break-inside: avoid; }
+      a { text-decoration: none; }
+      img { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="announcement">Looking for a high-performance web app? <a href="https://durraniwebdevelopers.vercel.app/calculator" target="_blank" rel="noopener noreferrer">Start a project &gt;</a></div>
+    <nav class="nav shell" aria-label="Main navigation">
+      <a class="brand" href="https://durraniwebdevelopers.vercel.app/" aria-label="Durrani Web Developers home">
+        <span class="brand-mark" aria-hidden="true">KD</span>
+        <span>DURRANI WEB DEVELOPERS</span>
+      </a>
+      <div class="nav-links">
+        <a href="#about">About</a>
+        <a href="#skills">Skills</a>
+        <a href="#templates">Templates</a>
+        <a href="#projects">Projects</a>
+        <a href="#solutions">Solutions</a>
+        <a href="#addons">Add-ons</a>
+        <a href="#tools">Tools</a>
+        <a class="nav-cta" href="#contact">Contact &gt;</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-grid shell">
+        <div>
+          <p class="eyebrow">Independent developer | Pakistan</p>
+          <h1 id="hero-heading">Kaleem <span>Durrani</span></h1>
+          <p class="hero-title">Full-Stack Web Developer | Web Designer | E-commerce &amp; AI Automation Specialist</p>
+          <p class="hero-copy">I build modern, responsive, business-focused websites and web applications - from restaurant ordering systems and online stores to SaaS platforms, client dashboards, and AI-assisted workflows. I help businesses turn ideas into useful digital products.</p>
+          <div class="actions">
+            <a class="button" href="kaleem-durrani-cv.pdf" download>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg>
+              Download my CV
+            </a>
+            <a class="button button-secondary" href="#projects">View projects</a>
+            <a class="button button-secondary" href="https://durraniwebdevelopers.vercel.app/calculator" target="_blank" rel="noopener noreferrer">Hire me <span aria-hidden="true">&gt;</span></a>
+          </div>
+          <div class="hero-meta" aria-label="Professional details">
+            <span class="meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              Pakistan
+            </span>
+            <a class="meta-item hero-link" href="https://durraniwebdevelopers.vercel.app/" target="_blank" rel="noopener noreferrer">Website &gt;</a>
+            <span class="meta-item">Availability shared on request</span>
+          </div>
+        </div>
+        <aside class="hero-card" aria-label="Professional profile">
+          <img class="hero-profile-logo" src="assets/dwd-logo.jpg" alt="Durrani Web Developers logo" width="132" height="132" loading="lazy">
+          <p class="card-label">Professional profile</p>
+          <h2>Thoughtful engineering. Practical outcomes.</h2>
+          <ul class="card-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>Responsive websites shaped around real business needs</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>E-commerce, web applications, and integrations</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>Human-reviewed implementation and delivery</span></li>
+          </ul>
+          <div class="card-divider"></div>
+          <div class="status-line"><span class="status-dot" aria-hidden="true"></span>Contact for current project availability</div>
+        </aside>
+      </div>
+    </section>
+
+    <div class="shell">
+      <div class="proof-strip" aria-label="Professional focus">
+        <div class="proof-item"><strong>Websites &amp; applications</strong><span>Designed for real workflows and audiences</span></div>
+        <div class="proof-item"><strong>E-commerce experiences</strong><span>Product presentation and commerce operations</span></div>
+        <div class="proof-item"><strong>Automation &amp; integrations</strong><span>Connected tools that support business processes</span></div>
+      </div>
+    </div>
+
+    <section class="section shell" id="about" aria-labelledby="about-title">
+      <div class="section-head">
+        <p class="section-kicker">About</p>
+        <h2 class="section-title" id="about-title">Development grounded in business goals</h2>
+      </div>
+      <div class="summary-card">
+        <p>I build and operate Durrani Web Developers as a full-fledged web development platform - not only a portfolio. It brings together service discovery, live website templates, a project portfolio, pricing and budget tools, and project enquiry routes. Our work spans business websites, restaurant ordering and QR-menu systems, e-commerce stores, jewellery showroom systems, SaaS platforms, custom dashboards, database and API integrations, and AI-assisted automation. Delivery is organized around scoped work and human-reviewed implementation.</p>
+      </div>
+      <div class="focus-grid">
+        <article class="focus-card">
+          <span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></svg></span>
+          <h3>Web development</h3><p>Responsive frontends and custom business applications.</p>
+        </article>
+        <article class="focus-card">
+          <span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3h2l2.2 12.2a2 2 0 0 0 2 1.7h8.5a2 2 0 0 0 1.9-1.4L22 8H6"/><circle cx="10" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg></span>
+          <h3>E-commerce</h3><p>Storefronts, product catalogues, and commerce workflows.</p>
+        </article>
+        <article class="focus-card">
+          <span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5m-16 7v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"/></svg></span>
+          <h3>Data &amp; integrations</h3><p>Database, authentication, and API-connected workflows.</p>
+        </article>
+        <article class="focus-card">
+          <span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v3m0 12v3M4.6 4.6l2.1 2.1m10.6 10.6 2.1 2.1M3 12h3m12 0h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/><circle cx="12" cy="12" r="4"/></svg></span>
+          <h3>AI &amp; automation</h3><p>Chatbots and lead-handling workflows connected to business tools.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section shell" id="skills" aria-labelledby="skills-title">
+      <div class="section-head">
+        <p class="section-kicker">Technical skills</p>
+        <h2 class="section-title" id="skills-title">Tools for the full web experience</h2>
+        <p class="section-intro">A practical mix of interface development, application integration, and digital workflow skills.</p>
+      </div>
+      <div class="skill-grid">
+        <article class="skill-card">
+          <h3>Frontend &amp; interface</h3>
+          <div class="tags"><span class="tag">HTML5</span><span class="tag">CSS3</span><span class="tag">JavaScript</span><span class="tag">TypeScript</span><span class="tag">React</span><span class="tag">Responsive design</span><span class="tag">Tailwind CSS</span></div>
+        </article>
+        <article class="skill-card">
+          <h3>Backend, data &amp; APIs</h3>
+          <div class="tags"><span class="tag">Supabase</span><span class="tag">PostgreSQL</span><span class="tag">Authentication</span><span class="tag">Database integration</span><span class="tag">API integration</span><span class="tag">Row Level Security</span></div>
+        </article>
+        <article class="skill-card">
+          <h3>Development &amp; delivery</h3>
+          <div class="tags"><span class="tag">Visual Studio Code</span><span class="tag">Git</span><span class="tag">GitHub</span><span class="tag">Vercel</span><span class="tag">npm</span><span class="tag">Deployment</span><span class="tag">Maintenance</span></div>
+        </article>
+        <article class="skill-card">
+          <h3>Design, AI &amp; workflows</h3>
+          <div class="tags"><span class="tag">UI/UX design</span><span class="tag">Lucide Icons</span><span class="tag">GSAP</span><span class="tag">Framer Motion</span><span class="tag">Three.js</span><span class="tag">AI chatbots</span><span class="tag">Typebot</span><span class="tag">Google Sheets</span><span class="tag">Workflow automation</span></div>
+        </article>
+        <article class="skill-card platform-skill">
+          <h3>Full-fledged web development platform</h3>
+          <p class="section-intro">Built and maintained <a class="project-link" href="https://durraniwebdevelopers.vercel.app/" target="_blank" rel="noopener noreferrer">DurraniWebDevelopers.vercel.app</a> as a working client-facing platform for services, project examples, ready-made templates, pricing, budget estimation, and project enquiries, with human review across delivery.</p>
+          <div class="tags platform-tags"><span class="tag">Live service platform</span><span class="tag">Website templates</span><span class="tag">Portfolio</span><span class="tag">Budget &amp; scope tools</span><span class="tag">Client enquiry workflows</span><span class="tag">Next.js</span><span class="tag">TypeScript</span></div>
+        </article>
+      </div>
+      <p class="skills-note">Tools and technologies are selected to fit project scope; animation and 3D libraries are used where appropriate. AI-assisted development is reviewed and verified by a human developer.</p>
+    </section>
+
+    <section class="section shell" id="templates" aria-labelledby="templates-title">
+      <div class="section-head">
+        <p class="section-kicker">Live website templates</p>
+        <h2 class="section-title" id="templates-title">Two restaurant websites, ready to explore</h2>
+        <p class="section-intro">These live template demos are available through Durrani Web Developers. Each can be customized to a client's scope; the links below open the actual websites.</p>
+      </div>
+      <div class="template-grid">
+        <article class="template-card">
+          <a href="https://dwdtemplate1.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="Preview Student Burgers &amp; Shawarmas live website">
+            <img class="template-preview" src="assets/student-burgers.jpg" alt="Student Burgers &amp; Shawarmas restaurant website menu preview" loading="lazy">
+          </a>
+          <div class="template-content">
+            <span class="template-category">Restaurant | Live template</span>
+            <h3>Student Burgers &amp; Shawarmas</h3>
+            <p>Design direction: bright, energetic, student-focused food branding with a bold product-and-deals-first homepage. The live restaurant website supports menu and deal browsing, WhatsApp checkout, dine-in table QR ordering, order tracking, and a nine-page admin panel for menu, deals, customers, and sales.</p>
+            <div class="tags"><span class="tag">Next.js</span><span class="tag">Bold food branding</span><span class="tag">Menu &amp; deals</span><span class="tag">Table QR</span><span class="tag">Admin dashboard</span></div>
+            <div class="template-actions">
+              <a class="template-demo" href="https://dwdtemplate1.vercel.app/" target="_blank" rel="noopener noreferrer">View live website &gt;</a>
+              <a class="template-demo" href="https://durraniwebdevelopers.vercel.app/templates" target="_blank" rel="noopener noreferrer">Template details &gt;</a>
+            </div>
+          </div>
+        </article>
+        <article class="template-card">
+          <a href="https://dwdtemplate2.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="Preview Restaurant Name live website">
+            <img class="template-preview" src="assets/restaurant-template.jpg" alt="Restaurant Name BBQ and family sharing thaal website preview" loading="lazy">
+          </a>
+          <div class="template-content">
+            <span class="template-category">Restaurant | Live template</span>
+            <h3>Restaurant Name</h3>
+            <p>Design direction: premium charcoal-and-black surfaces, warm orange and gold accents, editorial serif headings, and large food photography for family feasts. This configurable “Restaurant Name” template offers BBQ, rice, and karahi menus, order flow, QR codes, order tracking, kitchen tickets, and daily sales tools.</p>
+            <div class="tags"><span class="tag">Next.js</span><span class="tag">Dark premium design</span><span class="tag">Editorial typography</span><span class="tag">Digital menu</span><span class="tag">Order tracking</span><span class="tag">Sales dashboard</span></div>
+            <div class="template-actions">
+              <a class="template-demo" href="https://dwdtemplate2.vercel.app/" target="_blank" rel="noopener noreferrer">View live website &gt;</a>
+              <a class="template-demo" href="https://durraniwebdevelopers.vercel.app/templates" target="_blank" rel="noopener noreferrer">Template details &gt;</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section shell" id="projects" aria-labelledby="projects-title">
+      <div class="section-head">
+        <p class="section-kicker">Selected projects</p>
+        <h2 class="section-title" id="projects-title">Product thinking, put into practice</h2>
+        <p class="section-intro">Project summaries are based on the information provided. Links appear only where a public destination could be verified.</p>
+      </div>
+      <div class="project-grid">
+        <article class="project-card">
+          <div class="project-top"><span class="project-index">PROJECT 01</span><span class="project-kind">Live web development platform</span></div>
+          <a href="https://durraniwebdevelopers.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="View Durrani Web Developers platform">
+            <img class="project-image" src="./assets/dwd-platform-hero.jpeg" alt="Durrani Web Developers branded web application development hero artwork" loading="lazy" width="1600" height="595">
+          </a>
+          <h3>Durrani Web Developers</h3>
+          <p>A full-fledged web development platform - not just a portfolio. It brings together service discovery, examples, live templates, starting plans, a pricing catalogue, interactive project estimators, and enquiry workflows for local and international clients.</p>
+          <div class="project-bottom">
+            <div class="tags"><span class="tag">Next.js</span><span class="tag">TypeScript</span><span class="tag">Vercel</span><span class="tag">Service platform</span><span class="tag">Project estimator</span></div>
+            <a class="project-link" href="https://durraniwebdevelopers.vercel.app/" target="_blank" rel="noopener noreferrer">Visit website &gt;</a>
+          </div>
+        </article>
+        <article class="project-card">
+          <div class="project-top"><span class="project-index">PROJECT 02</span><span class="project-kind">Restaurant | Live template</span></div>
+          <a href="https://dwdtemplate1.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="View Student Burgers &amp; Shawarmas live template">
+            <img class="project-image" src="./assets/student-burgers.jpg" alt="Student Burgers &amp; Shawarmas restaurant website template preview" loading="lazy" width="1280" height="720">
+          </a>
+          <h3>Student Burgers &amp; Shawarmas</h3>
+          <p>Bright, energetic, student-focused food branding with a bold menu-and-deals-first layout. The live demo includes menu browsing, WhatsApp checkout, table QR ordering, order tracking, and a nine-page admin panel.</p>
+          <div class="project-bottom">
+            <div class="tags"><span class="tag">Restaurant</span><span class="tag">Menu &amp; deals</span><span class="tag">Table QR</span><span class="tag">Admin dashboard</span></div>
+            <a class="project-link" href="https://dwdtemplate1.vercel.app/" target="_blank" rel="noopener noreferrer">Visit live template &gt;</a>
+          </div>
+        </article>
+        <article class="project-card">
+          <div class="project-top"><span class="project-index">PROJECT 03</span><span class="project-kind">Restaurant | Live template</span></div>
+          <a href="https://dwdtemplate2.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="View Restaurant Name live template">
+            <img class="project-image" src="./assets/restaurant-template.jpg" alt="Restaurant Name BBQ and family sharing thaal website template preview" loading="lazy" width="1200" height="675">
+          </a>
+          <h3>Restaurant Name</h3>
+          <p>Premium charcoal design with warm orange and gold accents, editorial headings, and large food photography. This configurable template includes menu browsing, QR ordering, order tracking, kitchen tickets, and daily sales tools.</p>
+          <div class="project-bottom">
+            <div class="tags"><span class="tag">Restaurant</span><span class="tag">Dark premium design</span><span class="tag">Digital menu</span><span class="tag">Order tracking</span></div>
+            <a class="project-link" href="https://dwdtemplate2.vercel.app/" target="_blank" rel="noopener noreferrer">Visit live template &gt;</a>
+          </div>
+        </article>
+        <article class="project-card">
+          <div class="project-top"><span class="project-index">PROJECT 04</span><span class="project-kind">E-commerce | Live store</span></div>
+          <a href="https://mesm-gems.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="View MESM GEMS live jewellery store">
+            <img class="project-image" src="./assets/mesm-storefront.jpg" alt="MESM GEMS live jewellery storefront design" loading="lazy" width="1408" height="768">
+          </a>
+          <h3>MESM GEMS</h3>
+          <p>Live jewellery storefront for modern and traditional styles, with a product catalogue, curated shopping, checkout, and WhatsApp order confirmation. Order records are saved before customers continue to WhatsApp; payment is verified by the store team.</p>
+          <div class="project-bottom">
+            <div class="tags"><span class="tag">E-commerce</span><span class="tag">Product catalogue</span><span class="tag">WhatsApp orders</span><span class="tag">Supabase</span></div>
+            <a class="project-link" href="https://mesm-gems.vercel.app/" target="_blank" rel="noopener noreferrer">Visit live MESM store &gt;</a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section shell" id="services" aria-labelledby="services-title">
+      <div class="section-head">
+        <p class="section-kicker">Services</p>
+        <h2 class="section-title" id="services-title">From first screen to live product</h2>
+        <p class="section-intro">Project scope is agreed around the business need, delivery requirements, and the right tools.</p>
+      </div>
+      <div class="services-grid">
+        <article class="service-card"><span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="15" rx="2"/><path d="M3 9h18M8 4v5"/></svg></span><h3>Business websites</h3><p>Clear, responsive websites that present your business and make the next step easy.</p></article>
+        <article class="service-card"><span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 4h18v16H3zM3 9h18M8 4v5"/><path d="m8 14 2 2 5-5"/></svg></span><h3>Restaurant ordering systems</h3><p>Restaurant websites with digital menus, table QR ordering, WhatsApp checkout, order tracking, and staff dashboards.</p></article>
+        <article class="service-card"><span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h10M7 16h6"/></svg></span><h3>SaaS platforms &amp; portals</h3><p>Custom multi-role applications, client dashboards, subscription workflows, and business portals.</p></article>
+        <article class="service-card"><span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3h2l2.2 12.2a2 2 0 0 0 2 1.7h8.5a2 2 0 0 0 1.9-1.4L22 8H6"/><circle cx="10" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg></span><h3>E-commerce development</h3><p>Product catalogues, storefront experiences, and operational workflows for online selling.</p></article>
+        <article class="service-card"><span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h4"/></svg></span><h3>Custom web applications</h3><p>Purpose-built interfaces and application features organized around your process.</p></article>
+        <article class="service-card"><span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></svg></span><h3>Responsive design &amp; React</h3><p>Modern layouts and React-based experiences designed to work across screen sizes.</p></article>
+        <article class="service-card"><span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></span><h3>Redesign &amp; modernization</h3><p>Refresh an existing website with a more usable, current, and consistent interface.</p></article>
+        <article class="service-card"><span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2 4 6v6c0 5 3.4 8.3 8 10 4.6-1.7 8-5 8-10V6l-8-4Z"/><circle cx="12" cy="11" r="3"/><path d="M7.5 17c1.2-2 2.7-3 4.5-3s3.3 1 4.5 3"/></svg></span><h3>Jewellery showroom systems</h3><p>Luxury product presentation, catalogue workflows, and custom pricing or quote-request experiences.</p></article>
+        <article class="service-card"><span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5m-16 7v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"/></svg></span><h3>Supabase &amp; databases</h3><p>Database, authentication, and access-control integrations for connected applications.</p></article>
+        <article class="service-card"><span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 13a5 5 0 0 0 7.1 0l3-3A5 5 0 0 0 13 2.9l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.1 0l-3 3A5 5 0 0 0 11 21.1l1.7-1.7"/></svg></span><h3>API integrations</h3><p>Connect external services and APIs to the right parts of your web experience.</p></article>
+        <article class="service-card"><span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8Z"/></svg></span><h3>AI chatbots &amp; lead automation</h3><p>Conversation flows for collecting, qualifying, and organizing customer enquiries.</p></article>
+        <article class="service-card"><span class="icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg></span><h3>Deployment &amp; maintenance</h3><p>Launch support, troubleshooting, and ongoing website care as agreed in scope.</p></article>
+      </div>
+    </section>
+
+    <section class="section shell" id="solutions" aria-labelledby="solutions-title">
+      <div class="section-head">
+        <p class="section-kicker">What we build</p>
+        <h2 class="section-title" id="solutions-title">Websites and applications for real business workflows</h2>
+        <p class="section-intro">The platform offers custom builds and configurable starting points. Features below are scoped to each client's needs; not every capability is included in every website.</p>
+      </div>
+      <div class="solution-grid">
+        <article class="solution-card"><span class="solution-type">Company &amp; brand</span><h3>Business and service websites</h3><p>Brand-led pages, service catalogues, contact forms, social links, maps, SEO foundations, and mobile-first layouts.</p></article>
+        <article class="solution-card"><span class="solution-type">Restaurant &amp; food</span><h3>Restaurant ordering websites</h3><p>Digital menus, menu categories and options, WhatsApp orders, table QR flows, order tracking, kitchen tickets, receipts, and daily sales tools.</p></article>
+        <article class="solution-card"><span class="solution-type">Online commerce</span><h3>E-commerce and product stores</h3><p>Product catalogues, variants, carts, checkout, order workflows, inventory, customer accounts, and optional payment integrations.</p></article>
+        <article class="solution-card"><span class="solution-type">Platforms &amp; portals</span><h3>SaaS and multi-vendor applications</h3><p>Role-based workspaces, client/vendor dashboards, subscription plans, platform administration, usage limits, and marketplace workflows.</p></article>
+        <article class="solution-card"><span class="solution-type">Business operations</span><h3>Admin panels and internal tools</h3><p>Protected dashboards for products, customers, orders, stock, staff, reporting, data exports, and agreed operational processes.</p></article>
+        <article class="solution-card"><span class="solution-type">Bookings &amp; specialist workflows</span><h3>Booking, clinic, school, and job portals</h3><p>Optional modules can support appointment scheduling, staff calendars, attendance, student portals, job listings, application tracking, and event check-in.</p></article>
+      </div>
+    </section>
+
+    <section class="section shell" id="addons" aria-labelledby="addons-title">
+      <div class="section-head">
+        <p class="section-kicker">DWD platform | optional add-ons</p>
+        <h2 class="section-title" id="addons-title">Build the feature set your business needs</h2>
+        <p class="section-intro">The live pricing catalogue groups optional modules by purpose. The groups below summarize its listed add-ons; choose features during scoping, as implementation, compatibility, and final cost depend on the selected base package and confirmed requirements.</p>
+      </div>
+      <div class="addon-groups">
+        <details class="addon-group">
+          <summary>Website &amp; design</summary>
+          <div class="addon-group-body"><p>Brand, content, discoverability, and presentation options.</p><ul class="addon-list"><li>Personal domain setup</li><li>Responsive design enhancement</li><li>Content management system (CMS)</li><li>Advanced SEO setup</li><li>Multi-language support</li><li>Email notifications</li><li>Dark / light mode</li></ul></div>
+        </details>
+        <details class="addon-group">
+          <summary>Business tools &amp; admin</summary>
+          <div class="addon-group-body"><p>Operational dashboards and ways to manage customer, content, and business records.</p><ul class="addon-list"><li>Admin dashboard</li><li>Daily sales records</li><li>Daily sales calendar</li><li>Customer monthly credit accounts</li><li>Order CSV export</li><li>User registration and login</li><li>Role-based permissions</li><li>File and media uploads</li><li>Search, filters, and sorting</li><li>Order and invoice management</li><li>Activity logs</li><li>PDF / Excel export</li><li>Automated backups</li><li>Audit trail</li><li>API integration</li></ul></div>
+        </details>
+        <details class="addon-group">
+          <summary>E-commerce &amp; payments</summary>
+          <div class="addon-group-body"><p>Optional catalogue, fulfilment, customer-retention, and checkout features.</p><ul class="addon-list"><li>Advanced product management, variants, and SKUs</li><li>Inventory and low-stock alerts</li><li>Discounts and coupons</li><li>Wishlist</li><li>Product reviews and ratings</li><li>Shipping and delivery rules</li><li>Customer order tracking</li><li>Abandoned-cart recovery</li><li>Invoice and receipt generation</li><li>Product QR codes</li><li>Customer loyalty and rewards</li><li>Bulk product import</li><li>Product comparison</li><li>Multiple warehouses</li></ul></div>
+        </details>
+        <details class="addon-group">
+          <summary>SaaS &amp; multi-vendor</summary>
+          <div class="addon-group-body"><p>Tenant, subscription, vendor, billing, and customer-support building blocks for larger applications.</p><ul class="addon-list"><li>Multi-tenant architecture</li><li>Subscription and plan management</li><li>Usage limits and metering</li><li>Super admin panel</li><li>Vendor management</li><li>Commission and payout management</li><li>Team invitations and roles</li><li>White-label branding</li><li>Automated onboarding</li><li>Trial periods and plan expiry</li><li>Referral / affiliate system</li><li>Usage-based billing calculations</li><li>Tenant-specific domains</li><li>Data import and export tools</li><li>Feature flags and plan-based access</li><li>In-app notifications</li><li>Support tickets</li><li>Customer help center / knowledge base</li><li>Platform audit and monitoring</li></ul></div>
+        </details>
+        <details class="addon-group">
+          <summary>AI &amp; automation</summary>
+          <div class="addon-group-body"><p>AI and connected-system features that are configured around an agreed provider and workflow.</p><ul class="addon-list"><li>AI product recommendations</li><li>AI content assistant</li><li>Smart search</li><li>Automated email workflows</li><li>Scheduled reports</li><li>Document and PDF generation</li><li>Third-party webhooks</li><li>CRM integration</li><li>Calendar integration</li></ul></div>
+        </details>
+        <details class="addon-group">
+          <summary>Website images &amp; video</summary>
+          <div class="addon-group-body"><p>Visual asset preparation and responsive media sections, scoped to approved materials and usage rights.</p><ul class="addon-list"><li>Custom image editing and optimization</li><li>AI-generated website images</li><li>AI-assisted product and menu images</li><li>AI-assisted website video</li><li>Promotional / advertisement video</li><li>Website hero video section</li></ul></div>
+        </details>
+        <details class="addon-group">
+          <summary>Security &amp; reliability</summary>
+          <div class="addon-group-body"><p>Optional account protections and operational quality improvements based on project scope.</p><ul class="addon-list"><li>Two-factor authentication</li><li>Login rate limiting</li><li>Password reset workflow</li><li>Session management</li><li>Security hardening</li><li>Error-monitoring integration</li><li>Performance optimization</li><li>Accessibility improvements</li><li>Data retention and deletion tools</li><li>Maintenance and updates</li></ul></div>
+        </details>
+        <details class="addon-group">
+          <summary>Industry-specific modules</summary>
+          <div class="addon-group-body"><p>Optional workflows for restaurant, clinic, school, property, booking, recruitment, education, and event use cases.</p><ul class="addon-list"><li>Restaurant digital menus and QR codes</li><li>Kitchen order tickets (KOT)</li><li>Restaurant table reservations</li><li>Clinic appointment scheduling</li><li>Doctor and staff schedules</li><li>School attendance management</li><li>Parent / student portal</li><li>Advanced property filters</li><li>Real estate agent dashboard</li><li>Booking availability calendar</li><li>Booking cancellation / refund workflow</li><li>Job portal employer dashboard</li><li>CV upload and application tracking</li><li>Education course progress</li><li>Quizzes and assessments</li><li>Digital tickets and QR check-in</li></ul></div>
+        </details>
+        <details class="addon-group">
+          <summary>Real estate &amp; PropertyTech</summary>
+          <div class="addon-group-body"><p>The pricing catalogue also lists optional PropertyTech modules. These are configurable offerings, not a claim that a real-estate project is currently complete or live.</p><ul class="addon-list"><li>Property listing management and submission wizard</li><li>Property media galleries, maps, details, and comparison</li><li>Availability and listing-status management</li><li>Agent directory, profiles, and agency workspace</li><li>Agent verification and review queues</li><li>Real estate lead CRM and analytics</li><li>Exclusive lead-lock workflows</li><li>Property visit and appointment scheduling</li><li>Deal pipeline, transaction, lock, and settlement records</li><li>Fraud reporting and case management</li><li>Portal subscriptions and featured listings</li><li>Property documents and secure file access</li><li>AI property search and lead qualification assistants</li></ul></div>
+        </details>
+      </div>
+      <p class="addon-note">Add-ons are optional and are not automatically included in a base website. The calculator gives an estimate; final scope and quote are confirmed after review. Paid third-party accounts, domains, gateway fees, API usage, and hosting subscriptions are arranged and paid by the client. DWD deployment work on Vercel is included in the agreed web-app budget; paid Vercel hosting is separate.</p>
+      <div class="template-actions"><a class="template-demo" href="https://durraniwebdevelopers.vercel.app/pricing" target="_blank" rel="noopener noreferrer">Explore the live pricing catalogue &gt;</a><a class="template-demo" href="https://durraniwebdevelopers.vercel.app/calculator" target="_blank" rel="noopener noreferrer">Configure a project estimate &gt;</a></div>
+    </section>
+
+    <section class="section shell" id="tools" aria-labelledby="tools-title">
+      <div class="section-head">
+        <p class="section-kicker">Tools &amp; workflow</p>
+        <h2 class="section-title" id="tools-title">A practical, AI-assisted development toolkit</h2>
+        <p class="section-intro">Tools are used according to the project. AI assists with development workflows; implementation, testing, and delivery receive human review.</p>
+      </div>
+      <div class="tool-grid">
+        <article class="tool-card"><h3>Development environment</h3><p>Code editing, project organization, package management, and day-to-day development.</p><div class="tool-cloud"><span class="tag">Visual Studio Code</span><span class="tag">Google Antigravity</span><span class="tag">npm</span></div></article>
+        <article class="tool-card"><h3>AI-assisted work</h3><p>Use AI to support research, drafting, coding assistance, and problem-solving, then review and validate the output.</p><div class="tool-cloud"><span class="tag">ChatGPT</span><span class="tag">Google Antigravity</span><span class="tag">Human review</span></div></article>
+        <article class="tool-card"><h3>Version control &amp; deployment</h3><p>Track source changes and publish web applications using the project’s agreed workflow.</p><div class="tool-cloud"><span class="tag">Git</span><span class="tag">GitHub</span><span class="tag">Vercel</span></div></article>
+        <article class="tool-card"><h3>Application stack</h3><p>Modern web interfaces and application foundations, selected to match scope.</p><div class="tool-cloud"><span class="tag">Next.js</span><span class="tag">React</span><span class="tag">TypeScript</span><span class="tag">HTML</span><span class="tag">CSS</span><span class="tag">JavaScript</span></div></article>
+        <article class="tool-card"><h3>Database &amp; integrations</h3><p>Database-backed features, access controls, and connected business workflows.</p><div class="tool-cloud"><span class="tag">Supabase</span><span class="tag">PostgreSQL</span><span class="tag">APIs</span><span class="tag">Row Level Security</span></div></article>
+        <article class="tool-card"><h3>Design &amp; automation</h3><p>Interface design, motion where useful, chatbot flows, and structured lead handling.</p><div class="tool-cloud"><span class="tag">UI/UX</span><span class="tag">Lucide</span><span class="tag">GSAP</span><span class="tag">Framer Motion</span><span class="tag">Three.js</span><span class="tag">Typebot</span><span class="tag">Google Sheets</span></div></article>
+      </div>
+    </section>
+
+    <section class="section shell" id="experience" aria-labelledby="experience-title">
+      <div class="section-head">
+        <p class="section-kicker">Experience</p>
+        <h2 class="section-title" id="experience-title">Independent, project-based development</h2>
+      </div>
+      <article class="experience-card">
+        <div>
+          <span class="experience-role">Freelance</span>
+          <h3>Independent Web Developer</h3>
+          <p class="org">Durrani Web Developers | Pakistan</p>
+        </div>
+        <div class="experience-content">
+          <p>Project-based work spanning website development, e-commerce, custom web applications, and business automation. Experience is described through the projects and services provided; no employment dates or years are claimed.</p>
+          <ul>
+            <li>Developing responsive business and commerce experiences.</li>
+            <li>Connecting frontend interfaces with databases, authentication, and APIs.</li>
+            <li>Designing chatbot and lead-capture workflows with structured data handoff.</li>
+            <li>Supporting deployment, integration troubleshooting, and website maintenance.</li>
+          </ul>
+        </div>
+      </article>
+    </section>
+
+    <section class="section shell" id="contact" aria-labelledby="contact-title">
+      <div class="contact-band">
+        <div>
+          <p class="section-kicker">Let's work together</p>
+          <h2 id="contact-title">Have a project in mind?</h2>
+          <p>Share your requirements with Durrani Web Developers to discuss scope and next steps.</p>
+        </div>
+        <a class="button" href="https://durraniwebdevelopers.vercel.app/calculator" target="_blank" rel="noopener noreferrer">Start a project <span aria-hidden="true">&gt;</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-row">
+      <p>© <span id="year">2026</span> Kaleem Durrani | Durrani Web Developers</p>
+      <div class="footer-links">
+        <a href="https://durraniwebdevelopers.vercel.app/" target="_blank" rel="noopener noreferrer">Website</a>
+        <a href="https://durraniwebdevelopers.vercel.app/portfolio" target="_blank" rel="noopener noreferrer">Portfolio</a>
+        <a href="shamsa-durrani.html">Shamsa Durrani CV</a>
+        <a href="kaleem-durrani-cv.pdf" download>Download CV</a>
+      </div>
+    </div>
+  </footer>
+  <script>
+    document.getElementById("year").textContent = String(new Date().getFullYear());
+  </script>
+</body>
+</html>

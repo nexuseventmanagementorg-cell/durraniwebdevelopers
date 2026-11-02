@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -37,7 +37,11 @@ const COUNTRY_SUGGESTIONS = [
   "United Arab Emirates", "United Kingdom", "United States",
 ];
 const CURRENCY_CODES = CREATIVE_CURRENCIES.filter((currency) => currency !== "Other");
-const IMAGE_SIZE_LIMIT = 10 * 1024 * 1024;
+const REFERENCE_FILE_SIZE_LIMIT = 10 * 1024 * 1024;
+const REFERENCE_FILES_LIMIT = 20;
+const TOTAL_REFERENCE_SIZE_LIMIT = 20 * 1024 * 1024;
+const REFERENCE_FILE_ACCEPT =
+  "image/jpeg,image/png,image/webp,video/mp4,video/webm,.txt,.pdf,.doc,.docx,.rtf,.fountain,.srt";
 const WHATSAPP = "923296260778";
 
 const initialLanguages = {
@@ -47,6 +51,184 @@ const initialLanguages = {
   subtitles: "",
   dubbing: "",
 };
+
+const BRIEF_SAMPLES = [
+  {
+    id: "video",
+    type: "AI Video Generation",
+    title: "Luxury Real Estate Promotional Video — Lahore",
+    audience: "Pakistan · Local business",
+    description: "A premium property campaign for social media, digital ads, and WhatsApp.",
+    content: `Project Title
+Luxury Real Estate Promotional Video – Lahore
+
+Project Type: AI Video Generation
+
+Project Overview:
+We need a premium promotional video for a luxury residential property project located in Lahore, Pakistan. The video will be used for social media marketing, digital advertisements, and WhatsApp campaigns.
+
+Project Objective:
+Create a visually engaging video that highlights the lifestyle, architecture, location, and key features of the property to attract potential buyers and investors.
+
+Target Audience:
+• Property investors
+• Families looking for luxury homes
+• Overseas Pakistanis
+• Real estate buyers aged 25–55
+
+Required Deliverables:
+• One 30–45 second promotional video
+• Vertical format (9:16) for Instagram Reels, TikTok, and YouTube Shorts
+• Horizontal format (16:9) for website and YouTube
+• AI-generated cinematic property visuals
+• Professional voice-over
+• Background music
+• Logo placement and branded ending screen
+
+Visual Style & Direction:
+Modern luxury aesthetic, cinematic camera movements, realistic architectural visuals, warm lighting, elegant transitions, and premium typography.
+
+Content & Assets:
+We will provide the project logo, property details, location information, and available reference images. AI-generated scenes can be used where actual footage is unavailable.
+
+Preferred Language:
+English with an optional Urdu version.
+
+Deadline:
+5–7 working days.
+
+Estimated Budget:
+PKR 50,000–80,000 (illustrative only).
+
+Expected Outcome:
+A professional promotional video that communicates luxury, trust, and investment value while encouraging viewers to contact our sales team.`,
+  },
+  {
+    id: "image",
+    type: "AI Image Generation",
+    title: "Premium Skincare Product Campaign",
+    audience: "UK · USA · Europe · International brand",
+    description: "Consistent product and lifestyle visuals for e-commerce and advertising.",
+    content: `Project Title
+Premium Skincare Product Campaign – International Brand
+
+Project Type: AI Image Generation
+
+Project Overview:
+We are launching a premium skincare product line targeting customers in the UK, USA, and European markets. We need high-quality AI-generated product campaign images for our website, social media, and digital advertisements.
+
+Project Objective:
+Create a consistent visual identity through premium product imagery that makes the brand look elegant, trustworthy, modern, and internationally competitive.
+
+Target Audience:
+• Women and men aged 20–40
+• Premium skincare consumers
+• Beauty and lifestyle enthusiasts
+• Online shoppers in the UK, USA, and Europe
+
+Required Deliverables:
+• 10 unique AI-generated campaign images
+• Product hero images
+• Lifestyle and product-in-use visuals
+• Minimalist studio product photography concepts
+• Social media post formats (1:1 and 4:5)
+• Website banner images (16:9)
+• High-resolution final exports
+
+Visual Style & Direction:
+Clean luxury aesthetic, soft natural lighting, neutral backgrounds, elegant compositions, realistic textures, premium editorial photography, and minimal styling.
+
+Content & Assets:
+We will provide product photographs, brand logo, packaging references, brand colors, and product descriptions. Product packaging and labels should remain consistent with the supplied references.
+
+Preferred Language:
+English.
+
+Target Markets:
+United Kingdom, United States, and Europe.
+
+Deadline:
+4–6 working days.
+
+Estimated Budget:
+USD 250–400 (illustrative only).
+
+Expected Outcome:
+A cohesive collection of premium campaign images suitable for e-commerce, social media marketing, and paid advertising.`,
+  },
+  {
+    id: "mvp",
+    type: "MVP Development",
+    title: "AI-Powered Appointment Booking SaaS",
+    audience: "Startup · SaaS",
+    description: "A first release to validate an appointment-booking platform with real users.",
+    content: `Project Title
+AI-Powered Appointment Booking SaaS – MVP
+
+Project Type: MVP Development
+
+Project Overview:
+We want to develop an MVP for an AI-powered appointment booking platform designed for salons, clinics, consultants, and small service businesses.
+
+The platform should allow businesses to manage appointments, customers, services, and bookings through a simple online dashboard.
+
+Project Objective:
+Build a functional first version of the platform that can be tested with real users, validate the business idea, and provide a foundation for future development.
+
+Target Audience:
+• Small and medium-sized businesses
+• Beauty salons and clinics
+• Independent consultants
+• Service providers
+• Business owners looking to automate bookings
+
+Core Features Required:
+1. User Authentication
+• Customer registration and login
+• Business owner registration
+• Secure account management
+
+2. Business Dashboard
+• Manage services and pricing
+• View upcoming appointments
+• Manage customer information
+• Track booking status
+
+3. Appointment Booking
+• Public booking page for each business
+• Available date and time selection
+• Booking confirmation
+• Appointment cancellation
+
+4. AI Assistant
+• Basic AI-powered customer inquiry handling
+• Answers based on business-provided information
+• Assistance with booking-related questions
+
+5. Admin Panel
+• View registered businesses
+• Manage users
+• Monitor platform activity
+
+Preferred Technology:
+Open to recommendations. We prefer a modern, scalable web application using React or Next.js, a secure backend, and a database such as Supabase or PostgreSQL.
+
+Design & User Experience:
+Modern SaaS interface, responsive design, simple navigation, clean dashboard, and mobile-friendly booking experience.
+
+Project Scope:
+MVP only. Advanced analytics, mobile applications, automated payment subscriptions, and complex AI workflows can be considered in future phases.
+
+Deadline:
+4–6 weeks for the initial MVP, subject to final scope approval.
+
+Estimated Budget:
+USD 2,000–3,500 (illustrative only).
+
+Expected Outcome:
+A working MVP with essential features, deployed online, ready for initial user testing and feedback.`,
+  },
+] as const;
 
 function getProjectKind(id: string): CreativeQuoteInput["projectKind"] {
   if (id === "image" || id === "mvp") return id;
@@ -68,8 +250,48 @@ function getFileSignature(file: File): Promise<boolean> {
     if (file.type === "video/webm") {
       return bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3;
     }
+    if (file.type === "application/pdf") {
+      return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46 && bytes[4] === 0x2d;
+    }
+    if (file.type === "application/msword") {
+      return bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0 &&
+        bytes[4] === 0xa1 && bytes[5] === 0xb1 && bytes[6] === 0x1a && bytes[7] === 0xe1;
+    }
+    if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+      return bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04;
+    }
+    if (["application/rtf", "text/rtf", "application/x-rtf"].includes(file.type)) {
+      return new TextDecoder().decode(bytes).startsWith("{\\rtf");
+    }
+    if (file.type === "text/plain" || file.type === "application/x-subrip") {
+      try {
+        return !bytes.includes(0) && new TextDecoder("utf-8", { fatal: true }).decode(bytes).trim().length > 0;
+      } catch {
+        return false;
+      }
+    }
     return false;
   });
+}
+
+function isSupportedReferenceType(file: File): boolean {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  const expectedMimeTypes: Record<string, string[]> = {
+    jpg: ["image/jpeg"],
+    jpeg: ["image/jpeg"],
+    png: ["image/png"],
+    webp: ["image/webp"],
+    mp4: ["video/mp4"],
+    webm: ["video/webm"],
+    txt: ["text/plain"],
+    srt: ["text/plain", "application/x-subrip"],
+    fountain: ["text/plain"],
+    pdf: ["application/pdf"],
+    doc: ["application/msword"],
+    docx: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+    rtf: ["application/rtf", "text/rtf", "application/x-rtf"],
+  };
+  return expectedMimeTypes[extension || ""]?.includes(file.type) ?? false;
 }
 
 export default function CreativeStudioClient() {
@@ -105,6 +327,12 @@ export default function CreativeStudioClient() {
     preferredDeliveryDate: "",
   });
   const [brief, setBrief] = useState("");
+  const [expandedBriefSample, setExpandedBriefSample] = useState<string | null>(null);
+  const [editingBriefSample, setEditingBriefSample] = useState<string | null>(null);
+  const [briefSampleDrafts, setBriefSampleDrafts] = useState<Record<string, string>>({});
+  const [briefReferenceMessage, setBriefReferenceMessage] = useState("");
+  const [pendingBriefSample, setPendingBriefSample] = useState<string | null>(null);
+  const briefInputRef = useRef<HTMLTextAreaElement>(null);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -139,6 +367,7 @@ export default function CreativeStudioClient() {
   const currentDuration = durationValue === "custom"
     ? Math.max(10, Math.min(9000, Number(customDuration) || 10))
     : Number(durationValue);
+  const currentAspectRatio = aspectRatio === "Custom" ? customAspectRatio : aspectRatio;
   const quoteInput = useMemo<CreativeQuoteInput>(() => ({
     country,
     currency,
@@ -149,6 +378,7 @@ export default function CreativeStudioClient() {
     imageCount,
     complexity,
     quality,
+    aspectRatio: currentAspectRatio,
     languageCount: new Set(Object.values(languages).filter(Boolean)).size || 1,
     addonIds: selectedAddons,
   }), [
@@ -161,6 +391,7 @@ export default function CreativeStudioClient() {
     imageCount,
     complexity,
     quality,
+    currentAspectRatio,
     languages,
     selectedAddons,
   ]);
@@ -174,6 +405,7 @@ export default function CreativeStudioClient() {
       categoryCharge: 0,
       complexityCharge: 0,
       qualityCharge: 0,
+      aspectRatioCharge: 0,
       requiresManualReview: true,
       reason: configError || "Loading administrator-approved pricing.",
     };
@@ -209,24 +441,24 @@ export default function CreativeStudioClient() {
   const changeReferences = async (event: ChangeEvent<HTMLInputElement>) => {
     setReferenceError("");
     const picked = Array.from(event.target.files || []);
-    if (picked.length > 3) {
-      setReferenceError("You can upload up to 3 reference files.");
+    if (picked.length > REFERENCE_FILES_LIMIT) {
+      setReferenceError(`You can upload up to ${REFERENCE_FILES_LIMIT} reference files.`);
       event.target.value = "";
       return;
     }
-    if (picked.some((file) => file.size > IMAGE_SIZE_LIMIT || file.size === 0)) {
-      setReferenceError("Each reference must be smaller than 10 MB.");
+    if (picked.some((file) => file.size > REFERENCE_FILE_SIZE_LIMIT || file.size === 0)) {
+      setReferenceError("Each reference must be 10 MB or smaller.");
       event.target.value = "";
       return;
     }
-    if (picked.reduce((sum, file) => sum + file.size, 0) > 20 * 1024 * 1024) {
-      setReferenceError("All reference files together must be smaller than 20 MB.");
+    if (picked.reduce((sum, file) => sum + file.size, 0) > TOTAL_REFERENCE_SIZE_LIMIT) {
+      setReferenceError("All reference files together must be 20 MB or smaller.");
       event.target.value = "";
       return;
     }
     for (const file of picked) {
-      if (!await getFileSignature(file)) {
-        setReferenceError(`${file.name} is not a supported or valid image/video file.`);
+      if (!isSupportedReferenceType(file) || !await getFileSignature(file)) {
+        setReferenceError(`${file.name} is not a supported or valid image, video, or script file.`);
         event.target.value = "";
         return;
       }
@@ -274,6 +506,10 @@ export default function CreativeStudioClient() {
     setSelectedAddons([]);
     setReferences([]);
     setBrief("");
+    setEditingBriefSample(null);
+    setBriefSampleDrafts({});
+    setBriefReferenceMessage("");
+    setPendingBriefSample(null);
     setDisclaimerAccepted(false);
   };
 
@@ -297,7 +533,7 @@ export default function CreativeStudioClient() {
         style: style === "Custom Style" ? customStyle : style,
         languages,
         resolution: quality,
-        aspectRatio: aspectRatio === "Custom" ? customAspectRatio : aspectRatio,
+        aspectRatio: currentAspectRatio,
       }));
       references.forEach((file) => form.append("references", file));
       const response = await fetch("/api/public/creative-studio/inquiries", {
@@ -323,7 +559,7 @@ export default function CreativeStudioClient() {
   };
 
   const whatsappMessage = [
-    "Hello Shamsa, I would like to discuss a creative project.",
+    "Hello DWD AI Creator, I would like to discuss a creative project.",
     `Project: ${projectType}`,
     `Estimate: ${quote.total === null ? "Manual quotation requested" : priceFormatter(quote.total)}`,
     `Duration: ${projectKind === "image" ? `${imageCount} images` : `${currentDuration} seconds`}`,
@@ -333,7 +569,7 @@ export default function CreativeStudioClient() {
   const whatsappHref = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(whatsappMessage)}`;
 
   return (
-    <main className="min-h-screen bg-[#f7f8fb] text-slate-950">
+    <main className="min-h-screen bg-[#f7f8fb] pb-24 text-slate-950">
       <style jsx global>{`
         @media print {
           body * { visibility: hidden !important; }
@@ -550,9 +786,9 @@ export default function CreativeStudioClient() {
               <textarea value={vision} onChange={(event) => setVision(event.target.value)} maxLength={2000} rows={3} placeholder="Mood, references, audience, or the story you want to tell…" className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm font-normal" />
             </label>
             <label className="mt-4 block text-sm font-semibold text-slate-700">
-              Add reference images or videos (optional, up to 3 files)
-              <input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" multiple onChange={changeReferences} className="mt-2 block w-full rounded-xl border border-slate-300 p-3 text-sm font-normal file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:font-semibold file:text-indigo-700" />
-              <span className="mt-1 block text-xs font-normal text-slate-500">JPEG, PNG, WebP, MP4, or WebM; 10 MB each, 20 MB total. Only upload assets you own or have permission to use.</span>
+              Upload reference files (optional, up to {REFERENCE_FILES_LIMIT} files)
+              <input type="file" accept={REFERENCE_FILE_ACCEPT} multiple onChange={changeReferences} className="mt-2 block w-full rounded-xl border border-slate-300 p-3 text-sm font-normal file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:font-semibold file:text-indigo-700" />
+              <span className="mt-1 block text-xs font-normal text-slate-500">Upload logos, images, MP4/WebM video references, or scripts (TXT, PDF, DOC, DOCX, RTF, SRT, Fountain). Up to 20 files, 10 MB per file and 20 MB total. Only upload files you own or have permission to share.</span>
               {references.length > 0 && <span className="mt-2 block text-xs text-slate-600">{references.map((file) => file.name).join(", ")}</span>}
               {referenceError && <span role="alert" className="mt-2 block text-sm text-red-700">{referenceError}</span>}
             </label>
@@ -627,10 +863,196 @@ export default function CreativeStudioClient() {
                 <input type="date" value={customer.preferredDeliveryDate} onChange={(event) => updateCustomer("preferredDeliveryDate", event.target.value)} min={new Date().toISOString().slice(0, 10)} className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm font-normal" />
               </label>
             </div>
-            <label className="mt-4 block text-sm font-semibold text-slate-700">
-              Project brief
-              <textarea value={brief} onChange={(event) => setBrief(event.target.value)} required minLength={10} maxLength={4000} rows={5} placeholder="What are you making, who is it for, and what should it achieve?" className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm font-normal" />
-            </label>
+            <section aria-labelledby="sample-briefs-title" className="mt-7 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 to-white p-4 sm:p-5">
+              <div className="flex items-start gap-3">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-indigo-600 text-white"><Sparkles className="h-5 w-5" /></div>
+                <div>
+                  <h3 id="sample-briefs-title" className="text-lg font-black text-slate-950">Need Help Writing Your Project Brief?</h3>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">Explore these sample briefs to understand how to describe your project, share your expectations, and get a more accurate project estimate.</p>
+                </div>
+              </div>
+              <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+                These are fictional illustrative samples, not actual client projects, guaranteed quotations, or fixed offers. Sample budgets are examples only.
+              </p>
+              <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                {BRIEF_SAMPLES.map((sample) => {
+                  const isExpanded = expandedBriefSample === sample.id;
+                  const SampleIcon = sample.id === "video" ? Film : sample.id === "image" ? ImageIcon : Layers3;
+                  const thumbnailClass = sample.id === "video"
+                    ? "from-slate-900 via-indigo-900 to-indigo-500"
+                    : sample.id === "image"
+                      ? "from-rose-100 via-amber-50 to-indigo-100"
+                      : "from-emerald-950 via-teal-800 to-cyan-500";
+                  const iconClass = sample.id === "image" ? "text-rose-600" : "text-white";
+
+                  return (
+                    <article key={sample.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                      <div className={`relative grid h-28 place-items-center overflow-hidden bg-gradient-to-br ${thumbnailClass}`}>
+                        <div className="absolute -right-4 -top-8 h-28 w-28 rounded-full border border-white/30" />
+                        <div className="absolute -bottom-12 -left-3 h-28 w-28 rounded-full border border-white/20" />
+                        <SampleIcon aria-hidden="true" className={`relative h-10 w-10 ${iconClass}`} />
+                        <span className="absolute bottom-2 left-3 rounded-full bg-black/20 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-sm">{sample.type}</span>
+                      </div>
+                      <div className="p-4">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-600">{sample.audience}</p>
+                        <h4 className="mt-1 text-sm font-black leading-5 text-slate-900">{sample.title}</h4>
+                        <p className="mt-2 min-h-10 text-xs leading-5 text-slate-600">{sample.description}</p>
+                        <button
+                          type="button"
+                          aria-expanded={isExpanded}
+                          aria-controls={`sample-brief-${sample.id}`}
+                          onClick={() => setExpandedBriefSample(isExpanded ? null : sample.id)}
+                          className="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-indigo-200 px-3 py-2.5 text-xs font-bold text-indigo-700 transition hover:bg-indigo-50"
+                        >
+                          {isExpanded ? "Hide Sample Brief" : "View Sample Brief"}
+                        </button>
+                      </div>
+                      {isExpanded && (
+                        <div id={`sample-brief-${sample.id}`} className="border-t border-slate-200 bg-slate-50 p-4">
+                          {editingBriefSample === sample.id ? (
+                            <div>
+                              <label htmlFor={`sample-editor-${sample.id}`} className="text-xs font-bold text-slate-800">Edit this sample before using it</label>
+                              <textarea
+                                id={`sample-editor-${sample.id}`}
+                                value={briefSampleDrafts[sample.id] ?? sample.content}
+                                onChange={(event) => setBriefSampleDrafts((drafts) => ({ ...drafts, [sample.id]: event.target.value }))}
+                                maxLength={4000}
+                                rows={10}
+                                className="mt-2 max-h-[28rem] min-h-48 w-full rounded-lg border border-slate-300 bg-white p-3 font-sans text-xs leading-5 text-slate-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                              />
+                              <p className="mt-1 text-right text-[11px] text-slate-500">{(briefSampleDrafts[sample.id] ?? sample.content).length}/4000 characters</p>
+                            </div>
+                          ) : (
+                            <pre className="max-h-[28rem] overflow-auto whitespace-pre-wrap break-words font-sans text-xs leading-5 text-slate-700">{briefSampleDrafts[sample.id] ?? sample.content}</pre>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (editingBriefSample === sample.id) {
+                                setEditingBriefSample(null);
+                              } else {
+                                setBriefSampleDrafts((drafts) => ({
+                                  ...drafts,
+                                  [sample.id]: drafts[sample.id] ?? sample.content,
+                                }));
+                                setEditingBriefSample(sample.id);
+                              }
+                            }}
+                            className="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-indigo-200 bg-white px-3 py-2.5 text-xs font-bold text-indigo-700 transition hover:bg-indigo-50"
+                          >
+                            {editingBriefSample === sample.id ? "Done Editing Sample" : "Edit Sample"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const sampleContent = briefSampleDrafts[sample.id] ?? sample.content;
+                              if (brief.trim()) {
+                                setPendingBriefSample(sample.id);
+                                setBriefReferenceMessage("Your brief already contains text. Choose whether to replace it with this sample or keep your current brief.");
+                              } else {
+                                setBrief(sampleContent);
+                                setPendingBriefSample(null);
+                                setBriefReferenceMessage(`${sample.type} sample added to your brief. You can edit the text or clear it below.`);
+                              }
+                              briefInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                              briefInputRef.current?.focus({ preventScroll: true });
+                            }}
+                            className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-indigo-700"
+                          >
+                            {editingBriefSample === sample.id ? "Use Edited Sample" : "Use as Reference"}
+                          </button>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+            <div className="mt-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label htmlFor="creative-project-brief" className="text-sm font-semibold text-slate-700">
+                  Project brief (required)<span aria-hidden="true" className="ml-1 text-red-600">*</span>
+                </label>
+                {brief.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBrief("");
+                      setBriefReferenceMessage("");
+                      setPendingBriefSample(null);
+                      briefInputRef.current?.focus();
+                    }}
+                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                  >
+                    Clear brief
+                  </button>
+                )}
+              </div>
+              <div className="mt-2 block overflow-hidden rounded-xl border border-indigo-200 bg-indigo-50">
+                <span id="creative-brief-guidance" lang="ur-Latn" translate="yes" className="block border-b border-indigo-100 px-4 py-3 text-xs font-normal leading-5 text-indigo-950">
+                  <strong className="block text-sm">Brief mein yeh zaroor likhein:</strong>
+                  <span className="mt-1 block">• Kya banwana hai: video, image, animation ya prototype; aur kitni duration ya quantity chahiye.</span>
+                  <span className="block">• Yeh kis audience, mulk ya platform ke liye hai; viewer ya customer kaun hai.</span>
+                  <span className="block">• Project ka maqsad, main paigham, aur dekhne wale se aap kya action chahte hain.</span>
+                  <span className="block">• Video ya image mein kya dikhana hai: scenes, products, services, zaroori features ya kahani.</span>
+                  <span className="block">• Pasandeeda style, tone, language, aur koi example ya reference; logo aur brand assets ki availability bhi batayein.</span>
+                  <span className="block">• Zaroori text, call-to-action, khaas pabandiyan, aur agar ho to deadline.</span>
+                  <span className="mt-1 block font-semibold">Passwords ya sensitive personal maloomat na bhejein. Sirf woh files share karein jinhein bhejne ki ijazat ho.</span>
+                </span>
+                {briefReferenceMessage && (
+                  <span role="status" className="block border-b border-indigo-100 bg-indigo-50 px-4 py-2 text-xs font-normal text-indigo-800">
+                    {briefReferenceMessage}
+                    {pendingBriefSample && (
+                      <span className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const sample = BRIEF_SAMPLES.find((item) => item.id === pendingBriefSample);
+                            if (!sample) return;
+                            setBrief(briefSampleDrafts[pendingBriefSample] ?? sample.content);
+                            setPendingBriefSample(null);
+                            setBriefReferenceMessage(`${sample.type} sample added to your brief. You can edit the text or clear it below.`);
+                            briefInputRef.current?.focus();
+                          }}
+                          className="rounded-md bg-indigo-600 px-2.5 py-1.5 font-bold text-white hover:bg-indigo-700"
+                        >
+                          Replace with sample
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPendingBriefSample(null);
+                            setBriefReferenceMessage("Your existing brief has been kept unchanged.");
+                          }}
+                          className="rounded-md border border-indigo-200 bg-white px-2.5 py-1.5 font-bold text-indigo-800 hover:bg-indigo-100"
+                        >
+                          Keep my brief
+                        </button>
+                      </span>
+                    )}
+                  </span>
+                )}
+                <textarea
+                  id="creative-project-brief"
+                  ref={briefInputRef}
+                  value={brief}
+                  onChange={(event) => {
+                    setBrief(event.target.value);
+                    setBriefReferenceMessage("");
+                    setPendingBriefSample(null);
+                  }}
+                  required
+                  minLength={10}
+                  maxLength={4000}
+                  rows={5}
+                  aria-describedby="creative-brief-guidance"
+                  placeholder="Apna project brief yahan likhein..."
+                  lang="ur-Latn"
+                  translate="yes"
+                  className="w-full border-0 bg-white px-4 py-3 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                />
+              </div>
+            </div>
             <label className="mt-4 flex items-start gap-3 text-sm leading-6 text-slate-600">
               <input type="checkbox" checked={disclaimerAccepted} onChange={(event) => setDisclaimerAccepted(event.target.checked)} required className="mt-1 accent-indigo-600" />
               <span>This is an estimated project budget. Final pricing, production scope and delivery schedule are subject to creative team review and approval. I confirm I have permission to share any reference files.</span>
@@ -644,7 +1066,7 @@ export default function CreativeStudioClient() {
         </form>
 
         <aside className="space-y-5 lg:sticky lg:top-6 lg:self-start">
-          <section id="creative-quotation" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-200/50 sm:p-6">
+          <section id="creative-quotation" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-200/50 sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[.15em] text-indigo-600">Live estimate</p>
@@ -661,20 +1083,21 @@ export default function CreativeStudioClient() {
               <BreakdownRow label="Project" value={projectType} />
               <BreakdownRow label="Duration / quantity" value={projectKind === "image" ? `${imageCount} image${imageCount === 1 ? "" : "s"}` : `${currentDuration} sec`} />
               {quote.base !== null && <BreakdownRow label="Base estimate" value={priceFormatter(quote.base)} />}
-              {quote.categoryCharge > 0 && <BreakdownRow label="Category adjustment" value={priceFormatter(quote.categoryCharge)} />}
-              {quote.complexityCharge > 0 && <BreakdownRow label="Complexity adjustment" value={priceFormatter(quote.complexityCharge)} />}
-              {quote.qualityCharge > 0 && <BreakdownRow label="Quality adjustment" value={priceFormatter(quote.qualityCharge)} />}
+              {quote.categoryCharge !== 0 && <BreakdownRow label="Category adjustment" value={priceFormatter(quote.categoryCharge)} />}
+              {quote.complexityCharge !== 0 && <BreakdownRow label="Complexity adjustment" value={priceFormatter(quote.complexityCharge)} />}
+              {quote.qualityCharge !== 0 && <BreakdownRow label="Quality adjustment" value={priceFormatter(quote.qualityCharge)} />}
+              {quote.aspectRatioCharge !== 0 && <BreakdownRow label="Aspect ratio adjustment" value={priceFormatter(quote.aspectRatioCharge)} />}
               {quote.addonCharges.map((item) => <BreakdownRow key={item.id} label={item.label} value={item.amount === null ? "Custom quote" : priceFormatter(item.amount)} />)}
               <BreakdownRow label="Estimated delivery" value={quote.delivery} />
               <BreakdownRow label="Languages" value={Object.values(languages).filter(Boolean).join(", ") || "To be discussed"} />
               <BreakdownRow label="Style" value={style === "Custom Style" ? customStyle || style : style} />
-              {projectKind !== "image" && <BreakdownRow label="Format" value={`${quality} · ${aspectRatio}`} />}
+              <BreakdownRow label="Format" value={`${quality} · ${currentAspectRatio}`} />
             </dl>
             {quote.reason && <p className="mt-5 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">{quote.reason}</p>}
             <p className="mt-4 text-xs leading-5 text-slate-500">Delivery estimates are provisional and are not confirmed until the creative team approves the project.</p>
             <div className="mt-5 flex flex-wrap gap-2">
               <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><Download className="h-4 w-4" /> Download / print quote</button>
-              <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700"><MessageCircle className="h-4 w-4" /> Contact Shamsa</a>
+              <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700"><MessageCircle className="h-4 w-4" /> Contact AI Creator DWD</a>
             </div>
           </section>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600">
@@ -687,6 +1110,17 @@ export default function CreativeStudioClient() {
           </div>
           <button type="button" onClick={resetCalculation} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900"><Check className="h-4 w-4" /> Start a new calculation</button>
         </aside>
+      </div>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pl-4 pr-24 pt-3 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] backdrop-blur lg:pr-40" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.75rem)" }}>
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Project budget</p>
+            <p className="truncate text-lg font-black text-slate-950">{priceIsManual ? "Manual quote" : priceFormatter(quote.total!)}</p>
+          </div>
+          <button type="button" onClick={() => document.getElementById("creative-quotation")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="shrink-0 rounded-lg bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-indigo-700">
+            View breakdown
+          </button>
+        </div>
       </div>
     </main>
   );

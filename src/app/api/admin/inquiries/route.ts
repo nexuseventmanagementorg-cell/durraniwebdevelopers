@@ -2,11 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/auth";
 import { DataStore } from "@/lib/store";
 import { getInquiries, getInquiryById, updateInquiry } from "@/lib/inquiry-storage";
+import { calculateInquiryScopeEstimate } from "@/lib/inquiry-budget-estimate";
 import { canStartProjectAfterVerifiedAdvance, getVerifiedInquiryAdvanceAmount } from "@/lib/inquiry-advance";
 import { buildInquiryProjectBrief, buildProjectBuildBriefRecord, buildProjectReadinessChecklist } from "@/lib/project-brief";
 import { createProjectAutomationWorkflow } from "@/lib/project-workflow";
 import { getProjectRecordByInquiry, ProjectWorkspaceStorageError, saveProjectRecord } from "@/lib/project-storage";
 import { Client, Project, OrderStatus, PaymentMethod } from "@/lib/types";
+import type { ScopePricingPackageId } from "@/lib/types";
+
+const SCOPE_PRICING_PACKAGE_IDS = new Set<ScopePricingPackageId>([
+  "package_1",
+  "package_2",
+  "ecommerce_starter",
+  "ecommerce_business",
+  "ecommerce_advanced",
+  "saas_starter",
+  "saas_business",
+  "saas_enterprise",
+]);
 
 export async function GET(request: NextRequest) {
   if (!verifyAdminRequest(request)) {
@@ -33,6 +46,50 @@ export async function PATCH(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ success: false, error: "Inquiry ID is required" }, { status: 400 });
+    }
+    if (body.scopeEstimateAdjustment !== undefined) {
+      const pricingConfig = DataStore.getPricingConfig();
+      if (typeof id !== "string" || !id.trim() ||
+          typeof body.scopeEstimateAdjustment !== "object" || body.scopeEstimateAdjustment === null ||
+          Array.isArray(body.scopeEstimateAdjustment)) {
+        return NextResponse.json({ success: false, error: "A valid inquiry and scope estimate selection are required." }, { status: 400 });
+      }
+
+      const current = await getInquiryById(id);
+      if (!current) return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
+      if (
+        current.convertedProjectId ||
+        ["Quotation Sent", "Awaiting Advance", "Advance Received", "Approved", "In Development", "Testing", "Delivered", "Completed"].includes(current.status)
+      ) {
+        return NextResponse.json({ success: false, error: "Scope estimate changes are locked after a quotation has been sent or a project has started." }, { status: 409 });
+      }
+
+      const selection = body.scopeEstimateAdjustment as Record<string, unknown>;
+      const packageId = selection.packageId;
+      const addonIds = selection.addonIds;
+      if (
+        (packageId !== null && (typeof packageId !== "string" || !SCOPE_PRICING_PACKAGE_IDS.has(packageId as ScopePricingPackageId))) ||
+        !Array.isArray(addonIds) ||
+        addonIds.length > 100 ||
+        addonIds.some((addonId) =>
+          typeof addonId !== "string" ||
+          !pricingConfig.addons[addonId]?.enabled
+        )
+      ) {
+        return NextResponse.json({ success: false, error: "Select a supported package and enabled published add-ons." }, { status: 400 });
+      }
+
+      const originalScopeEstimate = current.originalScopeEstimate ||
+        calculateInquiryScopeEstimate(current, pricingConfig);
+      const adminScopeEstimate = calculateInquiryScopeEstimate(current, pricingConfig, {
+        selection: {
+          packageId: packageId as ScopePricingPackageId | null,
+          addonIds: Array.from(new Set(addonIds as string[])),
+        },
+      });
+      const updated = await updateInquiry(id, { originalScopeEstimate, adminScopeEstimate });
+      if (!updated) return NextResponse.json({ success: false, error: "Inquiry not found" }, { status: 404 });
+      return NextResponse.json({ success: true, inquiry: updated });
     }
     if (body.websiteCreationPrompt !== undefined) {
       if (

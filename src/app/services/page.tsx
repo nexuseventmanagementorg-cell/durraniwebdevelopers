@@ -287,11 +287,11 @@ export default function ServicesPage() {
                     <h2 className="text-xl font-extrabold text-[#101216]">
                       {service.title}
                     </h2>
-                    <p className="text-xs font-semibold text-[#E31E36] mt-1">
+                    <p lang="ur-Latn" translate="yes" className="text-xs font-semibold text-[#E31E36] mt-1">
                       {service.tagline}
                     </p>
 
-                    <p className="text-xs text-gray-600 mt-3 leading-relaxed">
+                    <p lang="ur-Latn" translate="yes" className="text-xs text-gray-600 mt-3 leading-relaxed">
                       {service.description}
                     </p>
 
@@ -301,7 +301,7 @@ export default function ServicesPage() {
                         Key Capabilities:
                       </span>
                       {service.highlights.map((h, i) => (
-                        <div key={i} className="flex items-start gap-2 text-xs text-gray-700">
+                        <div key={i} lang="ur-Latn" translate="yes" className="flex items-start gap-2 text-xs text-gray-700">
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
                           <span>{h}</span>
                         </div>
@@ -309,7 +309,7 @@ export default function ServicesPage() {
                     </div>
 
                     {/* Package Note */}
-                    <div className="mt-4 bg-gray-50 p-2.5 rounded-lg border border-gray-200 text-[11px] text-gray-500 italic">
+                    <div lang="ur-Latn" translate="yes" className="mt-4 bg-gray-50 p-2.5 rounded-lg border border-gray-200 text-[11px] text-gray-500 italic">
                       💡 {service.packageNote}
                     </div>
                   </div>
@@ -335,10 +335,10 @@ export default function ServicesPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <span className="text-[#E31E36] font-bold text-xs uppercase tracking-widest">
-              Seedhi zubaan mein
+              <span lang="ur-Latn" translate="yes">Seedhi zubaan mein</span>
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-[#101216] mt-2">
-              Technical Lafzon Ka Asaan Matlab
+              <span lang="ur-Latn" translate="yes">Technical Lafzon Ka Asaan Matlab</span>
             </h2>
           </div>
           <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -358,7 +358,7 @@ export default function ServicesPage() {
             ].map(([term, meaning]) => (
               <div key={term} className="rounded-xl border border-gray-200 bg-[#F4F5F7] p-4">
                 <dt className="text-sm font-extrabold text-[#101216]">{term}</dt>
-                <dd className="text-xs text-gray-600 mt-1 leading-relaxed">{meaning}</dd>
+                <dd lang="ur-Latn" translate="yes" className="text-xs text-gray-600 mt-1 leading-relaxed">{meaning}</dd>
               </div>
             ))}
           </dl>
@@ -370,15 +370,15 @@ export default function ServicesPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 sm:p-8">
             <h2 className="text-lg font-extrabold text-[#101216]">
-              Har Feature Har Package Mein Shamil Nahi Hota
+              <span lang="ur-Latn" translate="yes">Har Feature Har Package Mein Shamil Nahi Hota</span>
             </h2>
-            <p className="text-xs sm:text-sm text-gray-700 mt-3 leading-relaxed">
+            <p lang="ur-Latn" translate="yes" className="text-xs sm:text-sm text-gray-700 mt-3 leading-relaxed">
               Basic online store mein product listing aur order form ho sakta hai. Live payment gateway, automatic WhatsApp messages, Google login, live gold rates aur advanced inventory jaise features ko alag development aur configuration ki zaroorat ho sakti hai. Inhein included samajhne se pehle requirements aur final scope confirm karein.
             </p>
-            <p className="text-xs sm:text-sm text-gray-700 mt-3 leading-relaxed">
+            <p lang="ur-Latn" translate="yes" className="text-xs sm:text-sm text-gray-700 mt-3 leading-relaxed">
               Hum third-party subscriptions, paid domains, payment gateway accounts ya external API accounts provide, purchase, ya manage nahi karte. Zaroorat par client account/plan seedha provider se arrange karke uski fees provider ko ada karta hai. Vercel par app deploy karne ka hamara kaam web-app budget mein included hai; alag deployment fee nahi. Vercel ka paid hosting plan ismein shamil nahi. Launch ke baad product ya content updates package mein shamil nahi aur un par extra charges lag sakte hain.
             </p>
-            <p className="text-xs sm:text-sm font-semibold text-gray-700 mt-3 leading-relaxed">
+            <p lang="ur-Latn" translate="yes" className="text-xs sm:text-sm font-semibold text-gray-700 mt-3 leading-relaxed">
               Budget calculator sirf estimate deta hai; final quotation requirements aur formal scope review ke baad confirm hoti hai.
             </p>
           </div>
@@ -395,7 +395,7 @@ export default function ServicesPage() {
             Every Business Has Unique Requirements
           </h3>
           <p className="text-xs text-gray-600 leading-relaxed max-w-2xl mx-auto">
-            Har starting package mein tamam features shamil nahi. PKR 35,000 (admin ke baghair) aur PKR 45,000 (admin ke saath) starting rates hain. Complex integrations, custom features aur additional modules ka scope calculator aur formal review ke zariye tay hota hai.
+            <span lang="ur-Latn" translate="yes">Har starting package mein tamam features shamil nahi. PKR 35,000 (admin ke baghair) aur PKR 45,000 (admin ke saath) starting rates hain. Complex integrations, custom features aur additional modules ka scope calculator aur formal review ke zariye tay hota hai.</span>
           </p>
         </div>
       </section>

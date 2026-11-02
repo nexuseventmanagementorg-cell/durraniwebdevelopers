@@ -193,10 +193,10 @@ export default function PricingPage() {
             <span className="text-xs font-bold text-[#E31E36] uppercase tracking-wider">
               Starting Packages (1 Year 365 Days Duration)
             </span>
-            <h2 className="text-3xl font-black text-[#101216] mt-1">
+            <h2 lang="ur-Latn" translate="yes" className="text-3xl font-black text-[#101216] mt-1">
               Select The Right Administrative Scope
             </h2>
-            <p className="text-xs text-gray-600 mt-2">
+            <p lang="ur-Latn" translate="yes" className="text-xs text-gray-600 mt-2">
               Note: These represent starting package prices for standard builds. Advanced integrations adjust according to your specific functional scope.
             </p>
           </div>
@@ -403,7 +403,7 @@ export default function PricingPage() {
             <h2 className="text-3xl font-black text-[#101216] mt-1">
               E-Commerce Packages &amp; Rates
             </h2>
-            <p className="text-xs text-gray-600 mt-2">
+            <p lang="ur-Latn" translate="yes" className="text-xs text-gray-600 mt-2">
               Choose a store package to get started. Final pricing depends on your requirements and confirmed project scope.
             </p>
           </div>
@@ -529,7 +529,7 @@ export default function PricingPage() {
             <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
               Modular Extensions
             </span>
-            <h2 className="text-3xl font-black text-[#101216] mt-1">
+            <h2 lang="ur-Latn" translate="yes" className="text-3xl font-black text-[#101216] mt-1">
               Apni Zaroorat Ke Mutabiq Optional Features
             </h2>
             <p className="text-xs text-gray-600 mt-2">
@@ -581,21 +581,21 @@ export default function PricingPage() {
                       <h3 className="font-bold text-sm text-[#101216] mb-2">
                         {addon.label}
                       </h3>
-                      <p className="text-xs text-gray-700 leading-relaxed">
+                      <p lang="ur-Latn" translate="yes" className="text-xs text-gray-700 leading-relaxed">
                         {details.explanation}
                       </p>
                       <div className="mt-3 rounded-lg bg-white p-3 border border-gray-100">
-                        <p className="text-[10px] font-bold text-[#101216]">Misal:</p>
-                        <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                        <p lang="ur-Latn" translate="yes" className="text-[10px] font-bold text-[#101216]">Misal:</p>
+                        <p lang="ur-Latn" translate="yes" className="text-xs text-gray-600 mt-1 leading-relaxed">
                           {details.example}
                         </p>
                       </div>
-                      <p className="text-[11px] text-gray-600 mt-3 leading-relaxed">
-                        <span className="font-bold text-gray-700">Zyada kaam aata hai:</span>{" "}
+                      <p lang="ur-Latn" translate="yes" className="text-[11px] text-gray-600 mt-3 leading-relaxed">
+                        <span lang="ur-Latn" translate="yes" className="font-bold text-gray-700">Zyada kaam aata hai:</span>{" "}
                         {details.bestFor}
                       </p>
                       {details.note && (
-                        <p className="text-[11px] text-amber-800 mt-3 leading-relaxed">
+                        <p lang="ur-Latn" translate="yes" className="text-[11px] text-amber-800 mt-3 leading-relaxed">
                           {details.note}
                         </p>
                       )}
@@ -608,7 +608,7 @@ export default function PricingPage() {
                         href={`/calculator?addon=${addon.id}`}
                         className="text-xs font-bold text-[#E31E36] hover:underline inline-flex items-center gap-1"
                       >
-                        Calculator mein chunein &rarr;
+                        <span lang="ur-Latn" translate="yes">Calculator mein chunein</span> &rarr;
                       </Link>
                     </div>
                   </div>
@@ -618,7 +618,7 @@ export default function PricingPage() {
           </div>
 
           <div className="mt-8 max-w-3xl mx-auto rounded-2xl border border-gray-200 bg-[#F4F5F7] p-6">
-            <h3 className="font-extrabold text-sm text-[#101216]">
+            <h3 lang="ur-Latn" translate="yes" className="font-extrabold text-sm text-[#101216]">
               Misaal: Add-ons se estimate kaise banta hai?
             </h3>
             <div className="mt-4 space-y-2 text-xs text-gray-700">
@@ -629,7 +629,7 @@ export default function PricingPage() {
               <div className="flex justify-between gap-4 border-t border-gray-300 pt-2 text-[#101216]"><span className="font-bold">Andazati total</span><strong className="text-[#E31E36]"><RegionalPrice pkrAmount={65000} /></strong></div>
             </div>
             <p className="text-[11px] text-gray-600 mt-3 leading-relaxed">
-              Yeh sirf misaali estimate hai, final quotation nahi. Database ki zaroorat, selected features aur project scope review ke baad total confirm hota hai. Hum third-party accounts ya subscriptions provide nahi karte; agar client ko zaroorat ho to woh provider se khud le aur uski usage fees seedha ada kare. Vercel par deployment ka hamara kaam web-app budget mein included hai; Vercel ka paid hosting plan ismein shamil nahi.
+              <span lang="ur-Latn" translate="yes">Yeh sirf misaali estimate hai, final quotation nahi. Database ki zaroorat, selected features aur project scope review ke baad total confirm hota hai. Hum third-party accounts ya subscriptions provide nahi karte; agar client ko zaroorat ho to woh provider se khud le aur uski usage fees seedha ada kare. Vercel par deployment ka hamara kaam web-app budget mein included hai; Vercel ka paid hosting plan ismein shamil nahi.</span>
             </p>
           </div>
         </div>
@@ -641,10 +641,10 @@ export default function PricingPage() {
             <span className="text-[#E31E36] font-extrabold text-xs uppercase tracking-widest">
               Extended Modules
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-[#101216] mt-1">
+            <h2 lang="ur-Latn" translate="yes" className="text-2xl sm:text-3xl font-black text-[#101216] mt-1">
               Business aur industry ke mutabiq add-ons
             </h2>
-            <p className="text-xs text-gray-600 mt-2">
+            <p lang="ur-Latn" translate="yes" className="text-xs text-gray-600 mt-2">
               Yeh starting estimates hain; Real Estate & PropertyTech modules ki rates Pakistan ke liye PKR mein hain. Complex scope, third-party accounts, gateway fees, hosting, aur API usage alag ho sakte hain.
             </p>
           </div>
@@ -665,7 +665,7 @@ export default function PricingPage() {
                     <div key={addon.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3">
                       <div className="min-w-0">
                         <h3 className="font-bold text-xs text-[#101216]">{addon.label}</h3>
-                        <p className="mt-1 text-[11px] leading-relaxed text-gray-600">{addon.description}</p>
+                        <p lang="ur-Latn" translate="yes" className="mt-1 text-[11px] leading-relaxed text-gray-600">{addon.description}</p>
                       </div>
                       <div className="flex shrink-0 items-center justify-between sm:justify-end gap-4">
                         <strong className="text-xs font-black text-[#E31E36]">
@@ -704,9 +704,9 @@ export default function PricingPage() {
               Industry-specific modules
             </span>
             <h3 className="text-xl sm:text-2xl font-black text-[#101216] mt-1">
-              Business category ke mutabiq mazeed add-ons
+              <span lang="ur-Latn" translate="yes">Business category ke mutabiq mazeed add-ons</span>
             </h3>
-            <p className="text-xs text-gray-600 mt-2">
+            <p lang="ur-Latn" translate="yes" className="text-xs text-gray-600 mt-2">
               Har category khol kar us business ke features, unki tafseel aur starting estimate dekhein. Complex integrations ki final scope aur price requirements discuss karne ke baad confirm hoti hai.
             </p>
           </div>
@@ -811,7 +811,7 @@ export default function PricingPage() {
               </div>
               <div className="flex items-start gap-2">
                 <span className="font-bold text-[#E31E36] mt-0.5">•</span>
-                <span>
+                <span lang="ur-Latn" translate="yes">
                   <strong>Third-Party Accounts Are Not Provided:</strong> Hum paid domains, subscriptions, payment gateway accounts ya external API accounts provide, purchase, ya manage nahi karte. Zaroorat par client account/plan seedha provider se arrange karke uski fees provider ko ada karta hai. Hamara Vercel deployment kaam agreed web-app budget mein included hai; koi alag deployment fee nahi. Vercel ka paid hosting plan included nahi.
                 </span>
               </div>
