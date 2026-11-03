@@ -8,9 +8,9 @@
 - GitHub repository: `nexuseventmanagementorg-cell/durraniwebdevelopers`.
 - Production alias: `https://durraniwebdevelopers.vercel.app`.
 - Branch: `main`, tracking `origin/main`.
-- Base commit before this checkpoint: `45766bafd0c28b711febb038f7220b5a3cbefc0f`. The checkpoint commit is created after local validation; its SHA is reported in the completion message because a commit cannot contain its own hash.
+- Application checkpoint commit: `6e3f3aa717855e172b591261ca0c80ee71583c33` on `main`, pushed to `origin/main`. The handoff's post-deployment update is a documentation-only follow-up; its SHA is reported in the completion message because a commit cannot contain its own hash.
 - Vercel project confirmed from the successful GitHub Vercel deployment status: team `nexuseventmanagementorg-2858`, project `durraniwebdevelopers`. The Vercel CLI and local `.vercel` project link are absent; deployment is via the existing GitHub integration.
-- Before this checkpoint is pushed, the current production alias returned HTTP 200 for `/`, `/admin/login`, `/admin/workforce`, `/creative-studio`, `/calculator`, `/api/public/creative-studio/config`, and `/api/public/addons`. `/api/admin/workforce/sales-leads` returned 404 because this local checkpoint has not yet been deployed; recheck it after deployment. No customer data was used for these checks.
+- Vercel's GitHub status reported deployment success for application commit `6e3f3aa717855e172b591261ca0c80ee71583c33` (deployment `A8dDqAXGpcMs6LtBbjA4rpfLe1dG`). The production alias was checked after that success: `/`, `/admin/login`, `/admin/workforce`, `/creative-studio`, `/calculator`, `/api/public/creative-studio/config`, and `/api/public/addons` returned HTTP 200; `/api/admin/workforce/sales-leads` returned HTTP 401 unauthenticated, confirming that the deployed route exists and rejects anonymous access. No admin credentials or customer data were used for these checks.
 
 ### Workforce status
 
@@ -52,8 +52,8 @@ Agents 1–6 are implemented as human-supervised workflows, not autonomous custo
 - ESLint: all changed TypeScript/TSX files passed.
 - Production build: `npm.cmd run build` passed.
 - `git diff --check`: passed. Generated `tsconfig.tsbuildinfo` is intentionally excluded from the checkpoint; environment files, credentials, local customer data, and build caches are not to be staged.
-- The production build output includes the Agent 6 API route. The current live route check is still pre-deployment; verify the production alias and requested public/admin routes after the checkpoint push. A successful local build is not production verification.
-- Production environment secret values were not printed. The project is currently serving and its public config/add-on APIs respond successfully; check Vercel deployment status and route behavior after push. Do not change production variables or apply the Sales Leads migration for this checkpoint.
+- Vercel production deployment status is successful for the application checkpoint; public/admin pages and public APIs passed the post-deploy route checks above. The Agent 6 API was checked only without credentials, so its authenticated database-unavailable response was not exercised in production. Existing tests and server code cover the missing-storage condition; do not claim a production lead save was verified.
+- Production environment secret values were not printed or changed. The deployment succeeded and existing public config/add-on APIs respond successfully, but the Vercel environment variable list was not directly inspected because this workspace has no Vercel CLI or local `.vercel` project link. Do not change production variables or apply the Sales Leads migration for this checkpoint.
 
 ### Checkpoint file scope
 
@@ -63,7 +63,7 @@ The intended checkpoint contains the changes to the following files; the generat
 
 ### Next Copilot session
 
-1. Confirm this checkpoint commit and Vercel production deployment status against `main`; rerun the production route checks and inspect the deployed Agent 6 storage-unavailable state.
+1. Confirm the application checkpoint and documentation follow-up commits and their Vercel status against `main`; when an authorized admin session is available, verify Agent 6 explicitly reports storage unavailable while `sales-leads.sql` remains unapplied.
 2. Keep `sales-leads.sql` unapplied until an authorized human reviews the SQL and confirms the target Supabase schema/permissions. Apply it only through the separately approved database process.
 3. Continue only after human review of any deployment or migration blocker. Do not add live lead discovery or external prospect communication without authorized integrations and a separate human approval workflow.
 
