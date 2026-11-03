@@ -1,4 +1,4 @@
-import { randomBytes, randomInt, timingSafeEqual, createHash, randomUUID } from "node:crypto";
+import { randomBytes, randomInt, timingSafeEqual, createHash, createHmac, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -306,6 +306,34 @@ function newInquiryId(): string {
   return `DAC-${new Date().getUTCFullYear()}-${randomInt(100000, 1000000)}`;
 }
 
+function getCreativeIdempotencySecret(): string {
+  const secret = process.env.SESSION_SECRET?.trim();
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new CreativeStudioStorageError("Creative Studio idempotency requires the shared SESSION_SECRET configuration.");
+  }
+  return "dwd-local-creative-studio-idempotency-v1";
+}
+
+export function createCreativeInquiryId(idempotencyKey?: string): string {
+  if (!idempotencyKey) return newInquiryId();
+  const digest = createHmac("sha256", getCreativeIdempotencySecret())
+    .update("creative-studio-inquiry-id:")
+    .update(idempotencyKey)
+    .digest("hex")
+    .slice(0, 16)
+    .toUpperCase();
+  return `DAC-${new Date().getUTCFullYear()}-${digest}`;
+}
+
+export function createCreativeTrackingToken(idempotencyKey?: string): string {
+  if (!idempotencyKey) return createTrackingToken();
+  return createHmac("sha256", getCreativeIdempotencySecret())
+    .update("creative-studio-tracking-token:")
+    .update(idempotencyKey)
+    .digest("base64url");
+}
+
 function hashTrackingToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -339,13 +367,14 @@ async function verifyCreativeTrackingToken(id: string, token: string): Promise<b
 
 export async function createCreativeInquiry(
   inquiry: Omit<CreativeInquiry, "id" | "createdAt" | "updatedAt" | "status" | "activity" | "adminNotes">,
-): Promise<{ inquiry: CreativeInquiry; trackingToken: string }> {
+  inquiryId = newInquiryId(),
+  trackingToken = createTrackingToken(),
+): Promise<{ inquiry: CreativeInquiry; trackingToken: string; created: boolean }> {
   requireBackend();
   const createdAt = new Date().toISOString();
-  const trackingToken = createTrackingToken();
   const inquiryData: CreativeInquiry = {
     ...inquiry,
-    id: newInquiryId(),
+    id: inquiryId,
     createdAt,
     updatedAt: createdAt,
     status: "NEW_INQUIRY",
@@ -360,7 +389,12 @@ export async function createCreativeInquiry(
 
   if (!hasPaymentSupabaseConfiguration()) {
     const local = await readLocalData();
-    if (local.inquiries.some((item) => item.inquiry.id === inquiryData.id)) {
+    const existing = local.inquiries.find((item) => item.inquiry.id === inquiryData.id);
+    if (existing?.inquiry.submissionFingerprint &&
+        existing.inquiry.submissionFingerprint === inquiryData.submissionFingerprint) {
+      return { inquiry: existing.inquiry, trackingToken, created: false };
+    }
+    if (existing) {
       throw new CreativeStudioStorageError("Could not generate a unique inquiry ID. Please try again.");
     }
     local.inquiries.unshift({
@@ -368,7 +402,7 @@ export async function createCreativeInquiry(
       trackingTokenHash: hashTrackingToken(trackingToken),
     });
     await writeLocalData(local);
-    return { inquiry: inquiryData, trackingToken };
+    return { inquiry: inquiryData, trackingToken, created: true };
   }
 
   const { error } = await getPaymentSupabase().from(INQUIRIES_TABLE).insert({
@@ -380,10 +414,16 @@ export async function createCreativeInquiry(
     updated_at: createdAt,
   });
   if (error) {
+    if (error.code === "23505" && inquiryData.submissionFingerprint) {
+      const existing = await getCreativeInquiry(inquiryData.id);
+      if (existing?.submissionFingerprint === inquiryData.submissionFingerprint) {
+        return { inquiry: existing, trackingToken, created: false };
+      }
+    }
     console.error("Creative Studio inquiry insert failed", { code: error.code });
     throw describeStorageError(error);
   }
-  return { inquiry: inquiryData, trackingToken };
+  return { inquiry: inquiryData, trackingToken, created: true };
 }
 
 export async function getCreativeInquiries(): Promise<CreativeInquiry[]> {
@@ -521,7 +561,7 @@ export async function approveCreativeCustomerQuote(
 export async function getPublicCreativeInquiry(
   id: string,
   token: string
-): Promise<Pick<CreativeInquiry, "id" | "status" | "quote" | "createdAt" | "updatedAt" | "customerQuoteApprovedAt"> & {
+): Promise<Pick<CreativeInquiry, "id" | "status" | "quote" | "originalEstimate" | "createdAt" | "updatedAt" | "customerQuoteApprovedAt"> & {
   project: Pick<CreativeInquiry["project"],
     "subcategory" | "projectKind" | "durationSeconds" | "imageCount" | "style" |
     "brief" | "languages" | "resolution" | "aspectRatio"
@@ -534,6 +574,7 @@ export async function getPublicCreativeInquiry(
     id: inquiry.id,
     status: inquiry.status,
     quote: inquiry.quote,
+    ...(inquiry.originalEstimate ? { originalEstimate: inquiry.originalEstimate } : {}),
     project: {
       subcategory: inquiry.project.subcategory,
       projectKind: inquiry.project.projectKind,

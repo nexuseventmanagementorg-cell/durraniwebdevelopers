@@ -1605,8 +1605,8 @@ test("Project workflow creates assigned roles and gates implementation and relea
   }
   assert.equal(workflow.status, "awaiting_admin");
   assert.equal(workflow.tasks.find((item) => item.id === "production-release")?.status, "awaiting_admin");
-  workflow = updateProjectWorkflowTask(workflow, "production-release", "completed")!;
-  assert.equal(workflow.status, "completed");
+  assert.equal(updateProjectWorkflowTask(workflow, "production-release", "completed"), null);
+  assert.equal(workflow.tasks.find((item) => item.id === "production-release")?.status, "awaiting_admin");
 });
 
 test("Implementation workflow transitions require complete canonical admin approval metadata", () => {

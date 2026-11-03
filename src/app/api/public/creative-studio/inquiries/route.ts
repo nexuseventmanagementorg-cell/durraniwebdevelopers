@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { calculateCreativeQuote, CREATIVE_CATEGORIES } from "@/lib/creative-studio";
+import { CREATIVE_CATEGORIES } from "@/lib/creative-studio";
 import type { CreativeQuoteInput } from "@/lib/creative-studio";
 import {
+  createCreativeInquiryId,
   createCreativeInquiry,
+  createCreativeTrackingToken,
   CreativeStudioStorageError,
   getCreativeStudioConfig,
+  getCreativeInquiry,
   removeCreativeReferenceFiles,
   saveCreativeReferenceFile,
 } from "@/lib/creative-studio-storage";
 import type { CreativeReferenceFile } from "@/lib/creative-studio-storage";
 import { notifyAdminOfSubmission } from "@/lib/admin-notifications";
 import { isValidCreativeReferenceFile } from "@/lib/creative-reference-files";
+import { calculateCreativeStudioEstimate } from "@/lib/creative-studio-estimate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,9 +52,10 @@ function parseQuoteInput(value: unknown): CreativeQuoteInput | null {
   if (!Number.isInteger(imageCount) || imageCount < 1 || imageCount > 500) return null;
   if (typeof value.complexity !== "string" || !["basic", "standard", "advanced", "premium"].includes(value.complexity)) return null;
   if (typeof value.quality !== "string" || !["720p", "1080p", "2K", "4K"].includes(value.quality)) return null;
-  const addonIds = Array.isArray(value.addonIds)
-    ? Array.from(new Set(value.addonIds.filter((id): id is string => typeof id === "string"))).slice(0, 40)
-    : [];
+  const rawAddonIds = value.addonIds === undefined ? [] : value.addonIds;
+  if (!Array.isArray(rawAddonIds) || rawAddonIds.length > 40 ||
+      !rawAddonIds.every((id): id is string => typeof id === "string")) return null;
+  const addonIds = Array.from(new Set(rawAddonIds));
   return {
     country: value.country.trim(),
     currency: value.currency,
@@ -88,6 +94,10 @@ export async function POST(request: NextRequest) {
   const uploadedReferences: CreativeReferenceFile[] = [];
   let inquirySaved = false;
   try {
+    const idempotencyKey = request.headers.get("idempotency-key")?.trim() || "";
+    if (idempotencyKey && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
+      return NextResponse.json({ success: false, error: "The submission retry key is invalid. Refresh the form and try again." }, { status: 400 });
+    }
     let form: FormData;
     try {
       form = await request.formData();
@@ -171,60 +181,109 @@ export async function POST(request: NextRequest) {
         return [key, allowedLanguages.has(selected) ? selected : ""];
       })
     );
-    const config = await getCreativeStudioConfig();
-    const enabledAddonIds = new Set(config.addons.filter((addon) => addon.enabled).map((addon) => addon.id));
     const safeQuoteInput = {
       ...quoteInput,
       country,
       aspectRatio,
       languageCount: new Set(Object.values(languages).filter(Boolean)).size || 1,
-      addonIds: quoteInput.addonIds.filter((id) => enabledAddonIds.has(id)),
+      addonIds: Array.from(new Set(quoteInput.addonIds)),
     };
-    const quote = calculateCreativeQuote(safeQuoteInput, config);
+    const customerData = {
+      name,
+      email,
+      whatsapp,
+      country,
+      customerType,
+      company: text(customer.company, 160),
+      preferredDeliveryDate: text(customer.preferredDeliveryDate, 20),
+    };
+    const projectData = {
+      ...safeQuoteInput,
+      style,
+      vision,
+      brief,
+      languages,
+      resolution,
+      aspectRatio,
+      referenceFiles: uploadedReferences,
+    };
+    const submissionFingerprint = idempotencyKey
+      ? createHash("sha256").update(JSON.stringify({
+          customer: customerData,
+          project: {
+            ...projectData,
+            referenceFiles: filesToUpload.map((file) => ({
+              name: file.name,
+              type: file.type,
+              size: file.bytes.byteLength,
+              digest: createHash("sha256").update(file.bytes).digest("hex"),
+            })),
+          },
+        })).digest("hex")
+      : undefined;
+    const inquiryId = createCreativeInquiryId(idempotencyKey || undefined);
+    const trackingToken = createCreativeTrackingToken(idempotencyKey || undefined);
+    if (submissionFingerprint) {
+      const existing = await getCreativeInquiry(inquiryId);
+      if (existing) {
+        if (existing.submissionFingerprint !== submissionFingerprint) {
+          return NextResponse.json({ success: false, error: "This submission retry key was already used with different project details. Refresh the form before submitting a changed inquiry." }, { status: 409 });
+        }
+        return NextResponse.json({
+          success: true,
+          inquiry: { id: existing.id, status: existing.status, quote: existing.quote },
+          trackingToken,
+        }, { status: 200, headers: { "Cache-Control": "private, no-store" } });
+      }
+    }
+    const config = await getCreativeStudioConfig();
+    const enabledAddonIds = new Set(config.addons.filter((addon) => addon.enabled).map((addon) => addon.id));
+    if (safeQuoteInput.addonIds.some((addonId) => !enabledAddonIds.has(addonId))) {
+      return NextResponse.json({ success: false, error: "A selected add-on is unavailable. Refresh pricing and try again." }, { status: 400 });
+    }
+    const originalEstimate = calculateCreativeStudioEstimate({
+      inquiryId,
+      input: safeQuoteInput,
+      config,
+      customer: customerData,
+      project: projectData,
+      estimateId: `${inquiryId}-original`,
+    });
 
     for (const file of filesToUpload) {
       uploadedReferences.push(await saveCreativeReferenceFile(file.name, file.type, file.bytes));
     }
 
     const result = await createCreativeInquiry({
-      customer: {
-        name,
-        email,
-        whatsapp,
-        country,
-        customerType,
-        company: text(customer.company, 160),
-        preferredDeliveryDate: text(customer.preferredDeliveryDate, 20),
-      },
-      project: {
-        ...safeQuoteInput,
-        style,
-        vision,
-        brief,
-        languages,
-        resolution,
-        aspectRatio,
-        referenceFiles: uploadedReferences,
-      },
-      quote,
+      customer: customerData,
+      project: { ...projectData, referenceFiles: uploadedReferences },
+      quote: originalEstimate.quote,
       quoteSnapshot: config,
-    });
+      originalEstimate,
+      ...(submissionFingerprint ? { submissionFingerprint } : {}),
+    }, inquiryId, trackingToken);
     inquirySaved = true;
 
-    await notifyAdminOfSubmission({
-      type: "Creative Studio inquiry",
-      reference: result.inquiry.id,
-      customerName: name,
-      customerEmail: email,
-      customerPhone: whatsapp,
-      details: `${quoteInput.subcategory} — ${quote.total === null ? "manual quotation" : `${quote.currency} ${quote.total}`}`,
-    });
+    if (!result.created && uploadedReferences.length > 0) {
+      await removeCreativeReferenceFiles(uploadedReferences);
+      uploadedReferences.length = 0;
+    }
+    if (result.created) {
+      await notifyAdminOfSubmission({
+        type: "Creative Studio inquiry",
+        reference: result.inquiry.id,
+        customerName: name,
+        customerEmail: email,
+        customerPhone: whatsapp,
+        details: `${quoteInput.subcategory} — ${originalEstimate.estimatedTotal === null ? "manual quotation/review required" : `${originalEstimate.currency} ${originalEstimate.estimatedTotal} preliminary estimate`}`,
+      });
+    }
 
     return NextResponse.json({
       success: true,
       inquiry: { id: result.inquiry.id, status: result.inquiry.status, quote: result.inquiry.quote },
       trackingToken: result.trackingToken,
-    }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
+    }, { status: result.created ? 201 : 200, headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     if (!inquirySaved && uploadedReferences.length > 0) {
       try {

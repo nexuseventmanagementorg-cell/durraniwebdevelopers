@@ -88,6 +88,9 @@ export interface CreativeInquiry {
   };
   quote: CreativeQuote;
   quoteSnapshot: CreativeStudioConfig;
+  originalEstimate?: CreativeStudioEstimate;
+  adminEstimateAdjustment?: CreativeStudioEstimateAdjustment;
+  submissionFingerprint?: string;
   customerQuoteApprovedAt?: string;
   adminApprovedAt?: string;
   paymentVerifiedAt?: string;
@@ -101,6 +104,54 @@ export interface CreativeInquiry {
   };
   adminNotes: string;
   activity: { at: string; actor: string; action: string; detail: string }[];
+}
+
+export type CreativeEstimateStatus =
+  | "ESTIMATED"
+  | "PRELIMINARY"
+  | "NEEDS_FOLLOW_UP"
+  | "ADMIN_REVIEW_REQUIRED"
+  | "INSUFFICIENT_INFORMATION";
+
+export type CreativeEstimateConfidence = "LOW" | "MEDIUM" | "HIGH";
+
+export interface CreativeEstimateLine {
+  id: string;
+  label: string;
+  amount: number | null;
+  kind: "base" | "adjustment" | "addon";
+  quantity?: number;
+  unit?: string;
+}
+
+export interface CreativeStudioEstimate {
+  estimateId: string;
+  inquiryId: string;
+  calculatedAt: string;
+  pricingCatalogVersion: number;
+  currency: string;
+  input: CreativeQuoteInput;
+  selectedService: string;
+  matchedPackage: null;
+  matchedDeliverables: string[];
+  quantity: { value: number; unit: string };
+  lines: CreativeEstimateLine[];
+  includedFeatures: string[];
+  unpricedRequirements: string[];
+  subtotal: number | null;
+  estimatedTotal: number | null;
+  quote: CreativeQuote;
+  status: CreativeEstimateStatus;
+  confidence: CreativeEstimateConfidence;
+  missingInformation: string[];
+  explanation: string;
+}
+
+export interface CreativeStudioEstimateAdjustment {
+  estimate: CreativeStudioEstimate;
+  reason: string;
+  adjustedAt: string;
+  adjustedBy: string;
 }
 
 export type CreativeInquiryStatus =

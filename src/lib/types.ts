@@ -1,3 +1,9 @@
+import type { CeoStrategyRecord } from "@/lib/ceo-strategy";
+import type { ProjectManagerPlan } from "@/lib/project-manager";
+import type { BusinessAnalysisRecord } from "@/lib/business-analysis";
+import type { ProposalRecord } from "@/lib/proposal-writer";
+import type { ClientOnboardingRecord } from "@/lib/client-onboarding";
+
 export type OrderStatus =
   | "New Inquiry"
   | "Under Review"
@@ -9,6 +15,7 @@ export type OrderStatus =
   | "Approved"
   | "In Development"
   | "Testing"
+  | "Pending Delivery Review"
   | "Delivered"
   | "Completed"
   | "On Hold"
@@ -188,6 +195,83 @@ export interface CalculatorLead {
   updatedAt: string;
 }
 
+export interface SalesLeadRecord {
+  id: string;
+  businessName: string;
+  country: string;
+  city: string | null;
+  industry: string | null;
+  officialWebsite: string | null;
+  publicBusinessEmail: string | null;
+  publicBusinessPhone: string | null;
+  publicBusinessSocialProfile: string | null;
+  sourceUrls: string[];
+  evidence: Array<{
+    id: string;
+    claim:
+      | "BUSINESS_IDENTITY"
+      | "OFFICIAL_WEBSITE"
+      | "BUSINESS_PROFILE"
+      | "BUSINESS_EMAIL"
+      | "BUSINESS_PHONE"
+      | "BUSINESS_SOCIAL_PROFILE"
+      | "WEBSITE_ASSESSMENT"
+      | "INDUSTRY"
+      | "SERVICE_OPPORTUNITY"
+      | "OTHER";
+    sourceUrl: string;
+    observation: string;
+    capturedAt: string;
+    reviewStatus: "UNREVIEWED" | "REVIEWED" | "REJECTED";
+    reviewedAt: string | null;
+    reviewedBy: string | null;
+  }>;
+  verificationDate: string | null;
+  verificationStatus: "UNVERIFIED" | "PARTIALLY_VERIFIED" | "VERIFIED" | "OUTDATED" | "REJECTED";
+  confidenceLevel: "LOW" | "MEDIUM" | "HIGH";
+  websiteAssessment: {
+    availability: "UNKNOWN" | "ONLINE" | "UNAVAILABLE";
+    quality: "UNKNOWN" | "ADEQUATE" | "NEEDS_IMPROVEMENT";
+    opportunityNote: string | null;
+    sourceEvidenceIds: string[];
+  };
+  potentialDwdService:
+    | "BUSINESS_WEBSITE"
+    | "CORPORATE_WEBSITE"
+    | "ECOMMERCE_WEBSITE"
+    | "CUSTOM_WEB_APPLICATION"
+    | "WEBSITE_REDESIGN"
+    | "LANDING_PAGE"
+    | "BOOKING_SYSTEM"
+    | "BUSINESS_AUTOMATION"
+    | "OTHER_VERIFIED_DWD_SERVICE"
+    | null;
+  serviceCompatibility: "UNKNOWN" | "COMPATIBLE" | "NOT_COMPATIBLE";
+  marketSuitability: "UNKNOWN" | "SUITABLE" | "NOT_SUITABLE";
+  qualificationStatus: "HIGH_POTENTIAL" | "MEDIUM_POTENTIAL" | "LOW_POTENTIAL" | "RESEARCH_REQUIRED" | "NOT_SUITABLE";
+  score: number;
+  scoringBreakdown: Array<{
+    key: "authenticity" | "serviceCompatibility" | "websiteOpportunity" | "marketSuitability" | "evidenceQuality" | "contactVerification" | "informationFreshness";
+    label: string;
+    points: number;
+    maximum: number;
+    explanation: string;
+    evidenceIds: string[];
+  }>;
+  buyingIntent: "UNKNOWN";
+  researchNotes: string;
+  missingInformation: string[];
+  reviewHistory: Array<{
+    id: string;
+    action: "INTAKE_RECORDED" | "RESEARCH_UPDATED" | "PARTIALLY_VERIFIED" | "VERIFIED" | "OUTDATED" | "REJECTED";
+    actor: string;
+    at: string;
+    details: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProjectReadinessChecklistItem {
   id: string;
   label: string;
@@ -338,6 +422,16 @@ export interface Client {
 export interface Project {
   id: string;
   inquiryId?: string;
+  ceoStrategy?: CeoStrategyRecord;
+  ceoStrategyHistory?: CeoStrategyRecord[];
+  projectManagerPlan?: ProjectManagerPlan;
+  projectManagerPlanHistory?: ProjectManagerPlan[];
+  businessAnalysis?: BusinessAnalysisRecord;
+  businessAnalysisHistory?: BusinessAnalysisRecord[];
+  proposal?: ProposalRecord;
+  proposalHistory?: ProposalRecord[];
+  clientOnboarding?: ClientOnboardingRecord;
+  clientOnboardingHistory?: ClientOnboardingRecord[];
   projectBuildBrief?: ProjectBuildBriefRecord;
   automationWorkflow?: ProjectAutomationWorkflow;
   websiteDraft?: WebsiteDraft;
@@ -476,7 +570,7 @@ export interface AuditLog {
   id: string;
   action: string;
   actor: string;
-  targetType: "inquiry" | "project" | "client" | "payment" | "invoice" | "pricing" | "reminder" | "calculator-lead" | "auth";
+  targetType: "inquiry" | "project" | "client" | "payment" | "invoice" | "pricing" | "reminder" | "calculator-lead" | "sales-lead" | "auth";
   targetId: string;
   details: string;
   timestamp: string;

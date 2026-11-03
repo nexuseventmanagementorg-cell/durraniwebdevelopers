@@ -10,6 +10,7 @@ import {
   recoverStaleWorkforceBatches,
   recordOllamaRequestSuccess,
   recordWorkforceEvent,
+  setWorkforceWorkerStatus,
   saveBatchConcepts,
   updateBatchTask,
   deliverWorkforceTask,
@@ -285,7 +286,7 @@ async function runClaimedBatch(batchId: string, model: string | null): Promise<v
     summary: "Generated five isolated static websites, each with Starter, Business, and Enterprise editions.",
     recommendations: ["Review the generated previews and adapt them to approved client requirements."],
     openQuestions: ["Which templates should proceed to human design and browser review?"],
-  });
+  }, artifacts.artifacts);
   await updateBatchTask(batchId, "QA Testing Bot", "running");
   await deliverWorkforceTask({
     batchId,
@@ -300,7 +301,7 @@ async function runClaimedBatch(batchId: string, model: string | null): Promise<v
     summary: `Static checks passed: ${artifacts.qaReport.passed}; failed: ${artifacts.qaReport.failed}; not run: ${artifacts.qaReport.notRun}.`,
     recommendations: ["Run browser smoke tests before any public release."],
     openQuestions: ["Has a human reviewed the generated pages on desktop and mobile?"],
-  });
+  }, [`generated-templates/${batch.scheduledDate}/${batch.id}/batch-report.json`]);
   while (true) {
     await waitWhilePaused(batchId);
     try {
@@ -359,26 +360,38 @@ async function main(): Promise<void> {
   if (!isLocalWorkforceEnabled()) {
     throw new Error("The workforce worker is local-only and will not run on Vercel.");
   }
-  await recoverStaleWorkforceBatches();
-  const oneShot = process.argv.includes("--once");
-  if (process.argv.includes("--start-today")) {
-    const { day } = karachiClock();
-    const queued = await enqueueDailyBatch(day, "manual", "local-worker-cli");
-    console.log(queued.created ? `Queued manual batch for ${day}.` : `A batch for ${day} already exists; no duplicate was created.`);
+  const startedAt = new Date().toISOString();
+  await setWorkforceWorkerStatus("running", process.pid, startedAt);
+  const heartbeat = setInterval(() => {
+    void setWorkforceWorkerStatus("running", process.pid, startedAt).catch((error: unknown) => {
+      console.error("Could not save local workforce worker heartbeat", error);
+    });
+  }, 5_000);
+  try {
+    await recoverStaleWorkforceBatches();
+    const oneShot = process.argv.includes("--once");
+    if (process.argv.includes("--start-today")) {
+      const { day } = karachiClock();
+      const queued = await enqueueDailyBatch(day, "manual", "local-worker-cli");
+      console.log(queued.created ? `Queued manual batch for ${day}.` : `A batch for ${day} already exists; no duplicate was created.`);
+    }
+    console.log("Local DWD workforce worker started. Provider: Ollama; schedule timezone: Asia/Karachi.");
+    if (oneShot) {
+      const handled = await processNextBatch();
+      if (!handled) console.log("No queued batch was available; worker exited without starting a model request.");
+      return;
+    }
+    console.log("Press Ctrl+C to stop the worker. Completed batches remain on disk.");
+    while (!stopping) {
+      await ensureDailySchedule();
+      const handled = await processNextBatch();
+      if (!handled) await sleep(2_000);
+    }
+    console.log(activeBatchId ? `Worker stopped; ${activeBatchId} will be recovered if it becomes stale.` : "Worker stopped.");
+  } finally {
+    clearInterval(heartbeat);
+    await setWorkforceWorkerStatus("stopped", process.pid, startedAt);
   }
-  console.log("Local DWD workforce worker started. Provider: Ollama; schedule timezone: Asia/Karachi.");
-  if (oneShot) {
-    const handled = await processNextBatch();
-    if (!handled) console.log("No queued batch was available; worker exited without starting a model request.");
-    return;
-  }
-  console.log("Press Ctrl+C to stop the worker. Completed batches remain on disk.");
-  while (!stopping) {
-    await ensureDailySchedule();
-    const handled = await processNextBatch();
-    if (!handled) await sleep(2_000);
-  }
-  console.log(activeBatchId ? `Worker stopped; ${activeBatchId} will be recovered if it becomes stale.` : "Worker stopped.");
 }
 
 main().catch((error: unknown) => {

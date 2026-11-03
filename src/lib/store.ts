@@ -13,12 +13,14 @@ import {
   AuditLog,
   SystemSettings,
   CalculatorLead,
+  SalesLeadRecord,
 } from "./types";
 import { DEFAULT_PRICING_CONFIG, calculateBudget, mergePricingConfigWithDefaults } from "./constants";
 
 interface DatabaseSchema {
   inquiries: Inquiry[];
   calculatorLeads?: CalculatorLead[];
+  salesLeads?: SalesLeadRecord[];
   projects: Project[];
   clients: Client[];
   payments: PaymentRecord[];
@@ -367,6 +369,7 @@ function getInitialData(): DatabaseSchema {
   return {
     inquiries: initialInquiries,
     calculatorLeads: [],
+    salesLeads: [],
     projects: initialProjects,
     clients: initialClients,
     payments: initialPayments,
@@ -514,6 +517,54 @@ export class DataStore {
     }, data);
     this.writeData(data, true);
     return data.calculatorLeads[index];
+  }
+
+  static getSalesLeads(): SalesLeadRecord[] {
+    const data = this.ensureDataFile();
+    return [...(data.salesLeads || [])].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  }
+
+  static getSalesLeadById(id: string): SalesLeadRecord | undefined {
+    const data = this.ensureDataFile();
+    return (data.salesLeads || []).find((lead) => lead.id === id);
+  }
+
+  static createSalesLead(lead: SalesLeadRecord): SalesLeadRecord {
+    const data = this.ensureDataFile();
+    data.salesLeads = data.salesLeads || [];
+    if (data.salesLeads.some((item) => item.id === lead.id)) {
+      throw new Error("The sales lead ID already exists.");
+    }
+    data.salesLeads.unshift(lead);
+    this.addAuditLog({
+      action: "SALES_LEAD_CREATED",
+      actor: "Admin",
+      targetType: "sales-lead",
+      targetId: lead.id,
+      details: `Manual lead research intake recorded with status ${lead.verificationStatus}.`,
+    }, data);
+    this.writeData(data, true);
+    return lead;
+  }
+
+  static updateSalesLead(id: string, lead: SalesLeadRecord, actor: string): SalesLeadRecord | null {
+    const data = this.ensureDataFile();
+    data.salesLeads = data.salesLeads || [];
+    const index = data.salesLeads.findIndex((item) => item.id === id);
+    if (index < 0) return null;
+    if (lead.id !== id) throw new Error("Sales lead identifiers cannot be changed.");
+    data.salesLeads[index] = lead;
+    this.addAuditLog({
+      action: "SALES_LEAD_UPDATED",
+      actor,
+      targetType: "sales-lead",
+      targetId: id,
+      details: `Lead research reviewed; verification status is ${lead.verificationStatus}.`,
+    }, data);
+    this.writeData(data, true);
+    return lead;
   }
 
   // Projects

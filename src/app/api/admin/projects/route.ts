@@ -3,7 +3,7 @@ import { getAdminFromRequest, verifyAdminRequest } from "@/lib/auth";
 import { DataStore } from "@/lib/store";
 import { Project, OrderStatus } from "@/lib/types";
 import { getProjectRecord, getProjectRecords, saveProjectRecord, updateProjectRecord } from "@/lib/project-storage";
-import { updateProjectWorkflowTask } from "@/lib/project-workflow";
+import { isFinalProjectDeliveryStatus, updateProjectWorkflowTask } from "@/lib/project-workflow";
 import { ProjectWorkspaceStorageError } from "@/lib/project-storage";
 import { buildWebsiteDraft } from "@/lib/website-draft-worker";
 import {
@@ -13,6 +13,19 @@ import {
   ProjectTaskExecutionError,
 } from "@/lib/project-task-executions";
 import { isProjectWorkflowTaskApproved } from "@/lib/project-workflow";
+import { sanitizeCeoStrategyForReview } from "@/lib/ceo-strategy";
+
+function projectForAdminReview(project: Project) {
+  return {
+    ...project,
+    ...(project.ceoStrategy
+      ? { ceoStrategy: sanitizeCeoStrategyForReview(project.ceoStrategy) }
+      : {}),
+    ...(project.ceoStrategyHistory
+      ? { ceoStrategyHistory: project.ceoStrategyHistory.map(sanitizeCeoStrategyForReview) }
+      : {}),
+  };
+}
 
 export async function GET(request: NextRequest) {
   if (!verifyAdminRequest(request)) {
@@ -20,7 +33,7 @@ export async function GET(request: NextRequest) {
   }
   try {
     const projects = await getProjectRecords();
-    return NextResponse.json({ success: true, projects });
+    return NextResponse.json({ success: true, projects: projects.map(projectForAdminReview) });
   } catch (error) {
     console.error("Project workspace load failed", error);
     return NextResponse.json(
@@ -94,6 +107,16 @@ export async function PATCH(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: "Project ID is required" }, { status: 400 });
     }
+    if (isFinalProjectDeliveryStatus(status)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Delivery approval is not available until saved artifact integrity, QA evidence, and a separate human delivery review can be verified.",
+          requiredStatus: "Pending Delivery Review",
+        },
+        { status: 409 }
+      );
+    }
 
     const current = await getProjectRecord(id);
     if (!current) {
@@ -122,6 +145,16 @@ export async function PATCH(request: NextRequest) {
       }
       if (!current.automationWorkflow) {
         return NextResponse.json({ success: false, error: "This project has no automation workflow." }, { status: 409 });
+      }
+      if (automationTask.taskId === "production-release" && automationTask.status === "completed") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Production release requires independently verified deliverables and an explicit human delivery approval, which are not available in this workflow.",
+            requiredStatus: "Pending Delivery Review",
+          },
+          { status: 409 }
+        );
       }
       if (automationTask.taskId === "implementation") {
         const implementationTask = current.automationWorkflow.tasks.find(
@@ -211,7 +244,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Project not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, project: updated });
+    return NextResponse.json({ success: true, project: projectForAdminReview(updated) });
   } catch (error) {
     console.error("Update project error", error);
     return NextResponse.json(

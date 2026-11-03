@@ -26,6 +26,10 @@ const PUBLIC_MILESTONES = [
   { id: "launch", label: "Final launch approval", taskIds: ["production-release"] },
 ] as const;
 
+export function isFinalProjectDeliveryStatus(value: unknown): value is "Delivered" | "Completed" {
+  return value === "Delivered" || value === "Completed";
+}
+
 export function isProjectWorkflowTaskApproved(task: ProjectWorkflowTask): boolean {
   if (typeof task.approvedBy !== "string" || !task.approvedBy.trim() ||
       typeof task.approvedAt !== "string") {
@@ -118,6 +122,8 @@ export function updateProjectWorkflowTask(
   const task = workflow.tasks.find((item) => item.id === taskId);
   if (!task || task.status === "blocked" || task.status === "completed") return null;
   if (task.id === "implementation" && !isProjectWorkflowTaskApproved(task)) return null;
+  if (task.adminApprovalRequired && status === "completed" &&
+      !isProjectWorkflowTaskApproved(task)) return null;
   if (task.status === "awaiting_admin" && !(task.adminApprovalRequired && status === "completed")) return null;
 
   const prerequisitesComplete = task.dependsOn.every((dependencyId) =>

@@ -13,6 +13,7 @@ import {
 import type {
   CreativeAddon,
   CreativeInquiry,
+  CreativeStudioEstimate,
   CreativeStudioConfig,
 } from "@/lib/creative-studio";
 import {
@@ -37,6 +38,15 @@ export default function CreativeStudioAdminPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [quoteAmount, setQuoteAmount] = useState("");
+  const [estimateDraft, setEstimateDraft] = useState({
+    durationSeconds: 30,
+    imageCount: 1,
+    complexity: "standard",
+    quality: "1080p",
+    aspectRatio: "9:16",
+    addonIds: [] as string[],
+    reason: "",
+  });
   const [payment, setPayment] = useState({ amount: "", reference: "", note: "", confirmed: false });
   const [newCountry, setNewCountry] = useState({ country: "", currency: "USD", videoPerMinute: "", imagePerImage: "" });
   const [whatsappMessage, setWhatsappMessage] = useState<{
@@ -129,6 +139,19 @@ export default function CreativeStudioAdminPage() {
       confirmed: false,
     });
   }, [selectedId, selectedQuoteTotal]);
+
+  useEffect(() => {
+    if (!selected) return;
+    setEstimateDraft({
+      durationSeconds: selected.project.durationSeconds,
+      imageCount: selected.project.imageCount,
+      complexity: selected.project.complexity,
+      quality: selected.project.quality,
+      aspectRatio: selected.project.aspectRatio,
+      addonIds: selected.project.addonIds || [],
+      reason: "",
+    });
+  }, [selected]);
 
   const counts = useMemo(() => ({
     total: inquiries.length,
@@ -326,12 +349,21 @@ export default function CreativeStudioAdminPage() {
                     </InfoCard>
                     <InfoCard title="Quotation snapshot">
                       <Info label="Status" value={selected.quote.requiresManualReview ? "Review required" : "Estimate ready"} />
-                      <Info label="Estimate / final quote" value={selected.quote.total === null ? "Manual quotation needed" : formatCreativeCurrency(selected.quote.total, selected.quote.currency)} />
+                      <Info label="Current customer quote" value={selected.quote.total === null ? "Manual quotation needed" : formatCreativeCurrency(selected.quote.total, selected.quote.currency)} />
                       <Info label="Estimated delivery" value={selected.quote.delivery} />
                       <Info label="Rate configuration version" value={`v${selected.quoteSnapshot.version}`} />
                       <Info label="Submitted" value={new Date(selected.createdAt).toLocaleString()} />
                     </InfoCard>
                   </div>
+                  {selected.originalEstimate && (
+                    <EstimateSnapshotCard title="Original automatic estimate (saved at submission)" estimate={selected.originalEstimate} />
+                  )}
+                  {selected.adminEstimateAdjustment && (
+                    <div className="space-y-2">
+                      <EstimateSnapshotCard title="Latest admin-adjusted scope estimate" estimate={selected.adminEstimateAdjustment.estimate} />
+                      <p className="text-xs text-slate-500">Adjusted by {selected.adminEstimateAdjustment.adjustedBy} on {new Date(selected.adminEstimateAdjustment.adjustedAt).toLocaleString()}. Reason: {selected.adminEstimateAdjustment.reason}</p>
+                    </div>
+                  )}
                   <InfoCard title="Creative brief">
                     <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">{selected.project.brief}</p>
                     {selected.project.vision && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">Vision: {selected.project.vision}</p>}
@@ -342,6 +374,34 @@ export default function CreativeStudioAdminPage() {
                     </InfoCard>
                   )}
                   <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+                      <h3 className="font-bold">Adjust preliminary scope estimate</h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-600">Recalculates using the pricing catalog saved with this inquiry. This does not change the original estimate or the final customer quotation.</p>
+                      {selected.project.projectKind !== "mvp" && (
+                        <label className="mt-3 block text-xs font-semibold text-slate-700">
+                          {selected.project.projectKind === "image" ? "Image quantity" : "Video duration (seconds)"}
+                          <input type="number" min={selected.project.projectKind === "image" ? 1 : 10} max={selected.project.projectKind === "image" ? 500 : 9000} value={selected.project.projectKind === "image" ? estimateDraft.imageCount : estimateDraft.durationSeconds} onChange={(event) => setEstimateDraft((current) => selected.project.projectKind === "image" ? { ...current, imageCount: Number(event.target.value) } : { ...current, durationSeconds: Number(event.target.value) })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
+                        </label>
+                      )}
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <label className="text-xs font-semibold text-slate-700">Complexity<select value={estimateDraft.complexity} onChange={(event) => setEstimateDraft((current) => ({ ...current, complexity: event.target.value }))} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm">{["basic", "standard", "advanced", "premium"].map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+                        <label className="text-xs font-semibold text-slate-700">Quality<select value={estimateDraft.quality} onChange={(event) => setEstimateDraft((current) => ({ ...current, quality: event.target.value }))} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm">{["720p", "1080p", "2K", "4K"].map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+                        <label className="col-span-2 text-xs font-semibold text-slate-700">Aspect ratio<select value={estimateDraft.aspectRatio} onChange={(event) => setEstimateDraft((current) => ({ ...current, aspectRatio: event.target.value }))} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm">{["9:16", "16:9", "1:1", "4:5", selected.project.aspectRatio].filter((value, index, values) => values.indexOf(value) === index).map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+                      </div>
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-xs font-bold text-indigo-700">Selected add-ons ({estimateDraft.addonIds.length})</summary>
+                        <div className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2">
+                          {selected.quoteSnapshot.addons.filter((addon) => addon.enabled).map((addon) => (
+                            <label key={addon.id} className="flex items-center gap-2 text-xs text-slate-700">
+                              <input type="checkbox" checked={estimateDraft.addonIds.includes(addon.id)} onChange={(event) => setEstimateDraft((current) => ({ ...current, addonIds: event.target.checked ? [...current.addonIds, addon.id] : current.addonIds.filter((id) => id !== addon.id) }))} />
+                              {addon.name}{addon.billingUnit === "custom_quote" || addon.price === null ? " · custom quote" : ""}
+                            </label>
+                          ))}
+                        </div>
+                      </details>
+                      <label className="mt-3 block text-xs font-semibold text-slate-700">Reason for adjustment (required)<textarea value={estimateDraft.reason} onChange={(event) => setEstimateDraft((current) => ({ ...current, reason: event.target.value }))} minLength={10} maxLength={500} rows={2} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" placeholder="Explain what scope detail required this adjustment." /></label>
+                      <button type="button" disabled={saving || Boolean(selected.customerQuoteApprovedAt || selected.paymentVerifiedAt) || !["NEW_INQUIRY", "UNDER_REVIEW", "NEEDS_MORE_INFORMATION", "QUOTATION_PREPARED"].includes(selected.status)} onClick={() => void runAction("adjust_estimate", estimateDraft)} className="mt-3 rounded-lg bg-amber-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Save adjusted estimate</button>
+                    </div>
                     <div className="rounded-xl border border-slate-200 p-4">
                       <h3 className="font-bold">Send final quotation for approval</h3>
                       <p className="mt-1 text-xs leading-5 text-slate-500">Manual pricing must be reviewed before the customer can approve it.</p>
@@ -532,6 +592,44 @@ function MetricCard({ label, value }: { label: string; value: number }) {
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return <div className="rounded-xl border border-slate-200 p-4"><h3 className="mb-3 text-sm font-black text-slate-900">{title}</h3><div className="space-y-2">{children}</div></div>;
+}
+
+function EstimateSnapshotCard({
+  title,
+  estimate,
+}: {
+  title: string;
+  estimate: CreativeStudioEstimate;
+}) {
+  return (
+    <InfoCard title={title}>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Info label="Estimate status" value={estimate.status.replaceAll("_", " ")} />
+        <Info label="Confidence" value={estimate.confidence} />
+        <Info label="Service" value={estimate.selectedService} />
+        <Info label="Quantity" value={`${estimate.quantity.value} ${estimate.quantity.unit}`} />
+        <Info label="Catalog snapshot" value={`v${estimate.pricingCatalogVersion}`} />
+        <Info label="Calculated" value={new Date(estimate.calculatedAt).toLocaleString()} />
+        <Info label="Estimated subtotal" value={estimate.subtotal === null ? "Unavailable" : formatCreativeCurrency(estimate.subtotal, estimate.currency)} />
+        <Info label="Estimated total" value={estimate.estimatedTotal === null ? "Manual review required" : formatCreativeCurrency(estimate.estimatedTotal, estimate.currency)} />
+      </div>
+      <div className="mt-3 border-t border-slate-100 pt-3">
+        <p className="text-xs font-bold text-slate-700">Breakdown</p>
+        <ul className="mt-2 space-y-1">
+          {estimate.lines.map((line) => (
+            <li key={line.id} className="flex justify-between gap-3 text-xs">
+              <span className="text-slate-600">{line.label}</span>
+              <span className="font-semibold text-slate-800">{line.amount === null ? "Unpriced" : formatCreativeCurrency(line.amount, estimate.currency)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <p className="mt-3 text-xs leading-5 text-slate-600">{estimate.explanation}</p>
+      {estimate.includedFeatures.length > 0 && <p className="mt-2 text-xs leading-5 text-slate-600">Priced add-ons: {estimate.includedFeatures.join(", ")}</p>}
+      {estimate.missingInformation.length > 0 && <p className="mt-2 text-xs leading-5 text-amber-800">Missing information: {estimate.missingInformation.join(", ")}</p>}
+      {estimate.unpricedRequirements.length > 0 && <p className="mt-2 text-xs leading-5 text-amber-800">Unpriced or review-required scope: {estimate.unpricedRequirements.join(" ")}</p>}
+    </InfoCard>
+  );
 }
 
 function Info({ label, value }: { label: string; value: string }) {

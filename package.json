@@ -12,7 +12,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsx --test tests/business-logic.test.ts tests/workforce-pipeline.test.ts tests/workforce-state.test.ts tests/creative-studio.test.ts tests/admin-auth.test.ts tests/whatsapp-message-templates.test.ts tests/inquiry-budget-estimate.test.ts"
+    "test": "tsx --test tests/business-logic.test.ts tests/workforce-pipeline.test.ts tests/workforce-state.test.ts tests/project-manager.test.ts tests/business-analysis.test.ts tests/proposal-writer.test.ts tests/client-onboarding.test.ts tests/sales-leads.test.ts tests/creative-studio.test.ts tests/admin-auth.test.ts tests/whatsapp-message-templates.test.ts tests/inquiry-budget-estimate.test.ts"
   },
   "dependencies": {
     "@sfpy/node-core": "^0.3.5",

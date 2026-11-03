@@ -1,13 +1,159 @@
 # DWD Project Handoff
 
-Last updated: 2026-11-02
+## 2026-11-03 Verified Checkpoint
 
-## Latest resume point — website inquiry estimate release (2026-11-02)
+### Project and release target
+
+- Project: Durrani Web Developers.
+- GitHub repository: `nexuseventmanagementorg-cell/durraniwebdevelopers`.
+- Production alias: `https://durraniwebdevelopers.vercel.app`.
+- Branch: `main`, tracking `origin/main`.
+- Base commit before this checkpoint: `45766bafd0c28b711febb038f7220b5a3cbefc0f`. The checkpoint commit is created after local validation; its SHA is reported in the completion message because a commit cannot contain its own hash.
+- Vercel project confirmed from the successful GitHub Vercel deployment status: team `nexuseventmanagementorg-2858`, project `durraniwebdevelopers`. The Vercel CLI and local `.vercel` project link are absent; deployment is via the existing GitHub integration.
+- Before this checkpoint is pushed, the current production alias returned HTTP 200 for `/`, `/admin/login`, `/admin/workforce`, `/creative-studio`, `/calculator`, `/api/public/creative-studio/config`, and `/api/public/addons`. `/api/admin/workforce/sales-leads` returned 404 because this local checkpoint has not yet been deployed; recheck it after deployment. No customer data was used for these checks.
+
+### Workforce status
+
+The existing workforce remains at 50 roles across 10 departments. No role was added, removed, or renamed.
+
+- **Executive & Project Delivery:** AI CEO Strategist; Project Manager; Business Analyst; Proposal Writer; Client Onboarding Agent.
+- **Client Growth & Support:** Sales Lead Finder; Lead Qualification Agent; Appointment Booking Agent; Customer Support Assistant; Community Manager.
+- **Research & Insights:** Market Research Analyst; Competitor Research Agent; Data Analyst; Reputation Monitor; AI Research Scientist.
+- **Product & Brand Design:** Frontend UI Designer; UX Researcher; Brand Identity Designer; Image Generation Artist; Accessibility Auditor.
+- **Web, CMS & Knowledge:** Web Development Coder; WordPress Specialist; Shopify Developer; Mobile App Developer; Knowledge Base Builder.
+- **Apps & Systems Engineering:** Backend Architect; Database Engineer; API Integration Specialist; CRM Automation Specialist; Automation Workflow Engineer.
+- **Commerce & Operations:** Ecommerce Specialist; Product Description Writer; Invoice & Billing Assistant; Legal Document Assistant; Backup & Recovery Agent.
+- **Content & Media Studio:** Content Writer; Copywriter; Video Content Producer; Podcast Production Agent; Motion Graphics Designer.
+- **SEO & Digital Marketing:** SEO Specialist; SEO Technical Auditor; Web Performance Optimizer; Digital Marketing Strategist; Email Campaign Manager.
+- **Cloud, Quality & Knowledge:** Cybersecurity Guardian; QA Testing Bot; DevOps Cloud Engineer; Localization Translator; Compliance Monitor.
+
+Agents 1–6 are implemented as human-supervised workflows, not autonomous customer-facing agents:
+
+1. **AI CEO Strategist:** evidence-backed strategy records with human review/approval and source freshness checks.
+2. **Project Manager:** project task planning and dependency/status workflows; no autonomous production execution.
+3. **Business Analyst:** deterministic, source-traceable requirements analysis; unknowns and clarifications stay explicit and are not sent to customers.
+4. **Proposal Writer:** source-backed proposal drafts with separate human approval; internal approval is not customer acceptance.
+5. **Client Onboarding Agent:** readiness and blocker assessment. Onboarding remains blocked where customer acceptance, agreement evidence, customer authentication, or project-owned secure asset workflows are unavailable.
+6. **Sales Lead Finder (`sales-lead-finder`):** manual admin research intake, evidence-linked verification, explainable scoring, duplicate warnings, research history, and human review. Live search/discovery and all prospect outreach are unavailable.
+
+### Agent 6 database and safety status
+
+- `supabase/sales-leads.sql` is a proposed standalone SQL Editor script and is **NOT applied**. No Supabase connection or database operation was made.
+- The proposed schema qualifies objects with `public`, revokes table access from `PUBLIC`, `anon`, and `authenticated`, and grants only `SELECT`, `INSERT`, and `UPDATE` to `service_role`; it adds bounded non-whitespace name/country checks, JSON object and duplicated-column consistency checks, and `updated_at >= created_at`.
+- Duplicate detection remains warning-only. No unique normalized-domain constraint or DELETE grant exists.
+- Semantic VERIFIED evidence requirements remain enforced by the server, because their reviewed-evidence, independent-source, distinct-domain, and matching-human-review rules are not safely represented by a simple database CHECK.
+- Agent 6 persistence is unavailable until an authorized human reviews/applies the migration. When the configured database lacks the table, the server reports storage unavailable; it does not invent leads or claim a save succeeded. Never apply this SQL as part of routine deployment.
+- The prior independent security audit found no high-confidence exploitable vulnerability. The final change review also found no significant security, privacy, customer inquiry, Creative Studio, payment, or release blocker.
+
+### Validation and deployment checkpoint
+
+- Full project tests: **257 passed, 0 failed**.
+- TypeScript: `npx.cmd tsc --noEmit --incremental false` passed.
+- ESLint: all changed TypeScript/TSX files passed.
+- Production build: `npm.cmd run build` passed.
+- `git diff --check`: passed. Generated `tsconfig.tsbuildinfo` is intentionally excluded from the checkpoint; environment files, credentials, local customer data, and build caches are not to be staged.
+- The production build output includes the Agent 6 API route. The current live route check is still pre-deployment; verify the production alias and requested public/admin routes after the checkpoint push. A successful local build is not production verification.
+- Production environment secret values were not printed. The project is currently serving and its public config/add-on APIs respond successfully; check Vercel deployment status and route behavior after push. Do not change production variables or apply the Sales Leads migration for this checkpoint.
+
+### Checkpoint file scope
+
+The intended checkpoint contains the changes to the following files; the generated `tsconfig.tsbuildinfo` cache is excluded:
+
+`PROJECT_HANDOFF.md`; `package.json`; `scripts/workforce-worker.ts`; `src/app/admin/creative-studio/page.tsx`; `src/app/admin/projects/page.tsx`; `src/app/admin/workforce/page.tsx`; `src/app/api/admin/creative-studio/route.ts`; `src/app/api/admin/projects/route.ts`; `src/app/api/admin/workforce/route.ts`; `src/app/api/admin/workforce/business-analysis/route.ts`; `src/app/api/admin/workforce/client-onboarding/route.ts`; `src/app/api/admin/workforce/project-manager/route.ts`; `src/app/api/admin/workforce/proposal/route.ts`; `src/app/api/admin/workforce/sales-leads/route.ts`; `src/app/api/admin/workforce/strategy/route.ts`; `src/app/api/public/creative-studio/inquiries/route.ts`; `src/app/creative-studio/confirmation/confirmation-client.tsx`; `src/app/creative-studio/studio-client.tsx`; `src/components/admin/WorkforceSalesLeadPanel.tsx`; `src/lib/business-analysis.ts`; `src/lib/ceo-strategy.ts`; `src/lib/client-onboarding.ts`; `src/lib/creative-studio-estimate.ts`; `src/lib/creative-studio-storage.ts`; `src/lib/creative-studio.ts`; `src/lib/ollama-provider.ts`; `src/lib/project-manager.ts`; `src/lib/proposal-writer.ts`; `src/lib/project-workflow.ts`; `src/lib/sales-lead-contract.ts`; `src/lib/sales-lead-storage.ts`; `src/lib/sales-leads.ts`; `src/lib/store.ts`; `src/lib/types.ts`; `src/lib/workforce-pipeline.ts`; `supabase/sales-leads.sql`; `tests/business-logic.test.ts`; `tests/business-analysis.test.ts`; `tests/client-onboarding.test.ts`; `tests/creative-studio.test.ts`; `tests/project-manager.test.ts`; `tests/proposal-writer.test.ts`; `tests/sales-leads.test.ts`; `tests/workforce-pipeline.test.ts`; `tests/workforce-state.test.ts`.
+
+### Next Copilot session
+
+1. Confirm this checkpoint commit and Vercel production deployment status against `main`; rerun the production route checks and inspect the deployed Agent 6 storage-unavailable state.
+2. Keep `sales-leads.sql` unapplied until an authorized human reviews the SQL and confirms the target Supabase schema/permissions. Apply it only through the separately approved database process.
+3. Continue only after human review of any deployment or migration blocker. Do not add live lead discovery or external prospect communication without authorized integrations and a separate human approval workflow.
+
+Last updated: 2026-11-03
+
+## Latest resume point — Sales Lead Finder Agent 6 (local implementation, 2026-11-03)
+
+- Implemented the existing `sales-lead-finder` registry role; no role was added or renamed, and the 50-agent registry is unchanged.
+- Added admin-only manual research intake in the existing workforce dashboard. Public business facts, URLs, observations, assessments, country/city/industry, and service fit are admin-entered. No search/discovery adapter was found or connected, and the UI/API explicitly report live discovery unavailable.
+- Added evidence-linked verification with separate `UNVERIFIED`, `PARTIALLY_VERIFIED`, `VERIFIED`, `OUTDATED`, and `REJECTED` states. `VERIFIED` requires a human review action, an identity source, an official website or independent business-profile source, and at least two distinct public hostnames. The system does not fetch or independently validate URL content; the reviewer remains responsible for confirming sources. Duplicate domain/name-country matches only warn and never merge.
+- Added transparent 100-point maximum scoring across authenticity, service compatibility, website availability/quality opportunity, market suitability, evidence quality, public business contact verification, and review freshness. Outdated or rejected research cannot qualify above `RESEARCH_REQUIRED` unless an explicit market/service mismatch marks it `NOT_SUITABLE`. Qualification is separate from buying intent; buying intent always remains `UNKNOWN`. No budgets, requirements, decision-makers, or leads are synthesized.
+- National/international, country, city, industry, verification, and qualification filtering, source links, scoring explanations, duplicate warnings, and bounded review history are present in the authenticated admin page. No public lead route or outreach, booking, quotation, negotiation, CRM, or communication action was added. Nexus Property Network is excluded.
+- Existing local JSON storage is reused only when no Supabase backend is configured. The current local Supabase configuration does not yet have the new table, so the dashboard shows a storage blocker and cannot save leads until the proposed `supabase/sales-leads.sql` is reviewed and applied by an authorized human. It has not been applied.
+- Eight focused Agent 6 tests are registered in `npm test`, including API authorization, rejected deletion surface, private no-store responses, malformed/unsafe URLs, evidence-based verification, and unavailable-storage behavior. Security review found no high-confidence exploitable vulnerability in the proposal. Validation: full suite **256 passed, 0 failed**; `npx.cmd tsc --noEmit --incremental false` passed; ESLint on the Agent 6 security surface passed; `git diff --check` exited 0 (Git reported its existing package.json line-ending advisory). The authenticated localhost dashboard rendered and reported the missing-table blocker; no production build or production database/RLS verification was run.
+- Migration review: `sales-leads.sql` enables RLS, defines no anon/authenticated policies, revokes their table grants, and grants the service role. No SQL change was needed. Remaining hardening/verification limits: semantic JSONB integrity depends on server validators, timestamps have type/NOT NULL constraints but no ordering check, and PII policy is instructional rather than an automatic detector.
+- No deployment, commit, push, migration, live search request, or external communication occurred. Preserve unrelated Creative Studio and other pre-existing worktree changes.
+
+## Latest resume point — Client Onboarding Agent 5 (local only, 2026-11-03)
+
+- Added Agent 5 using the existing `client-onboarding-agent` registry role; no role was added or renamed, and the registry remains at 50 roles.
+- The admin-only readiness API binds the project to its converted inquiry, checks the current approved Agent 1–4 sources and server-loaded verified advance references, and records source fingerprints. The API accepts no customer acceptance or payment claims from clients; Agent 4 internal approval is never interpreted as customer acceptance.
+- The current source records do not represent customer acceptance or signed-agreement applicability/evidence. Consequently, generated assessments remain `BLOCKED`; human review records review of the blocker only and cannot complete onboarding or authorize project work.
+- Added category-specific clarification questions (15 recognized categories), read-only Agent 1–4 handoff references, bounded assessment history, and a workforce dashboard for eligibility, freshness, blockers, questions, evidence references, unavailable capabilities, and restricted review. No customer authentication, project-owned secure asset upload, customer-response endpoint, notification sender, scope approval, or project-start action exists.
+- Assessments reuse existing project workspace JSON; no migration was added. Existing project storage remains read/merge/write and is not transactional. No customer project data was changed.
+- Focused Agent 5 tests are registered in the normal test suite. Final test, TypeScript, ESLint, diff, and build results are recorded in the implementation handoff after verification.
+- No migration, deployment, commit, push, customer-project execution, or customer communication occurred. Preserve unrelated Creative Studio and other worktree changes.
+
+## Latest resume point — Proposal Writer Agent 4 integration (local only, 2026-11-03)
+
+- Added Agent 4 with the existing `proposal-writer` registry role; no role was added or removed, and the workforce remains at 50 roles. The proposal is a deterministic, source-linked draft assembled from approved records, not an LLM-generated customer commitment.
+- The admin-only API loads project and inquiry data on the server. Drafting requires a converted approved inquiry, consistent approved PKR commercial record and verified advance, current human-approved Agent 1 strategy, and separately human-approved current Agent 3 analysis. A current approved Agent 2 plan is included only when present and fresh; otherwise its phases/deliverables are explicitly unavailable and requirement mapping stays `NOT_MAPPED`.
+- Proposals preserve Agent 1 unknowns and Agent 3 clarifications/conflicts, assumptions, risks, scope, functional requirements, and acceptance proposals with references to authorized server-side sources. A full authorized-source fingerprint detects source changes; persisted content is validated before review/approval.
+- Human review and approval are separate server-side actions. Review is bound to the exact proposal content; approval rechecks current sources and requires explicit acknowledgement when open items remain. `APPROVED_FOR_CUSTOMER` means approved for customer review only: no email/WhatsApp send, customer acceptance tracking, work execution, or delivery approval is implemented.
+- Current proposal and a maximum of 19 prior versions are stored inside the existing `project_workspaces.project_data` record. No table or migration was added. Existing project storage updates are read/merge/write and are not transactional; concurrent proposal updates remain a storage limitation.
+- The workforce admin page shows eligibility blockers, version and freshness, review/approval state, currency/PKR commercial facts, scope, assumptions, risks, unresolved items, deliverables, and private source references. It has no send or execute action.
+- Remaining integrations/capabilities: no authorized attachment extraction, customer-URL assessment, Agent 2-to-Agent 3 requirement mapping, proposal transmission/response tracking, customer project implementation, browser QA, production readiness, or delivery approval.
+- Validation: focused Agent 4 tests passed (**3 passed, 0 failed**); full suite passed (**240 passed, 0 failed**); TypeScript and ESLint checks passed; `git diff --check` exited 0. Production build and authenticated browser interaction were not run.
+- No migration, deployment, commit, push, customer-project execution, or customer communication occurred. Preserve unrelated Creative Studio and pre-existing worktree changes.
+
+## Latest resume point — Business Analyst Agent 3 requirements workflow (local only, 2026-11-03)
+
+- Added Agent 3 using the existing `business-analyst` registry role; the registry remains exactly 50 roles. Analysis is deterministic and server-derived, not an LLM-generated customer decision.
+- Generation requires an admin-authenticated request and a converted inquiry with approved commercial scope, verified required advance, and a current human-approved Agent 1 strategy. The API accepts only a project ID and loads authorized inquiry/project sources server-side.
+- The structured, source-fingerprinted requirements draft includes customer/project requirements, scope boundaries, objectives, acceptance criteria, open questions, conflicts, assumptions, risks, category relevance, and evidence references. A persisted-output validator rejects malformed, untraceable, incomplete-category, or overstated capability data. Evidence and acceptance criteria remain review proposals; no tests are executed.
+- Customer-provided reference URLs are recorded but not retrieved or assessed. Website languages remain a clarification, and no authorized attachment retrieval/extraction interface is connected. Agent 2's current approved WBS can be referenced without fabricating task-to-requirement links. Direct Agent 4/5 handoffs are not implemented; analysis does not modify Agent 1/2 plans or execute project work.
+- Analysis and bounded history use existing `project_workspaces.project_data` persistence. Approval is a separate admin action bound to the exact analysis ID and source fingerprint. No migration or new table was added.
+- The workforce dashboard shows status/freshness, generated requirements, evidence, unknowns, categories, scope, risks, traceability, clarification records, and explicit human approval. Private source evidence is shown only in the authenticated admin workspace.
+- Validation: focused Agent 3 tests passed (**5 passed, 0 failed**); full suite passed (**237 passed, 0 failed**); TypeScript check passed; ESLint on Agent 3 files passed; `git diff --check` exited 0. Production build and authenticated browser interaction were not run.
+- No migration, deployment, commit, push, or customer-project execution occurred. Preserve the unrelated existing Creative Studio and other worktree changes.
+
+## Latest resume point — Project Manager Agent 2 planning integration (local only, 2026-11-03)
+
+- Added a server-side Project Manager planner that accepts only an inquiry-converted project with current commercial/advance eligibility and a human-approved, current Agent 1 strategy. It derives a deterministic WBS from the approved assignments, phases, dependencies, expected outputs, acceptance criteria, risks, and unknowns. The plan records a fingerprinted strategy identity/version because Agent 1 has no explicit version field.
+- WBS phases, milestones, parent tasks, and deliverable subtasks are stored in the existing `project_workspaces.project_data` record, with previous plans retained in bounded history. No migration or new table is required.
+- Generation accepts only a project ID; roles, tasks, dependencies, blockers, estimates, source binding, and plan content are derived and validated server-side. Separate admin approval records the authenticated admin and timestamp. Source changes invalidate a plan and prevent approval.
+- The workforce dashboard now shows Agent 2 plan state, source freshness, phases, milestones, assignments, dependencies, risks, blockers, and the explicit human approval action.
+- This is planning-only, not an LLM-generated or executable PM workflow. The current task and deliverable records remain `BLOCKED`; effort and timeline remain `UNKNOWN`. No customer-project worker, browser QA, independent artifact verifier, or execution lifecycle controls are connected. WBS approval does not start execution.
+- Existing project storage and inquiry conversion are reused. No database migration was created or applied. No project data was changed, no customer work was started, and no deployment, commit, or push occurred.
+- Validation: `npm.cmd test` passed (**232 passed, 0 failed**); `npx.cmd tsc --noEmit --incremental false` passed; ESLint on all Agent 2 changed TypeScript files passed; `git diff --check` exited 0. Production build was not run because its `prebuild` script and Next.js build write generated files. The browser redirected to admin login because no credentials were supplied; authenticated visual interaction was not tested.
+
+## Latest resume point — AI CEO Strategist Phase 2 (local only, 2026-11-03)
+
+- Workspace: `D:\website-projects-backup\durrani-web-developers`; branch `main`. Local implementation only. Do not push, deploy, or apply production/database changes without separate approval.
+- Agent 1 now has a dedicated evidence/input/output contract, strict structured-output validation, the 15 requested website categories, complete capability coverage, registered specialist-role validation, dependency-cycle checks, explicit missing information, and protected VERIFIED/RECOMMENDED/ASSUMED/UNKNOWN/BLOCKED/NOT TESTED labels. Model-generated completion claims are rejected.
+- Strategy generation and approval are restricted to admin-authenticated requests for inquiry-converted projects with approved status, positive approved price, valid advance requirements, and verified required advance. Strategy approval is a separate human action, records admin/time, and checks a source fingerprint before saving.
+- Strategy data is stored in the existing `project_workspaces.project_data` record. No new table, migration, or schema change was introduced. Existing admin authentication and server-side project/inquiry relationship checks remain in use.
+- Inputs include the approved project description/category/features, customer inquiry needs, budget/timeline constraints, and any existing DWD brief/workflow evidence. Missing target website languages and absent authorized attachments remain explicit unknowns. The contract accepts only bounded text attachments explicitly marked as authorized; there is no attachment extraction/import UI or automatic file access.
+- The workforce admin page now shows strategist readiness, Ollama model availability, local worker heartbeat separately, approved-project strategy status, human approval controls, all strategy sections, role assignments/dependency blockers, category capabilities, and evidence references. All 15 categories are planning-supported, but project implementation adapters are missing; static-template QA is limited to internal templates; production readiness is unverified. The stale 54-role label is corrected to 50.
+- Specialist assignments are retained as BLOCKED recommendations, never reported as executed. No customer-project worker adapter, project-specific task execution, customer QA, or human delivery-approval workflow exists yet. The local worker still requires an explicit command; Ollama remains loopback-only.
+- Existing daily batch completion now requires saved work products, safe paths to actual local artifacts, coder/QA evidence, and a persisted QA report/manifest that matches the batch. LLM-only role briefs are labeled LEGACY_UNVERIFIED; pre-existing completed batches lacking evidence are surfaced as LEGACY_UNVERIFIED without invented evidence.
+- Validation: 223 project tests passed; focused TypeScript check (`npx.cmd tsc --noEmit`) passed; ESLint on changed workforce files passed; `git diff --check` passed. Production build was not run. Local development server remains available at `http://localhost:3000` (homepage returned HTTP 200).
+- No customer project was generated or approved, no database records were changed by this work, and no deployment/push occurred. Keep the pre-existing dirty `tsconfig.tsbuildinfo` out of commits. The worktree also contains separate AI Creator Studio estimate changes; preserve them.
+
+## Latest resume point — AI Creator Studio estimate snapshots (local only)
+
+- Workspace: `D:\website-projects-backup\durrani-web-developers`; branch `main`. This AI Creator Studio change is local and **must not be pushed, deployed, or applied to production** during this task.
+- The new server-side estimate wrapper reuses `calculateCreativeQuote` and the trusted Creative Studio catalog. New submissions save an `originalEstimate` snapshot beside the existing quote and catalog snapshot. Public confirmation shows the original estimate, catalog version, breakdown, status, confidence, missing information, and unpriced requirements; the estimate is explicitly preliminary, not a confirmed quotation.
+- Admins can separately adjust quantity, quality, complexity, aspect ratio, and catalog add-ons with a required reason. The server recalculates against the pricing catalog saved with that inquiry, records actor/time/reason in `adminEstimateAdjustment` and the activity trail, and does not overwrite the original snapshot or customer quote. Adjustments lock after a quote is sent/approved or payment begins.
+- Customer submissions use an idempotency key and fingerprint, so identical retries resolve to the original inquiry and tracking token rather than creating duplicate inquiries/estimates. The HMAC-derived identifier/token require the existing shared `SESSION_SECRET` in production. Existing six-digit inquiry IDs continue to work. No schema migration is required because the snapshots are stored in the existing inquiry JSONB data.
+- Verified pricing remains unchanged: Pakistan/PKR video is PKR 10,000 per minute; image pricing is unset; enabled add-ons currently require custom quotes; MVP and unpriced services remain review-required. No package price or currency conversion was invented.
+- Current validation: 217 tests passed; TypeScript, ESLint, production build, and `git diff --check` passed. No valid submission was run against `.env.local` because its backend may target production. Production login/inquiry behavior has not been tested or deployed for this change.
+- Changed files: `src/lib/creative-studio-estimate.ts`, `src/lib/creative-studio.ts`, `src/lib/creative-studio-storage.ts`, Creative Studio customer/admin pages and API routes, and `tests/creative-studio.test.ts`. No database writes, migration, deployment, push, or customer communication occurred.
+- `tsconfig.tsbuildinfo` was already dirty before this task; keep it out of commits. Next step, if release work is explicitly authorized, is review the final diff and run any desired integration test against an isolated non-production backend before a separately approved deployment.
+
+## Previous resume point — website inquiry estimate release (2026-11-02)
 
 - Workspace: `D:\website-projects-backup\durrani-web-developers`; GitHub `main`; production Vercel project `nexuseventmanagementorg-2858/durraniwebdevelopers` (`prj_S3HMr6NkIl9fr6qUWU7OR1NdEnXc`), production alias `https://durraniwebdevelopers.vercel.app`.
 - The website-build inquiry inbox now calculates a preliminary scope estimate from published packages/add-ons, displays line items, confidence, follow-up gaps, and supported international currency conversions. Admin package/add-on adjustments are server-recalculated and stored separately from customer-submitted price/payment amounts; changes lock after quotation/project progression. New website inquiries persist the automated estimate. Legacy inquiries get an in-memory estimate and are explicitly labeled as historical/unsubmitted calculator amount where appropriate.
 - The “Customer-submitted calculator amount” is only the customer's original calculator snapshot; it is not the admin's scope estimate. Old inquiries without a stored calculator total cannot have that original amount reconstructed. The UI now explains this difference.
-- This estimate work is for the regular website-build inquiry path only; **AI Creator Studio pricing/estimate snapshots are not yet integrated**. Next Copilot session: continue from the Creative Studio request/inbox path (`src/app/creative-studio/studio-client.tsx`, `src/app/api/public/creative-studio/inquiries/route.ts`, `src/app/admin/creative-studio/page.tsx`). First trace the existing Studio quote/pricing contract end to end; then design a separate scope-aware Studio estimate and preserve the submitted quote/snapshot independently. Do not reuse website packages or change Creative Studio prices without verifying its existing pricing configuration.
+- This estimate work was for the regular website-build inquiry path. AI Creator Studio estimate snapshots are now tracked separately in the latest resume point above; do not reuse website packages or alter Creative Studio prices.
 - Other pending app work in this release includes the Creative Studio reference upload changes, editable admin WhatsApp reply templates, the website inquiry estimator, admin authentication fixes, and CV page/assets. Do not deploy the local `supabase/.temp` directory or `tsconfig.tsbuildinfo`.
 - Pricing discrepancy to retain: the earlier brief describes Admin Dashboard at PKR 15,000, while published add-on config returned PKR 10,000. The estimator uses the published/live config; do not silently change pricing.
 - Validation before release: all 209 project tests passed; ESLint, TypeScript, and production build passed. The final admin label/explanation edit also passed ESLint and TypeScript and was verified in the localhost inquiry modal. Application release commit `39f083828f7883f0ca508dda51357fa3d307cc68` is pushed to `main`; Vercel production deployment `dpl_5qN4UDPcXqijXcEoJ296a8e71jZD` reached `READY` and was explicitly promoted to `https://durraniwebdevelopers.vercel.app`. Smoke checks returned HTTP 200 for `/`, `/admin/login`, `/admin/inquiries`, `/creative-studio`, `/calculator`, `/api/public/creative-studio/config`, `/api/public/addons`, and `/cvs/shamsa-durrani-cv.pdf`.

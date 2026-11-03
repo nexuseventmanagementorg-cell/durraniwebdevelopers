@@ -5,12 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Clock3, LoaderCircle, MessageCircle, Printer } from "lucide-react";
 import { formatCreativeCurrency } from "@/lib/creative-studio";
-import type { CreativeInquiryStatus, CreativeQuote } from "@/lib/creative-studio";
+import type { CreativeInquiryStatus, CreativeQuote, CreativeStudioEstimate } from "@/lib/creative-studio";
 
 interface PublicInquiry {
   id: string;
   status: CreativeInquiryStatus;
   quote: CreativeQuote;
+  originalEstimate?: CreativeStudioEstimate;
   project: {
     subcategory: string;
     projectKind: "video" | "image" | "mvp";
@@ -55,7 +56,7 @@ export default function CreativeStudioConfirmation({ inquiryId }: { inquiryId: s
   const [approving, setApproving] = useState(false);
 
   useEffect(() => {
-    if (!inquiryId || !/^DAC-\d{4}-\d{6}$/.test(inquiryId)) {
+    if (!inquiryId || !/^DAC-\d{4}-(?:\d{6}|[A-F0-9]{16})$/i.test(inquiryId)) {
       setError("The inquiry link is invalid.");
       setLoading(false);
       return;
@@ -114,6 +115,20 @@ export default function CreativeStudioConfirmation({ inquiryId }: { inquiryId: s
   const formattedQuote = inquiry?.quote.total === null || !inquiry
     ? "Manual quotation requested"
     : formatCreativeCurrency(inquiry.quote.total, inquiry.quote.currency);
+  const finalQuoteSent = Boolean(inquiry && [
+    "AWAITING_CUSTOMER_APPROVAL",
+    "AWAITING_PAYMENT",
+    "PAYMENT_UNDER_VERIFICATION",
+    "PAYMENT_RECEIVED",
+    "ADMIN_APPROVED",
+    "READY_FOR_PRODUCTION",
+    "IN_PRODUCTION",
+    "QUALITY_REVIEW",
+    "REVISION_REQUESTED",
+    "APPROVED_FOR_DELIVERY",
+    "DELIVERED",
+    "COMPLETED",
+  ].includes(inquiry.status));
   const whatsappText = inquiry
     ? `Hello Shamsa, I submitted creative inquiry ${inquiry.id} for ${inquiry.project.subcategory}. Budget: ${formattedQuote}.`
     : "";
@@ -136,9 +151,36 @@ export default function CreativeStudioConfirmation({ inquiryId }: { inquiryId: s
               <p className="text-xs font-bold uppercase tracking-widest text-indigo-200">Inquiry ID</p>
               <p className="mt-1 text-2xl font-black">{inquiry.id}</p>
               <p className="mt-4 text-sm text-slate-300">{inquiry.project.subcategory}</p>
+              <p className="mt-1 text-xs font-bold uppercase tracking-wider text-indigo-200">{finalQuoteSent ? "Current final quotation" : "Current estimate"}</p>
               <p className="mt-1 text-2xl font-black">{formattedQuote}</p>
-              <p className="mt-1 text-xs text-slate-400">{inquiry.quote.requiresManualReview ? inquiry.quote.reason : "Estimated amount; final scope remains subject to team approval."}</p>
+              <p className="mt-1 text-xs text-slate-400">{finalQuoteSent ? "This quotation is awaiting your approval or continuing through the project workflow." : inquiry.quote.requiresManualReview ? inquiry.quote.reason : "Preliminary estimate only; the final scope and quotation require studio review."}</p>
             </section>
+            {inquiry.originalEstimate && (
+              <section className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5">
+                <h2 className="font-black text-slate-900">Original automatic estimate</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-600">Saved with your inquiry using the Creative Studio pricing catalog at submission. This is separate from any final quotation.</p>
+                <dl className="mt-3 space-y-2 text-sm">
+                  <Summary label="Estimate status" value={inquiry.originalEstimate.status.replaceAll("_", " ")} />
+                  <Summary label="Confidence" value={inquiry.originalEstimate.confidence} />
+                  <Summary label="Service" value={inquiry.originalEstimate.selectedService} />
+                  <Summary label="Quantity" value={`${inquiry.originalEstimate.quantity.value} ${inquiry.originalEstimate.quantity.unit}`} />
+                  <Summary label="Catalog version" value={`v${inquiry.originalEstimate.pricingCatalogVersion}`} />
+                  <Summary label="Estimate total" value={inquiry.originalEstimate.estimatedTotal === null ? "Manual review required" : formatCreativeCurrency(inquiry.originalEstimate.estimatedTotal, inquiry.originalEstimate.currency)} />
+                </dl>
+                <ul className="mt-3 space-y-1 border-t border-indigo-100 pt-3">
+                  {inquiry.originalEstimate.lines.map((line) => (
+                    <li key={line.id} className="flex justify-between gap-3 text-xs">
+                      <span className="text-slate-600">{line.label}</span>
+                      <span className="font-semibold text-slate-800">{line.amount === null ? "Unpriced" : formatCreativeCurrency(line.amount, inquiry.originalEstimate!.currency)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-xs leading-5 text-slate-600">{inquiry.originalEstimate.explanation}</p>
+                {inquiry.originalEstimate.includedFeatures.length > 0 && <p className="mt-2 text-xs leading-5 text-slate-600">Priced add-ons: {inquiry.originalEstimate.includedFeatures.join(", ")}</p>}
+                {inquiry.originalEstimate.missingInformation.length > 0 && <p className="mt-2 text-xs leading-5 text-amber-900">For a more accurate estimate, please clarify: {inquiry.originalEstimate.missingInformation.join(", ")}.</p>}
+                {inquiry.originalEstimate.unpricedRequirements.length > 0 && <p className="mt-2 text-xs leading-5 text-amber-900">Requires a manual quotation: {inquiry.originalEstimate.unpricedRequirements.join(" ")}</p>}
+              </section>
+            )}
             <section className="rounded-2xl border border-slate-200 p-5">
               <div className="flex items-start gap-3">
                 <Clock3 className="mt-0.5 h-5 w-5 text-indigo-600" />

@@ -10,7 +10,15 @@ import {
   VIDEO_DURATIONS,
 } from "../src/lib/creative-studio";
 import type { CreativeQuoteInput, CreativeStudioConfig } from "../src/lib/creative-studio";
-import { isValidCreativeStudioConfig } from "../src/lib/creative-studio-storage";
+import {
+  calculateCreativeStudioEstimate,
+  isCreativeEstimateAdjustmentAllowed,
+} from "../src/lib/creative-studio-estimate";
+import {
+  createCreativeInquiryId,
+  createCreativeTrackingToken,
+  isValidCreativeStudioConfig,
+} from "../src/lib/creative-studio-storage";
 import { isValidCreativeReferenceFile } from "../src/lib/creative-reference-files";
 import { GET as getAdminCreativeInquiries } from "../src/app/api/admin/creative-studio/route";
 import { POST as submitCreativeInquiry } from "../src/app/api/public/creative-studio/inquiries/route";
@@ -31,6 +39,41 @@ function input(overrides: Partial<CreativeQuoteInput> = {}): CreativeQuoteInput 
     addonIds: [],
     ...overrides,
   };
+}
+
+function estimateFor(
+  quoteInput: CreativeQuoteInput = input(),
+  config: CreativeStudioConfig = DEFAULT_CREATIVE_STUDIO_CONFIG,
+  overrides: {
+    brief?: string;
+    vision?: string;
+    languages?: Record<string, string>;
+    customerType?: string;
+    company?: string;
+  } = {}
+) {
+  return calculateCreativeStudioEstimate({
+    inquiryId: "DAC-2026-123456",
+    estimateId: "DAC-2026-123456-original",
+    calculatedAt: "2026-01-01T00:00:00.000Z",
+    input: quoteInput,
+    config,
+    customer: {
+      name: "Test Customer",
+      email: "customer@example.test",
+      whatsapp: "+923001234567",
+      country: "Pakistan",
+      customerType: overrides.customerType || "Individual",
+      company: overrides.company || "",
+      preferredDeliveryDate: "",
+    },
+    project: {
+      brief: overrides.brief || "Create a promotional video for a local business launch campaign.",
+      vision: overrides.vision ?? "Bright, modern commercial visuals.",
+      languages: overrides.languages || { video: "English" },
+      referenceFiles: [],
+    },
+  });
 }
 
 function validInquiryForm(file?: File, brief = "A test project brief for Creative Studio validation."): FormData {
@@ -182,6 +225,121 @@ test("custom add-ons are deduplicated and require a manual quote", () => {
   assert.equal(quote.total, null);
 });
 
+test("estimate snapshots reuse verified pricing and capture a complete line breakdown", () => {
+  const estimate = estimateFor();
+
+  assert.equal(estimate.estimatedTotal, 10000);
+  assert.equal(estimate.subtotal, 10000);
+  assert.equal(estimate.currency, "PKR");
+  assert.equal(estimate.pricingCatalogVersion, DEFAULT_CREATIVE_STUDIO_CONFIG.version);
+  assert.equal(estimate.status, "ESTIMATED");
+  assert.equal(estimate.confidence, "HIGH");
+  assert.deepEqual(estimate.lines.map((line) => [line.id, line.amount]), [["service-base", 10000]]);
+  assert.equal(estimate.matchedPackage, null);
+});
+
+test("estimate snapshot quantity, resolution, aspect ratio, and complexity use the existing calculator", () => {
+  const advanced = estimateFor(input({
+    durationSeconds: 120,
+    complexity: "advanced",
+    quality: "4K",
+    aspectRatio: "16:9",
+  }));
+  const directQuote = calculateCreativeQuote(input({
+    durationSeconds: 120,
+    complexity: "advanced",
+    quality: "4K",
+    aspectRatio: "16:9",
+  }), DEFAULT_CREATIVE_STUDIO_CONFIG);
+
+  assert.equal(advanced.quantity.value, 120);
+  assert.equal(advanced.estimatedTotal, directQuote.total);
+  assert.equal(advanced.estimatedTotal, 49500);
+  assert.deepEqual(advanced.lines.map((line) => line.id), [
+    "service-base", "complexity", "quality", "aspect-ratio",
+  ]);
+});
+
+test("unpriced image services, MVP scope, and custom add-ons never become numeric totals", () => {
+  const image = estimateFor(input({ projectKind: "image", subcategory: "Product Images" }));
+  const mvp = estimateFor(input({
+    projectKind: "mvp",
+    categoryId: "ai-development",
+    subcategory: "SaaS Product Prototype",
+  }));
+  const customAddon = estimateFor(input({
+    addonIds: [DEFAULT_CREATIVE_STUDIO_CONFIG.addons[0].id],
+  }));
+
+  assert.equal(image.estimatedTotal, null);
+  assert.equal(image.status, "ADMIN_REVIEW_REQUIRED");
+  assert.equal(mvp.estimatedTotal, null);
+  assert.equal(mvp.status, "ADMIN_REVIEW_REQUIRED");
+  assert.equal(customAddon.estimatedTotal, null);
+  assert.equal(customAddon.status, "ADMIN_REVIEW_REQUIRED");
+  assert.ok(customAddon.unpricedRequirements.length > 0);
+});
+
+test("mentioned but unselected add-ons and invalid service IDs are flagged for review", () => {
+  const mentionedAddon = estimateFor(input(), DEFAULT_CREATIVE_STUDIO_CONFIG, {
+    brief: "Please include AI voiceover and captions in this video project scope.",
+  });
+  const invalidAddon = estimateFor(input({ addonIds: ["not-in-catalog"] }));
+  const invalidService = estimateFor(input({ subcategory: "Made-up deliverable" }));
+
+  assert.equal(mentionedAddon.estimatedTotal, null);
+  assert.match(mentionedAddon.unpricedRequirements.join(" "), /mentioned in the brief/);
+  assert.equal(invalidAddon.estimatedTotal, null);
+  assert.match(invalidAddon.unpricedRequirements.join(" "), /not available/);
+  assert.equal(invalidService.status, "INSUFFICIENT_INFORMATION");
+  assert.equal(invalidService.estimatedTotal, null);
+});
+
+test("missing scope detail is identified without changing the catalog-calculated amount", () => {
+  const estimate = estimateFor(input(), DEFAULT_CREATIVE_STUDIO_CONFIG, {
+    vision: "",
+    languages: {},
+  });
+
+  assert.equal(estimate.estimatedTotal, 10000);
+  assert.equal(estimate.status, "NEEDS_FOLLOW_UP");
+  assert.deepEqual(estimate.missingInformation, [
+    "Visual direction or creative vision",
+    "Preferred production language",
+  ]);
+});
+
+test("estimate adjustment remains separate from the original and locks after quote approval or payment", () => {
+  const original = estimateFor();
+  const adjusted = estimateFor(input({ durationSeconds: 120 }));
+  const inquiry = {
+    status: "UNDER_REVIEW" as const,
+    originalEstimate: original,
+    adminEstimateAdjustment: {
+      estimate: adjusted,
+      reason: "Customer confirmed a longer deliverable.",
+      adjustedAt: "2026-01-02T00:00:00.000Z",
+      adjustedBy: "admin@example.test",
+    },
+  };
+  const lockedByApproval = {
+    ...inquiry,
+    status: "AWAITING_PAYMENT" as const,
+    customerQuoteApprovedAt: "2026-01-03T00:00:00.000Z",
+  };
+  const lockedByPayment = {
+    ...inquiry,
+    status: "PAYMENT_RECEIVED" as const,
+    paymentVerifiedAt: "2026-01-04T00:00:00.000Z",
+  };
+
+  assert.equal(isCreativeEstimateAdjustmentAllowed(inquiry), true);
+  assert.equal(isCreativeEstimateAdjustmentAllowed(lockedByApproval), false);
+  assert.equal(isCreativeEstimateAdjustmentAllowed(lockedByPayment), false);
+  assert.equal(inquiry.originalEstimate.estimatedTotal, 10000);
+  assert.equal(inquiry.adminEstimateAdjustment.estimate.estimatedTotal, 20000);
+});
+
 test("feature-film selections retain an indicative amount and require review", () => {
   const quote = calculateCreativeQuote(input({
     categoryId: "film",
@@ -257,6 +415,33 @@ test("public inquiry endpoint rejects malformed form data without reporting succ
   });
 
   const response = await submitCreativeInquiry(request);
+  const result = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(result.success, false);
+});
+
+test("Creative Studio submission retry keys produce a stable private inquiry ID and tracking token", () => {
+  const key = "0e8d8a28-c5ef-4f4e-b13b-a9e57588d2a4";
+  const firstId = createCreativeInquiryId(key);
+  const firstToken = createCreativeTrackingToken(key);
+
+  assert.match(firstId, /^DAC-\d{4}-[A-F0-9]{16}$/);
+  assert.equal(createCreativeInquiryId(key), firstId);
+  assert.match(firstToken, /^[A-Za-z0-9_-]{32,100}$/);
+  assert.equal(createCreativeTrackingToken(key), firstToken);
+  assert.notEqual(firstToken, key);
+});
+
+test("public inquiry endpoint rejects malformed add-on selections instead of silently dropping them", async () => {
+  const form = validInquiryForm();
+  const project = JSON.parse(String(form.get("project"))) as {
+    quoteInput: Record<string, unknown>;
+  };
+  project.quoteInput.addonIds = ["professional-scriptwriting", 42];
+  form.set("project", JSON.stringify(project));
+
+  const response = await submitCreativeInquiry(requestWithForm(form));
   const result = await response.json();
 
   assert.equal(response.status, 400);

@@ -9,6 +9,11 @@ import {
 } from "@/lib/creative-studio-storage";
 import type { CreativeInquiryStatus } from "@/lib/creative-studio";
 import { CREATIVE_STATUSES } from "@/lib/creative-studio";
+import {
+  calculateCreativeStudioEstimate,
+  isCreativeEstimateAdjustmentAllowed,
+  isSupportedCreativeService,
+} from "@/lib/creative-studio-estimate";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +78,84 @@ export async function PATCH(request: NextRequest) {
         admin.email,
         "QUOTATION_SENT",
         `Final quotation ${quote.currency} ${amount} sent for customer approval.`
+      );
+    } else if (record.action === "adjust_estimate") {
+      if (!isCreativeEstimateAdjustmentAllowed(current)) {
+        return NextResponse.json({ success: false, error: "The preliminary estimate is locked after a quotation is sent, approved, or payment begins." }, { status: 409 });
+      }
+      if (typeof record.reason !== "string" || record.reason.trim().length < 10 || record.reason.trim().length > 500) {
+        return NextResponse.json({ success: false, error: "Provide an adjustment reason between 10 and 500 characters." }, { status: 400 });
+      }
+      const durationSeconds = Number(record.durationSeconds);
+      const imageCount = Number(record.imageCount);
+      const complexity = typeof record.complexity === "string" ? record.complexity : "";
+      const quality = typeof record.quality === "string" ? record.quality : "";
+      const aspectRatio = typeof record.aspectRatio === "string" ? record.aspectRatio : "";
+      const rawAddonIds = record.addonIds;
+      if (!Number.isInteger(durationSeconds) || durationSeconds < 10 || durationSeconds > 9000 ||
+          !Number.isInteger(imageCount) || imageCount < 1 || imageCount > 500 ||
+          !["basic", "standard", "advanced", "premium"].includes(complexity) ||
+          !["720p", "1080p", "2K", "4K"].includes(quality) ||
+          !(/^([1-9]\d?):([1-9]\d?)$/.test(aspectRatio) ||
+            ["9:16", "16:9", "1:1", "4:5"].includes(aspectRatio)) ||
+          !Array.isArray(rawAddonIds) ||
+          !rawAddonIds.every((addonId): addonId is string => typeof addonId === "string")) {
+        return NextResponse.json({ success: false, error: "The adjusted scope contains invalid quantity, format, quality, or add-on selections." }, { status: 400 });
+      }
+      const addonIds = Array.from(new Set(rawAddonIds));
+      const enabledAddonIds = new Set(current.quoteSnapshot.addons
+        .filter((addon) => addon.enabled)
+        .map((addon) => addon.id));
+      if (addonIds.some((addonId) => !enabledAddonIds.has(addonId))) {
+        return NextResponse.json({ success: false, error: "An adjusted add-on is unavailable in the recorded pricing catalog." }, { status: 400 });
+      }
+      const adjustedInput = {
+        country: current.project.country,
+        currency: current.project.currency,
+        projectKind: current.project.projectKind,
+        categoryId: current.project.categoryId,
+        subcategory: current.project.subcategory,
+        durationSeconds,
+        imageCount,
+        complexity,
+        quality,
+        aspectRatio,
+        languageCount: current.project.languageCount,
+        addonIds,
+      };
+      if (!isSupportedCreativeService(adjustedInput)) {
+        return NextResponse.json({ success: false, error: "This inquiry does not match a supported Creative Studio service." }, { status: 409 });
+      }
+      const adjustedAt = new Date().toISOString();
+      const estimate = calculateCreativeStudioEstimate({
+        inquiryId: current.id,
+        estimateId: `${current.id}-admin-adjusted`,
+        calculatedAt: adjustedAt,
+        input: adjustedInput,
+        config: current.quoteSnapshot,
+        customer: current.customer,
+        project: current.project,
+      });
+      const reason = record.reason.trim();
+      updated = await updateCreativeInquiry(
+        id,
+        {
+          ...(current.originalEstimate ? {} : {
+            originalEstimate: calculateCreativeStudioEstimate({
+              inquiryId: current.id,
+              estimateId: `${current.id}-original-reconstructed`,
+              calculatedAt: current.createdAt,
+              input: current.project,
+              config: current.quoteSnapshot,
+              customer: current.customer,
+              project: current.project,
+            }),
+          }),
+          adminEstimateAdjustment: { estimate, reason, adjustedAt, adjustedBy: admin.email },
+        },
+        admin.email,
+        "ESTIMATE_ADJUSTED",
+        `Preliminary scope estimate adjusted to ${estimate.estimatedTotal === null ? "manual review" : `${estimate.currency} ${estimate.estimatedTotal}`}. Reason: ${reason}`
       );
     } else if (record.action === "verify_payment") {
       const amount = Number(record.amount);

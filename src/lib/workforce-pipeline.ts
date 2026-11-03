@@ -1,14 +1,15 @@
 import { randomUUID } from "crypto";
-import { mkdir, open, readFile, rename, rm, stat, writeFile } from "fs/promises";
+import { lstat, mkdir, open, readFile, rename, rm, stat, writeFile } from "fs/promises";
 import { join } from "path";
 import { BUSINESS_CATEGORIES } from "@/lib/business-addon-catalog";
 import { selectDailyConceptTargets, type ConceptTarget, type OllamaModel, type TemplateConcept, type WorkforceAgentBrief } from "@/lib/ollama-provider";
 import { DWD_WORKFORCE_AGENTS, DWD_WORKFORCE_DEPARTMENTS } from "@/lib/workforce-agents";
 import type { AgentReadinessRecord } from "@/lib/workforce-agent-readiness";
-import { getWorkforceStateDirectory } from "@/lib/workforce-storage";
+import { getGeneratedTemplatesDirectory, getWorkforceStateDirectory } from "@/lib/workforce-storage";
 
 export type WorkforceBatchStatus = "queued" | "running" | "paused" | "completed" | "failed" | "cancelled";
 export type WorkforceTaskStatus = "waiting" | "running" | "completed" | "failed" | "cancelled";
+export type WorkforceWorkerHeartbeatStatus = "RECENT_HEARTBEAT" | "STALE_HEARTBEAT" | "NOT_REPORTING";
 
 export interface WorkforceTask {
   id: string;
@@ -25,6 +26,8 @@ export interface WorkforceTask {
     deliveredAt?: string;
   };
   status: WorkforceTaskStatus;
+  evidenceStatus?: "VERIFIED" | "UNVERIFIED" | "LEGACY_UNVERIFIED" | "BLOCKED" | "FAILED";
+  evidenceArtifacts?: string[];
   output?: WorkforceAgentBrief;
   startedAt?: string;
   completedAt?: string;
@@ -36,6 +39,8 @@ export interface WorkforceBatch {
   scheduledDate: string;
   source: "manual" | "schedule";
   status: WorkforceBatchStatus;
+  completionEvidenceStatus?: "VERIFIED" | "UNVERIFIED" | "LEGACY_UNVERIFIED";
+  verificationVersion?: 2;
   attempt: number;
   model: string | null;
   createdBy: string;
@@ -72,6 +77,12 @@ export interface WorkforceState {
   scheduler: {
     lastObservedDate: string | null;
   };
+  worker?: {
+    pid: number;
+    startedAt: string;
+    lastSeenAt: string;
+    status: "running" | "stopped";
+  } | null;
   batches: WorkforceBatch[];
   events: Array<{
     id: string;
@@ -80,6 +91,17 @@ export interface WorkforceState {
     batchId?: string;
     details: Record<string, string | number | boolean | null>;
   }>;
+}
+
+export function getWorkforceWorkerHeartbeatStatus(
+  worker: WorkforceState["worker"],
+  now = Date.now()
+): WorkforceWorkerHeartbeatStatus {
+  if (!worker || worker.status !== "running") return "NOT_REPORTING";
+  const lastSeen = Date.parse(worker.lastSeenAt);
+  if (!Number.isFinite(lastSeen)) return "NOT_REPORTING";
+  const age = now - lastSeen;
+  return age >= 0 && age <= 15_000 ? "RECENT_HEARTBEAT" : "STALE_HEARTBEAT";
 }
 
 export class WorkforceStateError extends Error {
@@ -145,7 +167,19 @@ function validateState(value: unknown): WorkforceState {
       !Array.isArray(state.events)) {
     throw new WorkforceStateError("The local workforce state file has an unsupported or invalid structure.");
   }
-  return state as WorkforceState;
+  const validated = state as WorkforceState;
+  validated.worker ??= null;
+  for (const batch of validated.batches) {
+    if (batch.status === "completed" && batch.verificationVersion !== 2) {
+      batch.completionEvidenceStatus = "LEGACY_UNVERIFIED";
+      for (const task of batch.tasks) {
+        if (task.status === "completed") task.evidenceStatus = "LEGACY_UNVERIFIED";
+      }
+    } else if (batch.status === "completed" && !batch.completionEvidenceStatus) {
+      batch.completionEvidenceStatus = "UNVERIFIED";
+    }
+  }
+  return validated;
 }
 
 async function readStateUnlocked(): Promise<WorkforceState> {
@@ -316,6 +350,9 @@ function createBatch(day: string, source: "manual" | "schedule", createdBy: stri
 
 function migratePendingBatchTasks(state: WorkforceState): WorkforceState {
   for (const batch of state.batches) {
+    if (batch.status === "completed" && batch.verificationVersion !== 2) {
+      batch.completionEvidenceStatus = "LEGACY_UNVERIFIED";
+    }
     if (batch.tasks.length === DWD_WORKFORCE_AGENTS.length &&
         batch.tasks.every((task) => Array.isArray(task.handoff?.deliveredTo))) continue;
     if (batch.status === "completed" || batch.status === "cancelled") {
@@ -354,6 +391,74 @@ function migratePendingBatchTasks(state: WorkforceState): WorkforceState {
     });
   }
   return state;
+}
+
+function validateArtifactReferences(artifacts: string[]): void {
+  if (!Array.isArray(artifacts) || artifacts.length === 0 || artifacts.some((artifact) =>
+    typeof artifact !== "string" || !artifact || artifact.length > 300 ||
+    !artifact.startsWith("generated-templates/") || artifact.includes("\\") ||
+    artifact.split("/").some((segment) => !segment || segment === "." || segment === "..")
+  )) {
+    throw new WorkforceStateError("Workforce evidence requires safe, explicit generated artifact paths.");
+  }
+}
+
+function hasSavedWorkProduct(value: unknown): value is WorkforceAgentBrief {
+  if (!value || typeof value !== "object" || Array.isArray(value) ||
+      !("summary" in value) || typeof value.summary !== "string" ||
+      !value.summary.trim() || value.summary.length > 500 ||
+      !("recommendations" in value) || !Array.isArray(value.recommendations) ||
+      value.recommendations.length > 4 ||
+      !value.recommendations.every((item) => typeof item === "string" && item.trim() && item.length <= 300) ||
+      !("openQuestions" in value) || !Array.isArray(value.openQuestions) ||
+      value.openQuestions.length > 4 ||
+      !value.openQuestions.every((item) => typeof item === "string" && item.trim() && item.length <= 300)) {
+    return false;
+  }
+  return true;
+}
+
+function hasRoleSpecificEvidence(role: string, artifacts: string[]): boolean {
+  if (role === "Web Development Coder") {
+    return artifacts.some((artifact) => /\/(?:starter|business|enterprise)$/.test(artifact));
+  }
+  if (role === "QA Testing Bot") {
+    return artifacts.some((artifact) => artifact.endsWith("/batch-report.json"));
+  }
+  return false;
+}
+
+async function verifyGeneratedArtifacts(artifacts: string[]): Promise<void> {
+  validateArtifactReferences(artifacts);
+  const root = getGeneratedTemplatesDirectory();
+  const rootInfo = await lstat(root).catch((error: unknown) => {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+      throw new WorkforceStateError("The generated artifact directory is missing.");
+    }
+    throw error;
+  });
+  if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink()) {
+    throw new WorkforceStateError("Generated artifacts must be stored in a real local directory.");
+  }
+  for (const artifact of artifacts) {
+    let current = root;
+    const segments = artifact.split("/").slice(1);
+    for (let index = 0; index < segments.length; index += 1) {
+      const segment = segments[index];
+      current = join(current, segment);
+      const info = await lstat(current).catch((error: unknown) => {
+        if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+          throw new WorkforceStateError(`A required generated artifact is missing: ${artifact}`);
+        }
+        throw error;
+      });
+      if (info.isSymbolicLink() ||
+          (index < segments.length - 1 && !info.isDirectory()) ||
+          (index === segments.length - 1 && !info.isDirectory() && !info.isFile())) {
+        throw new WorkforceStateError(`A generated artifact is not a verified file or directory: ${artifact}`);
+      }
+    }
+  }
 }
 
 export async function readWorkforceState(): Promise<WorkforceState> {
@@ -527,16 +632,45 @@ export async function updateBatchTask(
   role: string,
   status: WorkforceTaskStatus,
   error?: string,
-  output?: WorkforceAgentBrief
+  output?: WorkforceAgentBrief,
+  evidenceArtifacts?: string[]
 ): Promise<void> {
+  if (status === "completed" && evidenceArtifacts?.length) {
+    await verifyGeneratedArtifacts(evidenceArtifacts);
+  }
   await updateWorkforceState((state) => {
     const batch = state.batches.find((entry) => entry.id === batchId);
     if (!batch) throw new WorkforceStateError("The active workforce batch was not found.");
     const task = batch.tasks.find((entry) => entry.role === role);
     if (!task) throw new WorkforceStateError(`The workforce task for ${role} was not found.`);
+    if (status === "running" || status === "completed") {
+      const incompleteDependency = task.dependencies.find((dependencyId) => {
+        const dependency = batch.tasks.find((entry) => entry.agentId === dependencyId);
+        return !dependency || dependency.status !== "completed" || !dependency.output;
+      });
+      if (incompleteDependency) {
+        throw new WorkforceStateError(`The ${role} task is blocked by an incomplete dependency.`);
+      }
+    }
+    const completedOutput = output || task.output;
+    if (status === "completed" && !hasSavedWorkProduct(completedOutput)) {
+      throw new WorkforceStateError(`The ${role} task cannot complete without a saved work product.`);
+    }
     task.status = status;
     task.error = error;
     if (output) task.output = output;
+    if (status === "completed") {
+      task.evidenceStatus = evidenceArtifacts?.length && hasRoleSpecificEvidence(role, evidenceArtifacts)
+        ? "VERIFIED"
+        : "UNVERIFIED";
+      task.evidenceArtifacts = evidenceArtifacts?.length ? [...evidenceArtifacts] : [];
+    }
+    if (status === "failed") task.evidenceStatus = "FAILED";
+    if (status === "cancelled") task.evidenceStatus = "BLOCKED";
+    if (status === "running") {
+      task.evidenceStatus = undefined;
+      task.evidenceArtifacts = [];
+    }
     if (status === "running") task.startedAt = new Date().toISOString();
     if (status === "completed" || status === "failed" || status === "cancelled") {
       task.completedAt = new Date().toISOString();
@@ -547,8 +681,18 @@ export async function updateBatchTask(
 
 export async function updateBatchTasks(
   batchId: string,
-  updates: Array<{ role: string; status: WorkforceTaskStatus; output?: WorkforceAgentBrief }>
+  updates: Array<{
+    role: string;
+    status: WorkforceTaskStatus;
+    output?: WorkforceAgentBrief;
+    evidenceArtifacts?: string[];
+  }>
 ): Promise<void> {
+  for (const update of updates) {
+    if (update.status === "completed" && update.evidenceArtifacts?.length) {
+      await verifyGeneratedArtifacts(update.evidenceArtifacts);
+    }
+  }
   await updateWorkforceState((state) => {
     const batch = state.batches.find((entry) => entry.id === batchId);
     if (!batch) throw new WorkforceStateError("The active workforce batch was not found.");
@@ -556,12 +700,38 @@ export async function updateBatchTasks(
     for (const update of updates) {
       const task = batch.tasks.find((entry) => entry.role === update.role);
       if (!task) throw new WorkforceStateError(`The workforce task for ${update.role} was not found.`);
+      if (update.status === "running" || update.status === "completed") {
+        const incompleteDependency = task.dependencies.find((dependencyId) => {
+          const dependency = batch.tasks.find((entry) => entry.agentId === dependencyId);
+          return !dependency || dependency.status !== "completed" || !dependency.output;
+        });
+        if (incompleteDependency) {
+          throw new WorkforceStateError(`The ${update.role} task is blocked by an incomplete dependency.`);
+        }
+      }
+      const completedOutput = update.output || task.output;
+      if (update.status === "completed" && !hasSavedWorkProduct(completedOutput)) {
+        throw new WorkforceStateError(`The ${update.role} task cannot complete without a saved work product.`);
+      }
       task.status = update.status;
       if (update.status === "running") task.startedAt = now;
       if (update.status === "completed" || update.status === "failed" || update.status === "cancelled") {
         task.completedAt = now;
       }
       if (update.output) task.output = update.output;
+      if (update.status === "completed") {
+        task.evidenceStatus = update.evidenceArtifacts?.length && hasRoleSpecificEvidence(update.role, update.evidenceArtifacts)
+          ? "VERIFIED"
+          : "UNVERIFIED";
+        task.evidenceArtifacts = update.evidenceArtifacts?.length ? [...update.evidenceArtifacts] : [];
+      } else if (update.status === "running") {
+        task.evidenceStatus = undefined;
+        task.evidenceArtifacts = [];
+      } else if (update.status === "failed") {
+        task.evidenceStatus = "FAILED";
+      } else if (update.status === "cancelled") {
+        task.evidenceStatus = "BLOCKED";
+      }
     }
     batch.updatedAt = now;
   });
@@ -573,12 +743,7 @@ export async function deliverWorkforceTask(input: {
   toRole: string;
   artifacts: string[];
 }): Promise<void> {
-  if (input.artifacts.length === 0 || input.artifacts.some((artifact) =>
-    !artifact || artifact.length > 300 || artifact.startsWith("/") || artifact.includes("\\") ||
-    artifact.split("/").some((segment) => segment === "." || segment === "..")
-  )) {
-    throw new WorkforceStateError("A task handoff requires safe, explicit artifact paths.");
-  }
+  validateArtifactReferences(input.artifacts);
   await updateWorkforceState((state) => {
     const batch = state.batches.find((entry) => entry.id === input.batchId);
     if (!batch) throw new WorkforceStateError("The active workforce batch was not found.");
@@ -623,12 +788,90 @@ export async function completeWorkforceBatch(input: {
   artifacts: string[];
   qaReport: NonNullable<WorkforceBatch["qaReport"]>;
 }): Promise<WorkforceBatch> {
+  const snapshot = await readWorkforceState();
+  const snapshotBatch = snapshot.batches.find((entry) => entry.id === input.batchId);
+  if (!snapshotBatch || snapshotBatch.status !== "running") {
+    throw new WorkforceStateError("The batch was paused or cancelled before completion.");
+  }
+  const reportPath = `generated-templates/${snapshotBatch.scheduledDate}/${snapshotBatch.id}/batch-report.json`;
+  const manifestPath = `generated-templates/${snapshotBatch.scheduledDate}/${snapshotBatch.id}/manifest.json`;
+  const conceptPath = `generated-templates/${snapshotBatch.scheduledDate}/${snapshotBatch.id}/concepts.json`;
+  if (![reportPath, manifestPath, conceptPath].every((required) => input.artifacts.includes(required))) {
+    throw new WorkforceStateError("A completed batch requires its verified concepts, manifest, and QA report artifacts.");
+  }
+  await verifyGeneratedArtifacts(input.artifacts);
+  const [reportContents, manifestContents] = await Promise.all([
+    readFile(join(getGeneratedTemplatesDirectory(), snapshotBatch.scheduledDate, snapshotBatch.id, "batch-report.json"), "utf8"),
+    readFile(join(getGeneratedTemplatesDirectory(), snapshotBatch.scheduledDate, snapshotBatch.id, "manifest.json"), "utf8"),
+  ]);
+  let report: unknown;
+  let manifest: unknown;
+  try {
+    report = JSON.parse(reportContents);
+    manifest = JSON.parse(manifestContents);
+  } catch {
+    throw new WorkforceStateError("The saved batch report or manifest is invalid JSON.");
+  }
+
   let result!: WorkforceBatch;
   await updateWorkforceState((state) => {
     const batch = state.batches.find((entry) => entry.id === input.batchId);
     if (!batch || batch.status !== "running") throw new WorkforceStateError("The batch was paused or cancelled before completion.");
-    if (input.qaReport.failed > 0) throw new WorkforceStateError("A batch cannot complete while required quality checks are failing.");
+    if (batch.tasks.length !== DWD_WORKFORCE_AGENTS.length ||
+        batch.tasks.some((task) =>
+          task.status !== "completed" ||
+          !hasSavedWorkProduct(task.output) ||
+          typeof task.handoff?.expectedOutput !== "string" ||
+          !task.handoff.expectedOutput.trim() ||
+          !Array.isArray(task.handoff.acceptanceCriteria) ||
+          task.handoff.acceptanceCriteria.length === 0
+        )) {
+      throw new WorkforceStateError("A batch cannot complete until every registered task has a completed output and valid handoff.");
+    }
+    if (batch.tasks.some((task) =>
+      task.dependencies.some((dependencyId) => !batch.tasks.some((dependency) =>
+        dependency.agentId === dependencyId && dependency.status === "completed" && dependency.output
+      ))
+    )) {
+      throw new WorkforceStateError("A batch cannot complete while a task dependency is incomplete.");
+    }
+    if (!input.qaReport || !Array.isArray(input.qaReport.checks)) {
+      throw new WorkforceStateError("A batch requires a recorded QA report.");
+    }
+    const checks = input.qaReport.checks;
+    const passed = checks.filter((check) => check.status === "passed").length;
+    const failed = checks.filter((check) => check.status === "failed").length;
+    const notRun = checks.filter((check) => check.status === "not_run").length;
+    if (!Array.isArray(checks) || checks.length === 0 ||
+        checks.some((check) => !check.name?.trim() || !check.evidence?.trim() ||
+          !["passed", "failed", "not_run"].includes(check.status)) ||
+        input.qaReport.passed !== passed || input.qaReport.failed !== failed ||
+        input.qaReport.notRun !== notRun || failed > 0 || passed === 0) {
+      throw new WorkforceStateError("A batch requires consistent, evidence-bearing QA results with passing checks.");
+    }
+    if (!report || typeof report !== "object" || !("batchId" in report) ||
+        report.batchId !== batch.id || !("qaReport" in report) ||
+        JSON.stringify(report.qaReport) !== JSON.stringify(input.qaReport) ||
+        !manifest || typeof manifest !== "object" ||
+        !("batchId" in manifest) || manifest.batchId !== batch.id ||
+        !("generationDate" in manifest) || manifest.generationDate !== batch.scheduledDate ||
+        !("totalDeliverables" in manifest) || manifest.totalDeliverables !== 15 ||
+        !("qaPassed" in manifest) || manifest.qaPassed !== passed ||
+        !("qaFailed" in manifest) || manifest.qaFailed !== failed) {
+      throw new WorkforceStateError("The saved QA report and manifest do not verify against this batch.");
+    }
+    for (const requiredRole of ["Web Development Coder", "QA Testing Bot"]) {
+      const task = batch.tasks.find((entry) => entry.role === requiredRole);
+      if (task?.evidenceStatus !== "VERIFIED" || !task.evidenceArtifacts?.length) {
+        throw new WorkforceStateError(`The ${requiredRole} task requires verified local artifact evidence.`);
+      }
+    }
     batch.status = "completed";
+    batch.completionEvidenceStatus = batch.tasks.every((task) => task.evidenceStatus === "VERIFIED") &&
+      notRun === 0
+      ? "VERIFIED"
+      : "UNVERIFIED";
+    batch.verificationVersion = 2;
     batch.artifacts = input.artifacts;
     batch.qaReport = input.qaReport;
     const generatedProjects = input.artifacts.filter((artifact) => /\/(starter|business|enterprise)$/.test(artifact));
@@ -739,6 +982,33 @@ export async function recordScheduleObservation(
     }
     state.scheduler.lastObservedDate = today;
     if (due && !hasBatchToday) appendEvent(state, "schedule_due", undefined, { date: today });
+  });
+}
+
+export async function setWorkforceWorkerStatus(
+  status: "running" | "stopped",
+  pid: number,
+  startedAt?: string,
+  now = new Date().toISOString()
+): Promise<void> {
+  if (!Number.isSafeInteger(pid) || pid < 1 || !Number.isFinite(Date.parse(now))) {
+    throw new WorkforceStateError("A valid local worker identity and heartbeat timestamp are required.");
+  }
+  await updateWorkforceState((state) => {
+    let statusChanged = false;
+    if (status === "running") {
+      statusChanged = state.worker?.status !== "running" || state.worker.pid !== pid;
+      state.worker = {
+        pid,
+        startedAt: startedAt || (state.worker?.pid === pid ? state.worker.startedAt : now),
+        lastSeenAt: now,
+        status,
+      };
+    } else if (state.worker?.pid === pid) {
+      statusChanged = state.worker.status !== "stopped";
+      state.worker = { ...state.worker, lastSeenAt: now, status };
+    }
+    if (statusChanged) appendEvent(state, `worker_${status}`, undefined, { pid });
   });
 }
 

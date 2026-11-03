@@ -9,6 +9,7 @@ import {
   controlWorkforceBatch,
   enqueueDailyBatch,
   getWorkforceRoleRegistry,
+  getWorkforceWorkerHeartbeatStatus,
   isLocalWorkforceEnabled,
   readWorkforceState,
   retryWorkforceBatch,
@@ -163,6 +164,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       localOnly: true,
+      worker: {
+        heartbeatStatus: getWorkforceWorkerHeartbeatStatus(state.worker),
+        startedAt: state.worker?.startedAt || null,
+        lastSeenAt: state.worker?.lastSeenAt || null,
+      },
       provider: {
         name: "Ollama",
         available: modelsResult.error === null,

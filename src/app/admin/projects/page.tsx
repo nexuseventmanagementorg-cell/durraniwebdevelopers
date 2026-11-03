@@ -39,6 +39,7 @@ export default function AdminProjectsPage() {
     "Approved",
     "In Development",
     "Testing",
+    "Pending Delivery Review",
     "Delivered",
     "Completed",
     "On Hold",

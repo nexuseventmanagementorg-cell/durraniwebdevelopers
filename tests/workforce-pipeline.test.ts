@@ -13,6 +13,243 @@ import { generateWorkforceTemplateArtifacts } from "../src/lib/workforce-templat
 import type { WorkforceBatch } from "../src/lib/workforce-pipeline";
 import { getWorkforceRoleRegistry } from "../src/lib/workforce-pipeline";
 import { readAgentReadiness, setAgentReadiness } from "../src/lib/workforce-agent-readiness";
+import {
+  CEO_STRATEGY_CATEGORIES,
+  hasUnreviewedCeoStrategyClaims,
+  isCeoStrategyProjectApproved,
+  isCeoStrategyAwaitingApproval,
+  sanitizeCeoStrategyForReview,
+  validateCeoStrategyInput,
+  validateCeoStrategyOutput,
+  type CeoStrategyFinding,
+  type CeoStrategyInput,
+} from "../src/lib/ceo-strategy";
+import { isFinalProjectDeliveryStatus } from "../src/lib/project-workflow";
+
+const strategyInput: CeoStrategyInput = {
+  projectId: "project-test",
+  inquiryId: "DW-123456",
+  evidence: [{
+    referenceId: "project.description",
+    label: "Approved scope",
+    content: "A corporate website for an established organization.",
+    status: "VERIFIED",
+  }],
+  missingInformation: ["Website target languages", "Authorized customer attachments"],
+};
+
+function strategyFinding(
+  text: string,
+  status: CeoStrategyFinding["status"] = "RECOMMENDED",
+  evidenceReferences: string[] = []
+): CeoStrategyFinding {
+  return { text, status, evidenceReferences };
+}
+
+function validCeoStrategyOutput() {
+  const finding = strategyFinding("Review the proposed project scope.");
+  return {
+    executiveSummary: finding,
+    businessObjectives: [finding],
+    targetAudience: finding,
+    classification: {
+      primaryCategory: "corporate_business_website",
+      relatedCategories: ["landing_page"],
+      rationale: finding,
+    },
+    scopeAndExclusions: {
+      scope: [strategyFinding("Review the approved website scope.")],
+      exclusions: [strategyFinding("No approved exclusions are recorded.", "UNKNOWN")],
+    },
+    functionalRequirements: [finding],
+    uiUxDirection: finding,
+    technicalArchitecture: finding,
+    requiredIntegrations: [{ name: "None identified", rationale: finding }],
+    projectPhases: [{
+      title: "Plan approved scope",
+      outcome: finding,
+      taskAssignmentIds: ["frontend-ui-designer"] as string[],
+    }],
+    specialistAssignments: [{
+      projectId: "model-supplied-value-is-ignored",
+      agentRoleId: "frontend-ui-designer",
+      agentRole: "Frontend UI Designer",
+      taskTitle: "Prepare design direction",
+      instructions: "Review the approved project description and recommend an interface direction.",
+      requiredInputs: ["Approved project description"],
+      expectedOutputs: ["Reviewable interface recommendation"],
+      acceptanceCriteria: ["Recommendation cites approved scope"],
+      dependencies: [] as string[],
+      permissionRequirements: ["arbitrary"],
+      humanApprovalRequirements: ["arbitrary"],
+      status: "COMPLETED",
+      blocker: "model-supplied blocker is ignored",
+    }],
+    acceptanceCriteria: [finding],
+    riskRegister: [{
+      risk: finding,
+      likelihood: "UNKNOWN",
+      impact: "MEDIUM",
+      mitigation: finding,
+    }],
+    assumptions: [strategyFinding("Delivery dates may depend on customer content readiness.", "ASSUMED")],
+    unknowns: [strategyFinding("Target languages are not provided.", "UNKNOWN")],
+    commercialConsiderations: [finding],
+    humanApprovalRequirements: [finding],
+    implementationBlockers: [],
+  };
+}
+
+test("CEO strategy contract keeps missing requirements explicit and blocks execution claims", () => {
+  const plan = validateCeoStrategyOutput(validCeoStrategyOutput(), strategyInput);
+  assert.deepEqual(plan.unknowns.map((item) => item.text), ["Target languages are not provided."]);
+  assert.equal(plan.specialistAssignments[0].projectId, strategyInput.projectId);
+  assert.equal(plan.specialistAssignments[0].status, "BLOCKED");
+  assert.match(plan.specialistAssignments[0].blocker, /no approved customer-project worker adapter/i);
+  assert.deepEqual(plan.specialistAssignments[0].permissionRequirements, [
+    "No filesystem or terminal access is granted by this assignment.",
+  ]);
+  assert.equal(plan.classification.capabilityCoverage.length, CEO_STRATEGY_CATEGORIES.length);
+  assert.ok(plan.classification.capabilityCoverage.every((item) =>
+    item.capabilities &&
+    Object.values(item.capabilities).every((available) => available === false) &&
+    Boolean(item.blocker)
+  ));
+});
+
+test("CEO strategy validation rejects malformed evidence, unregistered roles, and dependency cycles", () => {
+  assert.throws(() => validateCeoStrategyInput({
+    ...strategyInput,
+    evidence: [{ ...strategyInput.evidence[0], content: "invalid customer evidence: token=secret" }],
+  }), /private contact or credential data/);
+  assert.throws(() => validateCeoStrategyInput({
+    ...strategyInput,
+    missingInformation: [" ".repeat(2)],
+  }), /missing-information list is invalid/);
+
+  const unregistered = validCeoStrategyOutput();
+  unregistered.specialistAssignments[0].agentRoleId = "unknown-role";
+  unregistered.specialistAssignments[0].agentRole = "Unknown Role";
+  assert.throws(() => validateCeoStrategyOutput(unregistered, strategyInput), /outside the DWD workforce registry/);
+
+  const cyclic = validCeoStrategyOutput();
+  cyclic.specialistAssignments.push({
+    ...cyclic.specialistAssignments[0],
+    agentRoleId: "backend-architect",
+    agentRole: "Backend Architect",
+    dependencies: ["frontend-ui-designer"],
+  });
+  cyclic.specialistAssignments[0].dependencies = ["backend-architect"];
+  cyclic.projectPhases[0].taskAssignmentIds.push("backend-architect");
+  assert.throws(() => validateCeoStrategyOutput(cyclic, strategyInput), /contain a cycle/);
+
+  const unsupportedVerification = validCeoStrategyOutput();
+  unsupportedVerification.executiveSummary = strategyFinding(
+    "The customer project has been completed.",
+    "COMPLETED"
+  );
+  assert.throws(() => validateCeoStrategyOutput(unsupportedVerification, strategyInput), /cannot be model-verified or marked completed/);
+
+  const modelVerified = validCeoStrategyOutput();
+  modelVerified.executiveSummary = strategyFinding("The evidence proves a claim.", "VERIFIED", ["project.description"]);
+  assert.throws(() => validateCeoStrategyOutput(modelVerified, strategyInput), /cannot be model-verified/);
+
+  const unsupportedEvidence = validCeoStrategyOutput();
+  unsupportedEvidence.executiveSummary = strategyFinding("This is established by an unverified source.", "MODEL_INFERENCE", ["project.description"]);
+  assert.throws(() => validateCeoStrategyOutput(unsupportedEvidence, {
+    ...strategyInput,
+    evidence: [{ ...strategyInput.evidence[0], status: "UNKNOWN" }],
+  }), /evidence that is not verified/);
+
+  const unsupportedCategory = validCeoStrategyOutput();
+  unsupportedCategory.classification.primaryCategory = "unsupported_category";
+  assert.throws(() => validateCeoStrategyOutput(unsupportedCategory, strategyInput), /website category is invalid/);
+});
+
+test("CEO strategy rejects empty mandatory sections and reports all categories unavailable", () => {
+  const emptyObjectives = validCeoStrategyOutput();
+  emptyObjectives.businessObjectives = [];
+  assert.throws(() => validateCeoStrategyOutput(emptyObjectives, strategyInput), /business objectives list must contain substantive content/);
+
+  const emptyScope = validCeoStrategyOutput();
+  emptyScope.scopeAndExclusions.scope = [];
+  assert.throws(() => validateCeoStrategyOutput(emptyScope, strategyInput), /scope list must contain substantive content/);
+
+  const emptyRiskRegister = validCeoStrategyOutput();
+  emptyRiskRegister.riskRegister = [];
+  assert.throws(() => validateCeoStrategyOutput(emptyRiskRegister, strategyInput), /scope, integrations, phases, or risk register is invalid/);
+
+  const emptyAssumptions = validCeoStrategyOutput();
+  emptyAssumptions.assumptions = [];
+  assert.throws(() => validateCeoStrategyOutput(emptyAssumptions, strategyInput), /assumptions list must contain substantive content/);
+
+  const emptyApprovals = validCeoStrategyOutput();
+  emptyApprovals.humanApprovalRequirements = [];
+  assert.throws(() => validateCeoStrategyOutput(emptyApprovals, strategyInput), /human approval requirements list must contain substantive content/);
+
+  const emptyAssignments = validCeoStrategyOutput();
+  emptyAssignments.specialistAssignments = [];
+  assert.throws(() => validateCeoStrategyOutput(emptyAssignments, strategyInput), /specialist assignments are invalid/);
+
+  const plan = validateCeoStrategyOutput(validCeoStrategyOutput(), strategyInput);
+  assert.ok(plan.classification.capabilityCoverage.every((category) =>
+    Object.values(category.capabilities || {}).every((available) => available === false)
+  ));
+
+  const legacyStrategy = {
+    plan: {
+      executiveSummary: strategyFinding("Old model claim.", "VERIFIED", ["project.description"]),
+      evidenceReferences: [{ ...strategyInput.evidence[0] }],
+    },
+  };
+  assert.equal(hasUnreviewedCeoStrategyClaims(legacyStrategy.plan), true);
+  assert.deepEqual(sanitizeCeoStrategyForReview(legacyStrategy), {
+    plan: {
+      executiveSummary: {
+        text: "Old model claim.",
+        status: "HUMAN_REVIEW_REQUIRED",
+        evidenceReferences: ["project.description"],
+      },
+      evidenceReferences: [{ ...strategyInput.evidence[0] }],
+    },
+  });
+});
+
+test("final project delivery statuses require a separate verified delivery path", () => {
+  assert.equal(isFinalProjectDeliveryStatus("Delivered"), true);
+  assert.equal(isFinalProjectDeliveryStatus("Completed"), true);
+  assert.equal(isFinalProjectDeliveryStatus("Pending Delivery Review"), false);
+  assert.equal(isFinalProjectDeliveryStatus("Testing"), false);
+});
+
+test("CEO strategy eligibility requires an approved conversion, scope, and verified advance", () => {
+  const project = {
+    id: "project-test",
+    inquiryId: "DW-123456",
+    status: "Approved" as const,
+    approvedPrice: 100_000,
+    advanceRequired: 25_000,
+    advanceReceived: 25_000,
+  };
+  const inquiry = {
+    id: "DW-123456",
+    convertedProjectId: "project-test",
+    status: "Approved" as const,
+  };
+  assert.equal(isCeoStrategyProjectApproved(project, inquiry), true);
+  assert.equal(isCeoStrategyProjectApproved(project, { ...inquiry, convertedProjectId: undefined }), false);
+  assert.equal(isCeoStrategyProjectApproved(project, { ...inquiry, status: "Under Review" }), false);
+  assert.equal(isCeoStrategyProjectApproved({ ...project, advanceReceived: 24_999 }, inquiry), false);
+  assert.equal(isCeoStrategyProjectApproved({ ...project, approvedPrice: 0 }, inquiry), false);
+  assert.equal(isCeoStrategyAwaitingApproval({
+    status: "awaiting_human_approval",
+    approval: null,
+  }), true);
+  assert.equal(isCeoStrategyAwaitingApproval({
+    status: "approved",
+    approval: { approvedBy: "admin@example.invalid", approvedAt: "2026-10-30T00:00:00.000Z" },
+  }), false);
+});
 
 test("daily target selection is deterministic and rotates five distinct categories", () => {
   const first = selectDailyConceptTargets("2026-10-28");

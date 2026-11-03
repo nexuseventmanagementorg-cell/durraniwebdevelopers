@@ -335,6 +335,7 @@ export default function CreativeStudioClient() {
   const briefInputRef = useRef<HTMLTextAreaElement>(null);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submissionKeyRef = useRef("");
   const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
@@ -521,6 +522,21 @@ export default function CreativeStudioClient() {
       if (!configReady) throw new Error(configError || "Pricing configuration is not ready.");
       if (!disclaimerAccepted) throw new Error("Please accept the estimate and production disclaimer.");
       const form = new FormData();
+      let submissionKey = submissionKeyRef.current;
+      if (!submissionKey) {
+        try {
+          submissionKey = window.sessionStorage.getItem("creative-studio:pending-submission") || "";
+        } catch {
+          submissionKey = "";
+        }
+      }
+      if (!submissionKey) submissionKey = crypto.randomUUID();
+      submissionKeyRef.current = submissionKey;
+      try {
+        window.sessionStorage.setItem("creative-studio:pending-submission", submissionKey);
+      } catch {
+        // The in-memory key still protects retries in this page session.
+      }
       form.set("customer", JSON.stringify({
         ...customer,
         country,
@@ -538,6 +554,7 @@ export default function CreativeStudioClient() {
       references.forEach((file) => form.append("references", file));
       const response = await fetch("/api/public/creative-studio/inquiries", {
         method: "POST",
+        headers: { "Idempotency-Key": submissionKey },
         body: form,
       });
       const result = await response.json();
@@ -549,6 +566,12 @@ export default function CreativeStudioClient() {
       } catch {
         setSubmitError(`Your inquiry ${result.inquiry.id} was received, but private tracking could not be saved in this browser. Keep this ID and contact the creative team; do not submit the form again.`);
         return;
+      }
+      submissionKeyRef.current = "";
+      try {
+        window.sessionStorage.removeItem("creative-studio:pending-submission");
+      } catch {
+        // The inquiry and its tracking token are already safely saved.
       }
       router.push(`/creative-studio/confirmation?id=${encodeURIComponent(result.inquiry.id)}`);
     } catch (error) {
@@ -611,7 +634,15 @@ export default function CreativeStudioClient() {
       </section>
 
       <div className="mx-auto grid max-w-6xl gap-7 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:py-14">
-        <form onSubmit={submitInquiry} className="space-y-6">
+        <form onSubmit={submitInquiry} onChange={() => {
+          if (submitting) return;
+          submissionKeyRef.current = "";
+          try {
+            window.sessionStorage.removeItem("creative-studio:pending-submission");
+          } catch {
+            // A changed inquiry receives a new in-memory key on its next submission.
+          }
+        }} className="space-y-6">
           {(configError || !configReady) && (
             <div role="alert" className={`rounded-xl border px-4 py-3 text-sm ${configError ? "border-red-200 bg-red-50 text-red-800" : "border-slate-200 bg-white text-slate-600"}`}>
               {configError || "Loading the current approved pricing…"}
