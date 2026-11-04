@@ -883,6 +883,9 @@ function getDesignSignals(pages: ScannedPage[], externalStylesheets: string[] = 
   if (/<meta\b[^>]*name\s*=\s*["']viewport["']/i.test(html) || /@media\b/i.test(styles) || /(?:^|\s)(?:sm|md|lg|xl):/i.test(classNames)) {
     signals.push("Responsive layout signal found (viewport, breakpoints, or responsive utility classes).");
   }
+  if (/(?:\/_next\/(?:static|image)(?:\/|[?#])|__next_f\.push|__NEXT_DATA__)/i.test(html)) {
+    signals.push("Next.js runtime/asset signal found.");
+  }
   if (/wp-content|wp-includes/i.test(html)) signals.push("WordPress asset/path signal found.");
   if (/cdn\.shopify\.com|Shopify\.theme|\/cdn\/shop\//i.test(html)) signals.push("Shopify storefront asset signal found.");
   if (/static\.wixstatic\.com|wix-code/i.test(html)) signals.push("Wix asset/runtime signal found.");

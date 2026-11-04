@@ -981,11 +981,29 @@ test("MESM is third in the portfolio and has a live three-day half-price offer",
   const portfolio = mergePortfolioSeedProjects([...INITIAL_PORTFOLIO_PROJECTS].reverse());
   const mesm = portfolio[2];
   assert.equal(mesm?.id, "mesm-gems");
-  assert.equal(mesm?.offerEndsAt, "2026-11-03T20:00:00.000Z");
+  assert.equal(mesm?.offerEndsAt, "2026-11-06T20:00:00.000Z");
   assert.equal(
-    getPortfolioOffer(mesm, Date.parse("2026-11-01T04:00:00.000Z"))?.offerPrice,
+    getPortfolioOffer(mesm, Date.parse("2026-11-06T19:59:00.000Z"))?.offerPrice,
     87500
   );
+});
+
+test("MESM public scan signals migrate into saved portfolio features without removing custom labels", () => {
+  const mesm = INITIAL_PORTFOLIO_PROJECTS.find((item) => item.id === "mesm-gems");
+  assert.ok(mesm);
+  const savedMesm = {
+    ...mesm,
+    templateFeatureVersion: 1,
+    technologies: ["E-Commerce Website", "Admin-added note"],
+  };
+  const merged = mergePortfolioSeedProjects([savedMesm]).find((item) => item.id === "mesm-gems");
+  assert.ok(merged);
+  assert.ok(merged.technologies.includes("Next.js"));
+  assert.ok(merged.technologies.includes("Shopping Cart & Checkout"));
+  assert.ok(merged.technologies.includes("Product QR Codes"));
+  assert.equal(merged.technologies.some((label) => label.startsWith("Public Scan:")), false);
+  assert.ok(merged.technologies.includes("Admin-added note"));
+  assert.equal(merged.templateFeatureVersion, 2);
 });
 
 test("Deleted seeded portfolio projects stay removed until restored", () => {
@@ -2688,7 +2706,7 @@ test("URL estimator lists public pages, style clues, and marketplace signals wit
     { PKR: 1 },
     undefined,
     createWebsiteFixtureLoader({
-      "/": `<html><head><title>Marketplace Home</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#123456"><link rel="stylesheet" href="/theme.css"><style>body{font-family:Inter,sans-serif;color:#112233}@media(max-width:600px){.main{display:block}}</style></head><body><h1>Shop products</h1><a href="/products?sort=popular">Products</a><a href="/products?sort=new">More products</a><a href="/about">About</a><a href="/admin/login">Admin</a><a href="/seller">Become a seller</a><a href="/cart">Cart</a><a href="https://seller.market.example">Seller portal</a><a href="https://www.market.example">Main website</a><p>Custom domains for each vendor.</p></body></html>`,
+      "/": `<html><head><title>Marketplace Home</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#123456"><link rel="stylesheet" href="/theme.css"><script src="/_next/static/chunks/app/page.js"></script><style>body{font-family:Inter,sans-serif;color:#112233}@media(max-width:600px){.main{display:block}}</style></head><body><h1>Shop products</h1><a href="/products?sort=popular">Products</a><a href="/products?sort=new">More products</a><a href="/about">About</a><a href="/admin/login">Admin</a><a href="/seller">Become a seller</a><a href="/cart">Cart</a><a href="https://seller.market.example">Seller portal</a><a href="https://www.market.example">Main website</a><p>Custom domains for each vendor.</p></body></html>`,
       "/sitemap.xml": "",
       "/products": `<title>Product Catalog</title><h1>Products</h1>`,
       "/about": `<title>About our marketplace</title><p>Marketplace platform</p>`,
@@ -2712,6 +2730,7 @@ test("URL estimator lists public pages, style clues, and marketplace signals wit
   assert.ok(estimate.designSignals.some((signal) => signal.includes("#abcdef")));
   assert.ok(estimate.designSignals.some((signal) => signal.includes("Inter")));
   assert.ok(estimate.designSignals.some((signal) => signal.includes("Responsive layout signal")));
+  assert.ok(estimate.designSignals.some((signal) => signal.includes("Next.js runtime/asset signal")));
   assert.ok(estimate.architectureSignals.some((signal) => signal.includes("seller/vendor enrollment")));
   assert.ok(estimate.architectureSignals.some((signal) => signal.includes("multi-domain storefront wording")));
   assert.ok(estimate.architectureSignals.some((signal) => signal.includes("related subdomains: seller.market.example")));

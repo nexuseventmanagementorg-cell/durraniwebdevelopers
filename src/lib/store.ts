@@ -145,14 +145,22 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
   },
   {
     id: "mesm-gems",
+    templateFeatureVersion: 2,
     title: "MESM - Personalized Accoutrements for Ladies",
     category: "Jewellery stores",
-    shortDescription: "A personalized jewellery and accessories e-commerce website with 22 publicly scanned pages.",
-    fullDescription: "MESM is an e-commerce website for personalized jewellery and accessories. A public scan covered 22 pages and produced a preliminary comparable-build estimate of PKR 175,000. This is a scope-based estimate, not a confirmed project fee; private admin workflows, integrations, and other features that are not visible publicly may change the final scope and price.",
+    shortDescription: "Jewellery e-commerce website with a product catalog, shopping cart, checkout, WhatsApp contact, product management, and QR codes.",
+    fullDescription: "MESM is a personalized jewellery and accessories website. A public URL Budget Estimator scan covered 22 pages and identified public-page signals for a product catalog, shopping cart and checkout/order submission, WhatsApp contact, an admin dashboard route, advanced product management, and product QR codes. These are scan signals only—not implementation-verified features: cart behavior, order processing, automated messaging, private admin workflows, product-management capabilities, and QR behavior were not verified. The preliminary comparable-build estimate is PKR 175,000, based on the E-Commerce Business package (PKR 150,000) plus Product QR Codes (PKR 25,000); this is not a confirmed project fee, and private workflows, integrations, and unobserved scope may change it.",
     imageUrl: "https://esdonuxggfyyostvcmfl.supabase.co/storage/v1/object/public/meems-gems-media/local-import/images/c36658ffb6f20220164b4837138055d936fad9d863f4bb3a15c156b9d97785e2.png",
     technologies: [
+      "Next.js",
       "E-Commerce Website",
       "Personalized Jewellery",
+      "Product Catalog",
+      "Shopping Cart & Checkout",
+      "WhatsApp Contact",
+      "Admin Dashboard Route",
+      "Advanced Product Management",
+      "Product QR Codes",
       "22 Public Pages",
     ],
     status: "Live",
@@ -165,7 +173,7 @@ export const INITIAL_PORTFOLIO_PROJECTS: PortfolioProject[] = [
     offerEnabled: true,
     offerTag: "3-Day Half-Price Deal",
     offerDiscountPercent: 50,
-    offerEndsAt: "2026-11-03T20:00:00.000Z",
+    offerEndsAt: "2026-11-06T20:00:00.000Z",
     featured: true,
     clientConsentForBudget: false,
   },
@@ -275,15 +283,19 @@ export function mergePortfolioSeedProjects(
       ? seedProject.demoUrl
       : savedProject.demoUrl;
     const technologies = migratedLegacyValue("technologies");
-    const migrateStudentFeatureCatalog = savedProject.id === "student-burgers-shawarmas" &&
+    const migrateSeededFeatureCatalog = savedProject.id === "student-burgers-shawarmas" &&
       (savedProject.templateFeatureVersion || 0) < 1;
-    const templateIncludedAddonIds = migrateStudentFeatureCatalog
+    const migrateMesmFeatureCatalog = savedProject.id === "mesm-gems" &&
+      (savedProject.templateFeatureVersion || 0) < 2;
+    const templateIncludedAddonIds = savedProject.id === "student-burgers-shawarmas" &&
+      migrateSeededFeatureCatalog
       ? Array.from(new Set([
           ...(seedProject?.templateIncludedAddonIds || []),
           ...(savedProject.templateIncludedAddonIds || []),
         ]))
       : savedProject.templateIncludedAddonIds ?? seedProject?.templateIncludedAddonIds;
-    const templateIncludedAddonPrices = migrateStudentFeatureCatalog
+    const templateIncludedAddonPrices = savedProject.id === "student-burgers-shawarmas" &&
+      migrateSeededFeatureCatalog
       ? {
           ...(savedProject.templateIncludedAddonPrices || {}),
           ...(seedProject?.templateIncludedAddonPrices || {}),
@@ -295,7 +307,12 @@ export function mergePortfolioSeedProjects(
       title: migratedLegacyValue("title"),
       shortDescription: migratedLegacyValue("shortDescription"),
       fullDescription: migratedLegacyValue("fullDescription"),
-      technologies: migrateStudentFeatureCatalog
+      technologies: migrateMesmFeatureCatalog
+        ? Array.from(new Set([
+            ...(seedProject?.technologies || []),
+            ...(technologies || []).map((label) => label.replace(/^Public Scan:\s*/i, "")),
+          ]))
+        : migrateSeededFeatureCatalog
         ? Array.from(new Set([
             ...(seedProject?.technologies || []),
             ...(technologies || []),
@@ -314,7 +331,8 @@ export function mergePortfolioSeedProjects(
       templateIncludedAddonPrices,
       templateFeatureVersion: Math.max(
         savedProject.templateFeatureVersion || 0,
-        seedProject?.templateFeatureVersion || 0
+        seedProject?.templateFeatureVersion || 0,
+        migrateMesmFeatureCatalog ? 2 : 0
       ),
       offerEnabled: savedProject.offerEnabled ?? seedProject?.offerEnabled ?? false,
       offerTag: savedProject.offerTag ?? seedProject?.offerTag,
