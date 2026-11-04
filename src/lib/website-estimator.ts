@@ -1450,9 +1450,12 @@ export async function estimateWebsite(
     detected.features = agencyFeatures.length > 0
       ? agencyFeatures
       : [{
+          id: "public-informational-website",
           title: "Public informational website",
           explanation: "The public pages identify the agency and describe its services; portfolio feature listings are not treated as implemented functionality.",
           evidence: "The homepage identifies this organization as a web/software development agency.",
+          evidenceStatus: "public_signal",
+          sourcePages: [firstPage.url],
         }];
     detected.addonIds = [];
     detected.pricingPackage = null;

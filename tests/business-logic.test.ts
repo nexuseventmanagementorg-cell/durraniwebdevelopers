@@ -2933,6 +2933,10 @@ test("URL estimator does not price an agency's portfolio and service catalog as 
   assert.equal(estimate.basePrice, 35000);
   assert.equal(estimate.adminPanel, false);
   assert.ok(estimate.features.some((feature) => feature.title === "Public informational website"));
+  const informationalFeature = estimate.features.find((feature) => feature.title === "Public informational website");
+  assert.equal(informationalFeature?.id, "public-informational-website");
+  assert.equal(informationalFeature?.evidenceStatus, "public_signal");
+  assert.ok(informationalFeature?.sourcePages.includes("https://agency.example/"));
   assert.equal(
     estimate.features.some((feature) =>
       ["E-commerce store package", "SaaS application package"].includes(feature.title)
