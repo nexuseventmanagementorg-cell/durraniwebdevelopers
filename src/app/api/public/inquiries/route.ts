@@ -167,6 +167,7 @@ export async function POST(request: NextRequest) {
       ...(currency !== "PKR"
         ? {
             exchangeRate: exchangeSnapshot?.rates[currency],
+            usdExchangeRate: exchangeSnapshot?.rates.USD,
             internationalCalculation,
           }
         : { internationalCalculation: serverCalculation }),

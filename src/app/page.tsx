@@ -137,7 +137,7 @@ export default function HomePage() {
     },
     {
       q: "How does the 11-month installment plan work?",
-      a: "Pakistan package examples use a PKR 10,000 advance and spread the remaining balance over 11 monthly installments. International base packages are doubled and converted to local currency; each international add-on is 100 units. Exact schedules are confirmed after scope review.",
+      a: "Pakistan package examples use a PKR 10,000 advance and spread the remaining balance over 11 monthly installments. International base packages use 2x Pakistan rates converted to the selected currency. International add-ons use a published global agency-rate benchmark multiplied by estimated category and complexity effort; they are planning estimates, not regional market averages or fixed quotes. Exact schedules are confirmed after scope review.",
     },
     {
       q: "Are domains, third-party accounts, and Vercel deployment included?",
@@ -145,7 +145,7 @@ export default function HomePage() {
     },
     {
       q: "Can I customize the features and add special integrations?",
-      a: "Yes! The budget calculator lets you select optional add-ons like Google OAuth, Supabase PostgreSQL, payment integration, AI chatbots, personal domain setup, and bespoke workflows. One-time add-on rates vary by feature complexity and selected e-commerce or SaaS plan; e-commerce add-ons start at PKR 20,000. International one-time add-ons use the published flat 100-unit estimate, and monthly maintenance is priced separately.",
+      a: "Yes! The budget calculator lets you select optional add-ons like Google OAuth, Supabase PostgreSQL, payment integration, AI chatbots, personal domain setup, and bespoke workflows. One-time add-on rates vary by feature complexity and selected e-commerce or SaaS plan; e-commerce add-ons start at PKR 20,000. International add-ons use a global agency-rate benchmark multiplied by estimated category and complexity effort, and monthly maintenance is priced separately. These are planning estimates, not fixed quotes.",
     },
     {
       q: "How quickly can my web application be delivered?",
@@ -322,7 +322,7 @@ export default function HomePage() {
               Flexible Packages For Your Web Application
             </h2>
             <p className="text-gray-600 text-sm mt-2">
-              Pakistan rates are in PKR. International prices are doubled and converted to your selected local currency.
+              Pakistan rates are in PKR. International base packages are doubled and converted to your selected currency; add-ons use a published global agency-rate benchmark and estimated category effort.
             </p>
           </div>
 

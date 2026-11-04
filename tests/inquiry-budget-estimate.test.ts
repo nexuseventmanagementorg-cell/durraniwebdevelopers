@@ -259,7 +259,7 @@ test("admin dashboard add-on and dynamic published prices use the current pricin
   assert.equal(estimate.calculation?.estimatedTotal, 52_500);
 });
 
-test("international estimates use the existing doubled-base and fixed regional add-on conversion rules", () => {
+test("international estimates use benchmarked category pricing for add-ons", () => {
   const estimate = calculateInquiryScopeEstimate(makeInquiry({
     projectTypes: ["Real estate website"],
     problemToSolve: "Build a real estate website with advanced property filters.",
@@ -270,9 +270,24 @@ test("international estimates use the existing doubled-base and fixed regional a
 
   assert.equal(estimate.calculation?.estimatedTotal, 45_000);
   assert.equal(estimate.regionalCalculation?.basePrice, 25.2);
-  assert.equal(estimate.regionalCalculation?.selectedAddonDetails[0]?.price, 100);
-  assert.equal(estimate.regionalCalculation?.estimatedTotal, 125.2);
+  assert.equal(estimate.regionalCalculation?.selectedAddonDetails[0]?.price, 444);
+  assert.equal(estimate.regionalCalculation?.estimatedTotal, 469.2);
   assert.equal(estimate.currency, "USD");
+});
+
+test("saved USD exchange rates keep later non-USD inquiry recalculations on the benchmark model", () => {
+  const estimate = calculateInquiryScopeEstimate(makeInquiry({
+    projectTypes: ["Business website"],
+    problemToSolve: "Build a business website with payment integration.",
+    selectedAddons: ["payment_gateway"],
+    currency: "EUR",
+    internationalPricing: true,
+    exchangeRate: 0.003,
+    usdExchangeRate: 0.0035,
+  }));
+
+  assert.equal(estimate.regionalCalculation?.selectedAddonDetails[0]?.price, 253.71);
+  assert.ok(Math.abs((estimate.regionalCalculation?.estimatedTotal || 0) - 463.71) < 0.001);
 });
 
 test("missing exchange rates preserve the PKR audit amount and require admin review", () => {

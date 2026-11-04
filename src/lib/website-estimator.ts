@@ -16,7 +16,12 @@ import {
   SAAS_PACKAGES,
 } from "./constants";
 import { getPortfolioFeatureLabels, getTemplatePriceBreakdown, getTemplateRequestPlans } from "./template-pricing";
-import { CurrencyCode, ExchangeRates, getRegionalPricingConfig } from "./currency";
+import {
+  CurrencyCode,
+  ExchangeRates,
+  getRegionalPricingConfig,
+  INTERNATIONAL_ADDON_BENCHMARK,
+} from "./currency";
 import {
   getBusinessAddonDetectionRules,
   getBusinessAddonCatalog,
@@ -1421,13 +1426,25 @@ export async function estimateWebsite(
   }
 
   const text = pages.map(getPageSignalText).join(" ");
-  const detected = detectWebsiteFeatures(text, [], configuredPricing);
   const homepageText = getPageSignalText(firstPage);
   const homepageIdentity = [
     getPageTitle(firstPage.html),
     getMetaContent(firstPage.html, "description", "name"),
     ...Array.from(firstPage.html.matchAll(/<h[1-2]\b[^>]*>([\s\S]*?)<\/h[1-2]\s*>/gi), (match) => stripHtml(match[1])),
   ].join(" ");
+  const isDevelopmentAgencySite =
+    /\b(?:web development company|website development company|web developers?|software development (?:company|agency)|digital agency|app development company|custom web applications?)\b/i.test(homepageIdentity) &&
+    !/\b(?:online store|e-?commerce retailer|jewellery store|jewelry store|shop products)\b/i.test(homepageIdentity);
+  const detected = detectWebsiteFeatures(text, [], configuredPricing);
+  if (isDevelopmentAgencySite) {
+    const agencyIdentity = detectWebsiteFeatures(homepageIdentity, [], configuredPricing);
+    detected.features = agencyIdentity.features;
+    detected.addonIds = [];
+    detected.pricingPackage = null;
+    detected.assumptions.unshift(
+      "This appears to be a web/software development agency site. Portfolio examples, service descriptions, and published add-on catalogs are not treated as features implemented on the agency's own website."
+    );
+  }
   const restaurantBusinessContext =
     /\b(?:restaurant|caf[eé]|hotel|catering|bakery)\b/i.test(homepageIdentity) ||
     /\b(?:restaurant|caf[eé]|hotel|catering|bakery)\s+(?:website|web app(?:lication)?|ordering|menu|management|software|system|solution)\b/i.test(homepageText);
@@ -1552,7 +1569,7 @@ export async function estimateWebsite(
   }
   if (currency !== "PKR") {
     detected.assumptions.unshift(
-      "International base packages use 2x Pakistan rates converted with the latest available exchange rate; each selected one-time add-on is a flat 100 units in the selected currency."
+      `International add-ons use a USD ${INTERNATIONAL_ADDON_BENCHMARK.planningHourlyRateUsd}/hour planning rate, the midpoint of Clutch's published USD ${INTERNATIONAL_ADDON_BENCHMARK.hourlyRateMinimumUsd}-${INTERNATIONAL_ADDON_BENCHMARK.hourlyRateMaximumUsd}/hour agency range, multiplied by an estimated 2-40 hours based on add-on category and complexity, then converted using the current exchange-rate snapshot. This is a global planning benchmark, not a regional market average or a fixed quote; complex work requires scoping. International base packages still use 2x Pakistan rates converted at the current exchange rate.`
     );
   }
   const selectedPricingOption = pricingOptions.find(

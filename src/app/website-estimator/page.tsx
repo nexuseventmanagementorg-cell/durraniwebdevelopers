@@ -577,7 +577,11 @@ export default function WebsiteEstimatorPage() {
                 </ul>
                 {estimate.internationalPricing && (
                   <p className="mt-3 text-[11px] text-amber-900">
-                    International base package pricing uses the current regional rate and exchange rate (1 PKR = {estimate.exchangeRate} {estimate.currency}); add-on prices follow the published regional pricing rules. Rates updated {estimate.exchangeRateDate || "by provider"}.
+                    International base packages use 2x Pakistan rates converted at the current exchange rate (1 PKR = {estimate.exchangeRate} {estimate.currency}). Add-ons use a USD $37/hour planning midpoint from the{" "}
+                    <a href="https://clutch.co/web-developers/pricing" target="_blank" rel="noreferrer" className="font-bold underline">
+                      published $25–$49/hour Clutch agency rate range
+                    </a>
+                    , multiplied by estimated effort for each category and complexity, then converted at the current exchange rate. This is a global planning estimate, not a local market average or a fixed quote. Rates updated {estimate.exchangeRateDate || "by provider"}.
                   </p>
                 )}
                 <Link

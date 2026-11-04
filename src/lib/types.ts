@@ -394,6 +394,7 @@ export interface Inquiry {
   currency?: string;
   internationalPricing?: boolean;
   exchangeRate?: number;
+  usdExchangeRate?: number;
   internationalCalculation?: CalculationBreakdown;
   disclaimerAccepted: boolean;
 

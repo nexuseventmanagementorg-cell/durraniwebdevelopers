@@ -1,4 +1,4 @@
-import { PricingRuleConfig } from "./types";
+import type { AddonOption, PricingRuleConfig } from "./types";
 
 export const CURRENCY_OPTIONS = [
   { code: "PKR", name: "Pakistani Rupee" },
@@ -53,6 +53,13 @@ export const CURRENCY_OPTIONS = [
 
 export type CurrencyCode = (typeof CURRENCY_OPTIONS)[number]["code"];
 export type ExchangeRates = Partial<Record<CurrencyCode, number>>;
+
+export const INTERNATIONAL_ADDON_BENCHMARK = {
+  hourlyRateMinimumUsd: 25,
+  hourlyRateMaximumUsd: 49,
+  planningHourlyRateUsd: 37,
+  sourceUrl: "https://clutch.co/web-developers/pricing",
+} as const;
 
 const COUNTRY_CURRENCY: Record<string, CurrencyCode> = {
   PK: "PKR",
@@ -164,6 +171,38 @@ function roundForCurrency(amount: number, currency: CurrencyCode): number {
   return Math.round(amount * multiplier) / multiplier;
 }
 
+const ADDON_EFFORT_HOURS_BY_LEVEL = {
+  basic: 6,
+  expanded: 16,
+  complex: 40,
+} as const;
+
+const ADDON_EFFORT_HOURS_BY_CATEGORY: Record<AddonOption["category"], number> = {
+  auth: 6,
+  database: 8,
+  payment: 8,
+  admin: 8,
+  ai: 16,
+  custom: 16,
+  feature: 6,
+  website: 4,
+  business: 8,
+  creative: 10,
+  ecommerce: 12,
+  saas: 24,
+  automation: 12,
+  security: 8,
+  industry: 12,
+  propertytech: 16,
+  businesscatalog: 6,
+};
+
+function getEstimatedAddonEffortHours(addon: AddonOption): number {
+  if (addon.billingPeriod === "monthly") return 2;
+  if (addon.pricingLevel) return ADDON_EFFORT_HOURS_BY_LEVEL[addon.pricingLevel];
+  return ADDON_EFFORT_HOURS_BY_CATEGORY[addon.category];
+}
+
 export function getRegionalPricingConfig(
   config: PricingRuleConfig,
   currency: CurrencyCode,
@@ -175,7 +214,12 @@ export function getRegionalPricingConfig(
   if (!rate || !Number.isFinite(rate) || rate <= 0) {
     throw new Error(`Live ${currency} exchange rate is currently unavailable.`);
   }
+  const usdRate = rates.USD;
+  if (!usdRate || !Number.isFinite(usdRate) || usdRate <= 0) {
+    throw new Error("Live USD exchange rate is currently unavailable for benchmark add-on pricing.");
+  }
   const convert = (pkrAmount: number) => roundForCurrency(pkrAmount * 2 * rate, currency);
+  const hourlyRate = INTERNATIONAL_ADDON_BENCHMARK.planningHourlyRateUsd * rate / usdRate;
 
   return {
     ...config,
@@ -185,7 +229,10 @@ export function getRegionalPricingConfig(
     addons: Object.fromEntries(
       Object.entries(config.addons).map(([id, addon]) => [
         id,
-        { ...addon, price: 100 },
+        {
+          ...addon,
+          price: roundForCurrency(hourlyRate * getEstimatedAddonEffortHours(addon), currency),
+        },
       ])
     ),
   };

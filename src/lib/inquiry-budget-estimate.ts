@@ -18,6 +18,7 @@ import {
   getRegionalPricingConfig,
   isCurrencyCode,
   type CurrencyCode,
+  type ExchangeRates,
 } from "@/lib/currency";
 import { reviewInquiryScope } from "@/lib/inquiry-review";
 import type {
@@ -189,6 +190,7 @@ export function calculateInquiryScopeEstimate(
   options: {
     selection?: InquiryScopeSelection;
     exchangeRate?: number;
+    usdExchangeRate?: number;
     now?: string;
   } = {}
 ): InquiryScopeEstimate {
@@ -285,10 +287,16 @@ export function calculateInquiryScopeEstimate(
 
     const currency: CurrencyCode = isCurrencyCode(inquiry.currency) ? inquiry.currency : "PKR";
     const exchangeRate = options.exchangeRate ?? inquiry.exchangeRate;
+    const usdExchangeRate = options.usdExchangeRate ?? inquiry.usdExchangeRate ??
+      (currency === "USD" ? exchangeRate : undefined);
+    const regionalRates: ExchangeRates = {
+      [currency]: exchangeRate,
+      ...(usdExchangeRate ? { USD: usdExchangeRate } : {}),
+    };
     if (currency !== "PKR") {
       if (exchangeRate && Number.isFinite(exchangeRate) && exchangeRate > 0) {
         try {
-          const regionalConfig = getRegionalPricingConfig(selectedConfig, currency, { [currency]: exchangeRate });
+          const regionalConfig = getRegionalPricingConfig(selectedConfig, currency, regionalRates);
           regionalCalculation = calculateBudget(packageAdminType, chargeableAddons, regionalConfig);
           if (packageId === "package_1" || packageId === "package_2") {
             const regionalBase = packageId === "package_2" ? regionalConfig.baseWithAdmin : regionalConfig.baseWithoutAdmin;
@@ -314,9 +322,7 @@ export function calculateInquiryScopeEstimate(
       maximumPrice = maxCalculation.estimatedTotal;
       if (regionalCalculation) {
         const currency = inquiry.currency as CurrencyCode;
-        const regionalMaxConfig = getRegionalPricingConfig(maxConfig, currency, {
-          [currency]: options.exchangeRate ?? inquiry.exchangeRate ?? 0,
-        });
+        const regionalMaxConfig = getRegionalPricingConfig(maxConfig, currency, regionalRates);
         regionalMaximumPrice = calculateBudget("none", chargeableAddons, regionalMaxConfig).estimatedTotal;
       }
     }

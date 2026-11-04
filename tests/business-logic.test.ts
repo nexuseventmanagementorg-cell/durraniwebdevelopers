@@ -2546,7 +2546,7 @@ test("Beginner calculator plans fit the selected budget without forced extras", 
     "online-store",
     "150-300k",
     "EUR",
-    { PKR: 1, EUR: 0.0003 },
+    { PKR: 1, USD: 0.00036, EUR: 0.0003 },
     "roman-ur"
   );
   assert.equal(internationalRomanUrdu.calculation.estimatedTotal, 90);
@@ -2909,6 +2909,27 @@ test("URL estimator does not infer a starter price or enterprise value from an i
   assert.equal(starterBuild.calculation.estimatedTotal, 35000);
   assert.equal(starterBuild.calculation.selectedAddonDetails.length, 0);
   assert.doesNotMatch(starterBuild.basePackage, /enterprise|marketplace/i);
+});
+
+test("URL estimator does not price an agency's portfolio and service catalog as implemented features", async () => {
+  const estimate = await estimateWebsite(
+    "https://agency.example/",
+    "PKR",
+    { PKR: 1 },
+    undefined,
+    createWebsiteFixtureLoader({
+      "/": `<title>Durrani Web Developers | Custom Web Applications</title><meta name="description" content="Professional web development company"><h1>We build software for businesses</h1><a href="/services">Services</a><a href="/portfolio">Portfolio</a><a href="/about">About</a>`,
+      "/sitemap.xml": "",
+      "/services": `<title>Services</title><p>Online store product catalog, shopping cart and checkout, analytics dashboard, custom integration, multi-vendor marketplace, payment gateway, product inventory, AI assistant, and advanced reporting.</p>`,
+      "/portfolio": `<title>Portfolio</title><p>Example project with multi-tenant architecture, subscription management, multi-institution LMS, product QR codes, vendor management, and order tracking.</p>`,
+      "/about": `<title>About our company</title><p>We are a custom software development agency building websites for clients.</p>`,
+    })
+  );
+
+  assert.equal(estimate.pricingPackage, undefined);
+  assert.equal(estimate.addons.length, 0);
+  assert.equal(estimate.estimatedTotal, 35000);
+  assert.ok(estimate.assumptions.some((assumption) => assumption.includes("Portfolio examples")));
 });
 
 test("Basic informational scope uses the existing starter price only after the user selects it", async () => {
@@ -4066,30 +4087,37 @@ test("Website estimator rejects non-HTTP URL schemes", async () => {
   );
 });
 
-test("International pricing doubles PKR rates before converting to the selected currency", () => {
+test("International add-ons use category effort and published global agency-rate benchmarks", () => {
   const regionalConfig = getRegionalPricingConfig(DEFAULT_PRICING_CONFIG, "EUR", {
     PKR: 1,
+    USD: 0.0035,
     EUR: 0.003,
   });
 
   assert.equal(regionalConfig.baseWithoutAdmin, 210);
   assert.equal(regionalConfig.baseWithAdmin, 270);
-  assert.equal(regionalConfig.addons.supabase_db.price, 100);
-  assert.equal(regionalConfig.addons.google_auth.price, 100);
-  assert.equal(regionalConfig.addons.personal_domain.price, 100);
-  assert.equal(regionalConfig.addons.maintenance_updates.price, 100);
+  assert.equal(regionalConfig.addons.supabase_db.price, 253.71);
+  assert.equal(regionalConfig.addons.google_auth.price, 190.29);
+  assert.equal(regionalConfig.addons.personal_domain.price, 126.86);
+  assert.equal(regionalConfig.addons.maintenance_updates.price, 63.43);
+  assert.ok(regionalConfig.addons.product_badges_labels.price < regionalConfig.addons.product_bundles.price);
+  assert.ok(regionalConfig.addons.product_bundles.price < regionalConfig.addons.subscription_commerce.price);
   assert.equal(regionalConfig.advanceDefault, 60);
   const calculatorTotal = calculateBudget(
     "none",
     ["supabase_db"],
     regionalConfig
   );
-  assert.equal(calculatorTotal.estimatedTotal, 310);
+  assert.ok(Math.abs(calculatorTotal.estimatedTotal - 463.71) < 0.001);
+  assert.throws(
+    () => getRegionalPricingConfig(DEFAULT_PRICING_CONFIG, "EUR", { PKR: 1, EUR: 0.003 }),
+    /USD exchange rate/i
+  );
 
   const internationalEcommerce = getRegionalPricingConfig(
     getEcommercePricingConfig(DEFAULT_PRICING_CONFIG, "ecommerce_business"),
     "EUR",
-    { PKR: 1, EUR: 0.003 }
+    { PKR: 1, USD: 0.0035, EUR: 0.003 }
   );
   assert.equal(internationalEcommerce.baseWithAdmin, 900);
   assert.equal(internationalEcommerce.advanceDefault, 360);

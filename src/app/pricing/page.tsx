@@ -472,7 +472,7 @@ export default function PricingPage() {
               SaaS Project Packages &amp; Rates
             </h2>
             <p className="text-xs text-gray-600 mt-2">
-              Pakistan rates are in PKR. International rates are doubled and converted to your regional currency. Enterprise pricing starts at the listed amount; final scope is confirmed after review.
+              Pakistan rates are in PKR. International base packages are doubled and converted to your selected currency; add-ons use a published global agency-rate benchmark and estimated category effort. Enterprise pricing starts at the listed amount; final scope is confirmed after review.
             </p>
           </div>
 

@@ -233,11 +233,12 @@ export default function Footer() {
             <div className="bg-[#181B20] p-3 rounded-lg border border-[#242830] text-[11px] text-gray-400 space-y-2 leading-relaxed">
               <div className="flex items-start gap-1.5 text-gray-300 font-semibold">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <span>Prices for your selected region</span>
+                <span>Prices in your selected currency</span>
               </div>
               <CurrencySelector className="w-full rounded-md border border-gray-700 bg-[#101216] px-2 py-1.5 text-gray-200" />
               <p>
-                International base packages are doubled from Pakistan rates and converted using the latest exchange rate; each add-on is 100 units in the selected currency. Final quotation follows scope review.
+                International base packages use 2x Pakistan rates converted using the latest exchange rate. Add-ons use a USD $37/hour planning midpoint from Clutch&apos;s published $25-$49/hour agency range, multiplied by estimated category and complexity effort, then converted to the selected currency. This global planning estimate is not a local market average or a fixed quote; final pricing follows scope review.{" "}
+                <a href="https://clutch.co/web-developers/pricing" target="_blank" rel="noreferrer" className="underline">View the benchmark source.</a>
               </p>
               <p>This site is written in English. Use your browser&apos;s built-in translate feature to read it in another language.</p>
               <p>
