@@ -1438,9 +1438,25 @@ export async function estimateWebsite(
   const detected = detectWebsiteFeatures(text, [], configuredPricing);
   if (isDevelopmentAgencySite) {
     const agencyIdentity = detectWebsiteFeatures(homepageIdentity, [], configuredPricing);
-    detected.features = agencyIdentity.features;
+    const agencyFeatures = agencyIdentity.features.filter((feature) => {
+      if (feature.addonId) return false;
+      const addonId = Object.entries(configuredPricing.addons)
+        .find(([, addon]) => addon.label === feature.title)?.[0];
+      return !addonId && ![
+        "E-commerce store package",
+        "SaaS application package",
+      ].includes(feature.title);
+    });
+    detected.features = agencyFeatures.length > 0
+      ? agencyFeatures
+      : [{
+          title: "Public informational website",
+          explanation: "The public pages identify the agency and describe its services; portfolio feature listings are not treated as implemented functionality.",
+          evidence: "The homepage identifies this organization as a web/software development agency.",
+        }];
     detected.addonIds = [];
     detected.pricingPackage = null;
+    detected.adminPanel = false;
     detected.assumptions.unshift(
       "This appears to be a web/software development agency site. Portfolio examples, service descriptions, and published add-on catalogs are not treated as features implemented on the agency's own website."
     );

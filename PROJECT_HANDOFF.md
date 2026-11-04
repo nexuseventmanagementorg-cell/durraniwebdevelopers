@@ -1,5 +1,12 @@
 # DWD Project Handoff
 
+## 2026-11-05 — Agency URL Scan Estimate Follow-up
+
+- **Issue found from production screenshot:** The first `89ca5ef` agency-site suppression correctly removed portfolio/service-catalog add-ons, but retained an “E-commerce store package” text signal from marketing copy. That stale feature blocked the informational-scope fallback, leaving no selected package and a zero total for DWD itself.
+- **Correction:** Agency detection now discards catalog-priced and e-commerce/SaaS package signals, clears unverified admin detection, and provides a public informational-site finding when no other non-priced homepage feature remains. The ordinary informational-page rule can then suggest Package 1 at PKR 35,000 while leaving portfolio-derived add-ons at zero.
+- **Local verification:** Scanning DWD’s 18 public pages on localhost now returns `Package 1: Durrani-Managed`, base/total PKR 35,000, one “Public informational website” finding, zero add-ons, and no inferred admin panel. Focused agency/informational regression tests and lint passed.
+- **Production status:** This follow-up fix is not yet included in production. Deploy only after the new commit passes checks; verify the live scan returns the same PKR 35,000 base estimate.
+
 ## 2026-11-03 Verified Checkpoint
 
 ### Project and release target

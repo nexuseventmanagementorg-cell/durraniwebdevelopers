@@ -2929,6 +2929,16 @@ test("URL estimator does not price an agency's portfolio and service catalog as 
   assert.equal(estimate.pricingPackage, undefined);
   assert.equal(estimate.addons.length, 0);
   assert.equal(estimate.estimatedTotal, 35000);
+  assert.equal(estimate.suggestedPricingOptionId, "package_1");
+  assert.equal(estimate.basePrice, 35000);
+  assert.equal(estimate.adminPanel, false);
+  assert.ok(estimate.features.some((feature) => feature.title === "Public informational website"));
+  assert.equal(
+    estimate.features.some((feature) =>
+      ["E-commerce store package", "SaaS application package"].includes(feature.title)
+    ),
+    false
+  );
   assert.ok(estimate.assumptions.some((assumption) => assumption.includes("Portfolio examples")));
 });
 
